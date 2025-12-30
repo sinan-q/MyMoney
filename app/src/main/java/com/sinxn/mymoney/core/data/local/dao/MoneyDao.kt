@@ -89,17 +89,44 @@ interface MoneyDao {
                     WHEN t.direction = 0 THEN -t.money 
                     ELSE 0 
                 END
-            ), 0)) AS currentBalance 
+            ), 0)) AS currentBalance,
+            COALESCE(c.decimals, 2) as decimals,
+            c.symbol as currencySymbol
         FROM wallets w 
         LEFT JOIN transactions t ON w.id = t.walletId 
             AND t.confirmed = 1 
             AND t.countInTotal = 1
             AND t.isDeleted = 0
+        LEFT JOIN currencies c ON w.currency = c.iso
         WHERE w.isDeleted = 0
         GROUP BY w.id 
         ORDER BY w.`index` ASC
     """)
     fun getWalletsWithBalance(): Flow<List<com.sinxn.mymoney.core.data.local.model.WalletWithBalance>>
+
+    @androidx.room.Transaction
+    @Query("""
+        SELECT 
+            w.*, 
+            (w.startMoney + COALESCE(SUM(
+                CASE 
+                    WHEN t.direction = 1 THEN t.money 
+                    WHEN t.direction = 0 THEN -t.money 
+                    ELSE 0 
+                END
+            ), 0)) AS currentBalance,
+            COALESCE(c.decimals, 2) as decimals,
+            c.symbol as currencySymbol
+        FROM wallets w 
+        LEFT JOIN transactions t ON w.id = t.walletId 
+            AND t.confirmed = 1 
+            AND t.countInTotal = 1
+            AND t.isDeleted = 0
+        LEFT JOIN currencies c ON w.currency = c.iso
+        WHERE w.isDeleted = 0 AND w.id = :walletId
+        GROUP BY w.id
+    """)
+    fun getWalletWithBalance(walletId: String): Flow<com.sinxn.mymoney.core.data.local.model.WalletWithBalance?>
 
     // Categories
     @Insert(onConflict = OnConflictStrategy.REPLACE)

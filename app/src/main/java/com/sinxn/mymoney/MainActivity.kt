@@ -32,11 +32,19 @@ class MainActivity : ComponentActivity() {
                             HomeScreen(
                                 onNavigateToBackup = {
                                     navController.navigate("backup")
+                                },
+                                onNavigateToWallet = { walletId ->
+                                    navController.navigate("wallet_details/$walletId")
                                 }
                             )
                         }
                         composable("backup") {
                             BackupScreen()
+                        }
+                        composable("wallet_details/{walletId}") {
+                            com.sinxn.mymoney.feature.wallet.WalletDetailsScreen(
+                                onNavigateUp = { navController.navigateUp() }
+                            )
                         }
                     }
                 }

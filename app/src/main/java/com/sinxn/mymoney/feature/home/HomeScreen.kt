@@ -35,6 +35,7 @@ import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 @Composable
 fun HomeScreen(
     onNavigateToBackup: () -> Unit,
+    onNavigateToWallet: (String) -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -78,19 +79,34 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(wallets) { walletWithBalance ->
-                    WalletItem(walletWithBalance)
+                    WalletItem(
+                        item = walletWithBalance,
+                        onClick = { onNavigateToWallet(walletWithBalance.wallet.id) }
+                    )
                 }
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WalletItem(item: WalletWithBalance) {
-    Card(modifier = Modifier.fillMaxSize()) {
+fun WalletItem(
+    item: WalletWithBalance,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxSize()
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = item.wallet.name, style = MaterialTheme.typography.titleMedium)
-            Text(text = "${item.wallet.currency} ${item.currentBalance}", style = MaterialTheme.typography.bodyMedium)
+            val formattedBalance = com.sinxn.mymoney.core.util.MoneyFormatter.format(
+                amount = item.currentBalance,
+                currencyCode = item.wallet.currency,
+                decimals = item.decimals
+            )
+            Text(text = formattedBalance, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
