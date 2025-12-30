@@ -68,7 +68,7 @@ data class TransactionEntity(
     val description: String?,
     val categoryId: String?,
     val walletId: String,
-    val direction: Int, // -1: Expense, 1: Income
+    val direction: Int, // 0: Expense, 1: Income
     val type: Int,
     val note: String?,
     val confirmed: Boolean,
