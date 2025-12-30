@@ -2,18 +2,23 @@ package com.sinxn.mymoney.feature.wallet
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -136,6 +141,9 @@ fun TransactionList(
             Text(text = "No transactions found", style = MaterialTheme.typography.bodyLarge)
         }
     } else {
+        // State to track collapsed keys (using formatted date string as key)
+        var collapsedGroups by remember { mutableStateOf(setOf<String>()) }
+        
         LazyColumn(
             contentPadding = PaddingValues(bottom = 16.dp),
         ) {
@@ -158,14 +166,39 @@ fun TransactionList(
             }
             
             customGrouped.forEach { (header, transactions) ->
-                stickyHeader {
-                    TransactionHeader(header, decimals, currencyCode, formatterConfig)
+                val headerKey = com.sinxn.mymoney.core.util.DateUtils.formatMonthHeader(header.date)
+                val isCollapsed = collapsedGroups.contains(headerKey)
+                
+                stickyHeader(key = headerKey) {
+                    TransactionHeader(
+                        header = header,
+                        decimals = decimals,
+                        currencyCode = currencyCode,
+                        formatterConfig = formatterConfig,
+                        isCollapsed = isCollapsed,
+                        onToggle = {
+                            collapsedGroups = if (isCollapsed) {
+                                collapsedGroups - headerKey
+                            } else {
+                                collapsedGroups + headerKey
+                            }
+                        }
+                    )
                 }
                 
-                items(transactions) { transactionItem ->
-                     Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-                         TransactionItem(transactionItem.transaction, decimals, currencyCode, formatterConfig)
-                     }
+                if (!isCollapsed) {
+                    items(
+                        items = transactions,
+                        key = { it.transaction.transaction.id }
+                    ) { transactionItem ->
+                         Box(
+                             modifier = Modifier
+                                 .padding(horizontal = 16.dp, vertical = 4.dp)
+                                 .animateItem()
+                         ) {
+                             TransactionItem(transactionItem.transaction, decimals, currencyCode, formatterConfig)
+                         }
+                    }
                 }
             }
         }
@@ -177,7 +210,9 @@ fun TransactionHeader(
     header: TransactionListItem.Header,
     decimals: Int,
     currencyCode: String,
-    formatterConfig: MoneyFormatter.Config
+    formatterConfig: MoneyFormatter.Config,
+    isCollapsed: Boolean,
+    onToggle: () -> Unit
 ) {
     val formattedDate = com.sinxn.mymoney.core.util.DateUtils.formatMonthHeader(header.date)
     val formattedTotal = MoneyFormatter.format(
@@ -187,20 +222,38 @@ fun TransactionHeader(
         config = formatterConfig
     )
     
+    // Animate arrow rotation
+    val rotation by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isCollapsed) 180f else 0f,
+        label = "ArrowRotation"
+    )
+    
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface) // Opaque for sticky
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .clickable(onClick = onToggle)
+            .padding(horizontal = 16.dp, vertical = 12.dp), // Increased vertical padding for touch target
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = formattedDate,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+             Icon(
+                imageVector = Icons.Default.KeyboardArrowUp,
+                contentDescription = if (isCollapsed) "Expand" else "Collapse",
+                modifier = Modifier
+                    .padding(end = 8.dp)
+                    .rotate(rotation),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            
+            Text(
+                text = formattedDate,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+        }
         
         Text(
             text = formattedTotal,
