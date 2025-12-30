@@ -221,6 +221,18 @@ fun TransactionHeader(
         decimals = decimals,
         config = formatterConfig
     )
+    val formattedIncome = MoneyFormatter.format(
+        amount = header.income,
+        currencyCode = currencyCode,
+        decimals = decimals,
+        config = formatterConfig
+    )
+    val formattedExpense = MoneyFormatter.format(
+        amount = header.expense,
+        currencyCode = currencyCode,
+        decimals = decimals,
+        config = formatterConfig
+    )
     
     // Animate arrow rotation
     val rotation by androidx.compose.animation.core.animateFloatAsState(
@@ -239,7 +251,7 @@ fun TransactionHeader(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
              Icon(
-                imageVector = Icons.Default.KeyboardArrowUp,
+                imageVector = androidx.compose.material.icons.Icons.Default.KeyboardArrowUp,
                 contentDescription = if (isCollapsed) "Expand" else "Collapse",
                 modifier = Modifier
                     .padding(end = 8.dp)
@@ -255,12 +267,32 @@ fun TransactionHeader(
             )
         }
         
-        Text(
-            text = formattedTotal,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = if (header.totalAmount >= 0) Color(0xFF4CAF50) else Color(0xFFE53935)
-        )
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = formattedTotal,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = if (header.totalAmount >= 0) Color(0xFF4CAF50) else Color(0xFFE53935)
+            )
+            
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                 if (header.income > 0) {
+                     Text(
+                        text = "+$formattedIncome",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF4CAF50),
+                        modifier = Modifier.padding(end = 6.dp)
+                    )
+                 }
+                 if (header.expense > 0) {
+                     Text(
+                        text = "-$formattedExpense",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFE53935)
+                    )
+                 }
+            }
+        }
     }
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 }
@@ -399,7 +431,7 @@ fun parseIconData(iconString: String?, categoryName: String): IconData {
                     } catch (e: Exception) { defaultColor }
                 } else defaultColor
                 
-                val text = if (name.isNotEmpty()) name else defaultText
+                val text = name.ifEmpty { defaultText }
                 return IconData(color, text)
             }
             // If "resource" or other JSON type, fallback to default (Letter Avatar)

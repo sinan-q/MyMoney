@@ -6,7 +6,9 @@ import java.util.Date
 sealed class TransactionListItem {
     data class Header(
         val date: Date,
-        val totalAmount: Long
+        val totalAmount: Long,
+        val income: Long,
+        val expense: Long
     ) : TransactionListItem()
 
     data class Transaction(

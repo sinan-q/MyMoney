@@ -119,16 +119,24 @@ class WalletDetailsViewModel @Inject constructor(
                     grouped.forEach { (monthDate, transactionsInGroup) ->
                         // Calculate total efficiently
                         var total = 0L
+                        var income = 0L
+                        var expense = 0L
                         val transactionItems = ArrayList<TransactionListItem.Transaction>(transactionsInGroup.size)
 
                         for ((t, _) in transactionsInGroup) {
                             if (t.transaction.countInTotal && t.transaction.confirmed) {
-                                if (t.transaction.direction == 1) total += t.transaction.money else total -= t.transaction.money
+                                if (t.transaction.direction == 1) {
+                                    total += t.transaction.money
+                                    income += t.transaction.money
+                                } else {
+                                    total -= t.transaction.money
+                                    expense += t.transaction.money
+                                }
                             }
                             transactionItems.add(TransactionListItem.Transaction(t))
                         }
 
-                        result.add(TransactionListItem.Header(monthDate, total))
+                        result.add(TransactionListItem.Header(monthDate, total, income, expense))
                         result.addAll(transactionItems)
                     }
                     result
