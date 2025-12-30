@@ -14,7 +14,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,12 +35,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.sinxn.mymoney.core.data.importBackup.model.EntityStats
 
 @Composable
 fun BackupScreen(
     viewModel: BackupViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val analysisReport by viewModel.analysisReport.collectAsState()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -45,6 +50,12 @@ fun BackupScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let { viewModel.importBackup(it) }
+    }
+
+    val analysisLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { viewModel.analyzeBackup(it) }
     }
 
     LaunchedEffect(uiState) {
@@ -59,6 +70,45 @@ fun BackupScreen(
             }
             else -> {}
         }
+    }
+
+    if (analysisReport != null) {
+        val report = analysisReport!!
+        AlertDialog(
+            onDismissRequest = { viewModel.clearAnalysis() },
+            title = { Text("Backup Analysis") },
+            text = {
+                Column {
+                    Text("Total Items / Deleted / Zombies", style = MaterialTheme.typography.labelSmall)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    @Composable
+                    fun itemRow(label: String, stats: EntityStats) {
+                         Text("$label: ${stats.total} / ${stats.softDeleted} / ${stats.zombies}")
+                    }
+
+                    itemRow("Wallets", report.wallets)
+                    itemRow("Categories", report.categories)
+                    itemRow("Transactions", report.transactions)
+                    itemRow("Transfers", report.transfers)
+                    itemRow("Debts", report.debts)
+                    itemRow("Savings", report.savings)
+                    itemRow("Recurrent Trans", report.recurrentTransactions)
+                    itemRow("Attachments", report.attachments)
+                    itemRow("Attachments", report.attachments)
+                    itemRow("People", report.people)
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Debug Info:", style = MaterialTheme.typography.labelSmall)
+                    Text(report.debugInfo, style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                Button(onClick = { viewModel.clearAnalysis() }) {
+                    Text("Close")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -104,6 +154,22 @@ fun BackupScreen(
                     Icon(Icons.Default.Restore, contentDescription = null)
                     Spacer(modifier = Modifier.size(8.dp))
                     Text("Import Backup")
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = {
+                        analysisLauncher.launch(arrayOf("*/*")) 
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    )
+                ) {
+                    Icon(Icons.Default.Analytics, contentDescription = null)
+                    Spacer(modifier = Modifier.size(8.dp))
+                    Text("Analyze Backup")
                 }
             }
             

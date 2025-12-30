@@ -29,7 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.sinxn.mymoney.core.data.local.entity.WalletEntity
+import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,8 +77,8 @@ fun HomeScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(wallets) { wallet ->
-                    WalletItem(wallet)
+                items(wallets) { walletWithBalance ->
+                    WalletItem(walletWithBalance)
                 }
             }
         }
@@ -86,11 +86,11 @@ fun HomeScreen(
 }
 
 @Composable
-fun WalletItem(wallet: WalletEntity) {
+fun WalletItem(item: WalletWithBalance) {
     Card(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = wallet.name, style = MaterialTheme.typography.titleMedium)
-            Text(text = "${wallet.currency} ${wallet.startMoney}", style = MaterialTheme.typography.bodyMedium)
+            Text(text = item.wallet.name, style = MaterialTheme.typography.titleMedium)
+            Text(text = "${item.wallet.currency} ${item.currentBalance}", style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

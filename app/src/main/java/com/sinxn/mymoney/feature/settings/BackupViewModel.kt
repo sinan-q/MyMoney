@@ -18,6 +18,11 @@ class BackupViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<BackupUiState>(BackupUiState.Idle)
     val uiState = _uiState.asStateFlow()
 
+    val importState = _uiState.asStateFlow()
+
+    private val _analysisReport = MutableStateFlow<com.sinxn.mymoney.core.data.importBackup.model.BackupAnalysisReport?>(null)
+    val analysisReport = _analysisReport.asStateFlow()
+
     fun importBackup(uri: Uri) {
         viewModelScope.launch {
             _uiState.value = BackupUiState.Loading
@@ -30,7 +35,24 @@ class BackupViewModel @Inject constructor(
             }
         }
     }
-    
+
+    fun analyzeBackup(uri: Uri) {
+        viewModelScope.launch {
+            _uiState.value = BackupUiState.Loading
+            try {
+                val report = repository.analyzeBackup(uri)
+                _analysisReport.value = report
+                _uiState.value = BackupUiState.Idle
+            } catch (e: Exception) {
+                _uiState.value = BackupUiState.Error(e.message ?: "Analysis failed")
+            }
+        }
+    }
+
+    fun clearAnalysis() {
+        _analysisReport.value = null
+    }
+
     fun resetState() {
         _uiState.value = BackupUiState.Idle
     }

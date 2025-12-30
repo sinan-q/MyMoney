@@ -2,16 +2,16 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "24d5d844377decb9db02b7740350cf61",
+    "identityHash": "2ca29085f4e17ab2c058d3bc7960f85c",
     "entities": [
       {
         "tableName": "wallets",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `name` TEXT NOT NULL, `icon` TEXT NOT NULL, `currency` TEXT NOT NULL, `startMoney` INTEGER NOT NULL, `isArchived` INTEGER NOT NULL, `note` TEXT, `countInTotal` INTEGER NOT NULL, `index` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `icon` TEXT NOT NULL, `currency` TEXT NOT NULL, `startMoney` INTEGER NOT NULL, `isArchived` INTEGER NOT NULL, `note` TEXT, `countInTotal` INTEGER NOT NULL, `index` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
             "columnName": "id",
-            "affinity": "INTEGER",
+            "affinity": "TEXT",
             "notNull": true
           },
           {
@@ -71,12 +71,12 @@
       },
       {
         "tableName": "categories",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `name` TEXT NOT NULL, `icon` TEXT NOT NULL, `type` INTEGER NOT NULL, `parentId` INTEGER, `showReport` INTEGER NOT NULL, `index` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `icon` TEXT NOT NULL, `type` INTEGER NOT NULL, `parentId` TEXT, `showReport` INTEGER NOT NULL, `index` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
             "columnName": "id",
-            "affinity": "INTEGER",
+            "affinity": "TEXT",
             "notNull": true
           },
           {
@@ -100,7 +100,7 @@
           {
             "fieldPath": "parentId",
             "columnName": "parentId",
-            "affinity": "INTEGER"
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "showReport",
@@ -124,12 +124,12 @@
       },
       {
         "tableName": "transactions",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `money` INTEGER NOT NULL, `date` TEXT NOT NULL, `description` TEXT, `categoryId` INTEGER, `walletId` INTEGER NOT NULL, `direction` INTEGER NOT NULL, `type` INTEGER NOT NULL, `note` TEXT, `confirmed` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`walletId`) REFERENCES `wallets`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`categoryId`) REFERENCES `categories`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `money` INTEGER NOT NULL, `date` TEXT NOT NULL, `description` TEXT, `categoryId` TEXT, `walletId` TEXT NOT NULL, `direction` INTEGER NOT NULL, `type` INTEGER NOT NULL, `note` TEXT, `confirmed` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`walletId`) REFERENCES `wallets`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`categoryId`) REFERENCES `categories`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
         "fields": [
           {
             "fieldPath": "id",
             "columnName": "id",
-            "affinity": "INTEGER",
+            "affinity": "TEXT",
             "notNull": true
           },
           {
@@ -152,12 +152,12 @@
           {
             "fieldPath": "categoryId",
             "columnName": "categoryId",
-            "affinity": "INTEGER"
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "walletId",
             "columnName": "walletId",
-            "affinity": "INTEGER",
+            "affinity": "TEXT",
             "notNull": true
           },
           {
@@ -238,7 +238,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '24d5d844377decb9db02b7740350cf61')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2ca29085f4e17ab2c058d3bc7960f85c')"
     ]
   }
 }

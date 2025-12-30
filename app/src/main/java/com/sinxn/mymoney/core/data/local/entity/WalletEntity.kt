@@ -5,7 +5,7 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "wallets")
 data class WalletEntity(
-    @PrimaryKey val id: Long,
+    @PrimaryKey val id: String,
     val name: String,
     val icon: String,
     val currency: String,
@@ -13,5 +13,8 @@ data class WalletEntity(
     val isArchived: Boolean,
     val note: String?,
     val countInTotal: Boolean,
-    val index: Int
+    val index: Int,
+    val isDeleted: Boolean,
+    val lastEdit: Long,
+    val tag: String?
 )

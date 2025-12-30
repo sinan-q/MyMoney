@@ -18,23 +18,67 @@ import androidx.room.PrimaryKey
             entity = CategoryEntity::class,
             parentColumns = ["id"],
             childColumns = ["categoryId"],
+            onDelete = ForeignKey.CASCADE
+        ),
+        ForeignKey(
+            entity = PlaceEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["placeId"],
+            onDelete = ForeignKey.SET_NULL
+        ),
+        ForeignKey(
+            entity = EventEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["eventId"],
+            onDelete = ForeignKey.SET_NULL
+        ),
+        ForeignKey(
+            entity = DebtEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["debtId"],
+            onDelete = ForeignKey.SET_NULL
+        ),
+        ForeignKey(
+            entity = SavingEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["savingId"],
+            onDelete = ForeignKey.SET_NULL
+        ),
+        ForeignKey(
+            entity = RecurrentTransactionEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["recurrenceId"],
             onDelete = ForeignKey.SET_NULL
         )
     ],
     indices = [
         Index("walletId"),
-        Index("categoryId")
+        Index("categoryId"),
+        Index("placeId"),
+        Index("eventId"),
+        Index("debtId"),
+        Index("savingId"),
+        Index("recurrenceId")
     ]
 )
 data class TransactionEntity(
-    @PrimaryKey val id: Long,
+    @PrimaryKey val id: String,
     val money: Long,
     val date: String, // Stored as string in legacy, typically ISO or timestamp
     val description: String?,
-    val categoryId: Long?,
-    val walletId: Long,
+    val categoryId: String?,
+    val walletId: String,
     val direction: Int, // -1: Expense, 1: Income
     val type: Int,
     val note: String?,
-    val confirmed: Boolean
+    val confirmed: Boolean,
+    val countInTotal: Boolean,
+    val isDeleted: Boolean,
+    val placeId: String?,
+    val eventId: String?,
+    val debtId: String?,
+    val savingId: String?,
+    val recurrenceId: String?,
+    val lastEdit: Long,
+    val tag: String?
 )
