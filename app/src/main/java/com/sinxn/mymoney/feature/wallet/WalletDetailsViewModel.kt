@@ -14,21 +14,43 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class WalletDetailsViewModel @Inject constructor(
     private val moneyDao: MoneyDao,
+    private val settingsRepository: com.sinxn.mymoney.core.data.preferences.SettingsRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     val walletId: String = checkNotNull(savedStateHandle["walletId"])
+
+    init {
+        // Save as current wallet accessible on launch
+        viewModelScope.launch {
+            try {
+                settingsRepository.setCurrentWalletId(walletId)
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
+    }
+    
+    // ... rest of the code
 
     val wallet: Flow<WalletWithBalance?> = moneyDao.getWalletWithBalance(walletId)
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = null
+        )
+
+    val formattingSettings = settingsRepository.formattingSettings
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = com.sinxn.mymoney.core.data.preferences.FormattingSettings()
         )
 
     @OptIn(ExperimentalCoroutinesApi::class)

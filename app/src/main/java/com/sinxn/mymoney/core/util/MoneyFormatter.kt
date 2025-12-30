@@ -6,21 +6,46 @@ import java.util.Currency
 import kotlin.math.pow
 
 object MoneyFormatter {
-    fun format(amount: Long, currencyCode: String, decimals: Int): String {
+    data class Config(
+        val showCurrency: Boolean = true,
+        val groupDigits: Boolean = true,
+        val roundDecimals: Boolean = false,
+        val showPlusMinus: Boolean = false
+    )
+
+    fun format(
+        amount: Long, 
+        currencyCode: String, 
+        decimals: Int, 
+        config: Config = Config()
+    ): String {
         val divider = 10.0.pow(decimals.toDouble())
         val value = amount.toDouble() / divider
         
         val format = NumberFormat.getInstance() as DecimalFormat
-        format.minimumFractionDigits = decimals
-        format.maximumFractionDigits = decimals
-        format.isGroupingUsed = true
+        // Round decimals: if true, show 0 fraction digits. Else usage passed decimals.
+        val fractions = if (config.roundDecimals) 0 else decimals
         
-        val symbol = try {
-            Currency.getInstance(currencyCode).symbol
-        } catch (e: Exception) {
-            currencyCode
+        format.minimumFractionDigits = fractions
+        format.maximumFractionDigits = fractions
+        format.isGroupingUsed = config.groupDigits
+        
+        var formattedValue = format.format(value)
+        
+        // Handle Plus/Minus
+        if (config.showPlusMinus && value > 0) {
+            formattedValue = "+$formattedValue"
         }
         
-        return "$symbol ${format.format(value)}"
+        if (config.showCurrency) {
+             val symbol = try {
+                Currency.getInstance(currencyCode).symbol
+            } catch (e: Exception) {
+                currencyCode
+            }
+            return "$symbol $formattedValue"
+        }
+        
+        return formattedValue
     }
 }

@@ -6,6 +6,8 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -26,25 +28,51 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
+                    val viewModel: MainViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+                    val startDest by viewModel.startDestination.collectAsState()
                     
-                    NavHost(navController = navController, startDestination = "home") {
-                        composable("home") {
-                            HomeScreen(
-                                onNavigateToBackup = {
-                                    navController.navigate("backup")
-                                },
-                                onNavigateToWallet = { walletId ->
-                                    navController.navigate("wallet_details/$walletId")
-                                }
-                            )
+                    if (startDest != "loading") {
+                        NavHost(navController = navController, startDestination = startDest) {
+                            composable("home") {
+                                HomeScreen(
+                                    onNavigateToBackup = {
+                                        navController.navigate("backup")
+                                    },
+                                    onNavigateToWallet = { walletId ->
+                                        navController.navigate("wallet_details/$walletId")
+                                    },
+                                    onNavigateToSettings = {
+                                        navController.navigate("settings")
+                                    }
+                                )
+                            }
+                            composable("backup") {
+                                BackupScreen()
+                            }
+                            composable("settings") {
+                                com.sinxn.mymoney.feature.settings.SettingsScreen(
+                                    onNavigateUp = { navController.navigateUp() }
+                                )
+                            }
+                            composable("wallet_details/{walletId}") {
+                                com.sinxn.mymoney.feature.wallet.WalletDetailsScreen(
+                                    onNavigateUp = { 
+                                        if (navController.previousBackStackEntry != null) {
+                                            navController.navigateUp()
+                                        } else {
+                                            // If launched directly here, back should go home
+                                            navController.navigate("home") {
+                                                popUpTo("wallet_details/{walletId}") { inclusive = true }
+                                            }
+                                        }
+                                    }
+                                )
+                            }
                         }
-                        composable("backup") {
-                            BackupScreen()
-                        }
-                        composable("wallet_details/{walletId}") {
-                            com.sinxn.mymoney.feature.wallet.WalletDetailsScreen(
-                                onNavigateUp = { navController.navigateUp() }
-                            )
+                    } else {
+                        // Show Loading Screen or Splash
+                        androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                             androidx.compose.material3.CircularProgressIndicator()
                         }
                     }
                 }

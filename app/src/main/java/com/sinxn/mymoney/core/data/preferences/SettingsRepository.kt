@@ -1,0 +1,95 @@
+package com.sinxn.mymoney.core.data.preferences
+
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+import javax.inject.Singleton
+
+val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
+
+@Singleton
+data class FormattingSettings(
+    val showCurrency: Boolean = true,
+    val groupDigits: Boolean = true,
+    val roundDecimals: Boolean = false,
+    val showPlusMinus: Boolean = false,
+    val dateFormat: Int = 2 // Default to medium date format
+)
+
+@Singleton
+class SettingsRepository @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
+    private val dataStore = context.dataStore
+
+    companion object {
+        val CURRENT_WALLET_ID = stringPreferencesKey("current_wallet_id")
+        
+        val SHOW_CURRENCY = booleanPreferencesKey("show_currency")
+        val GROUP_DIGITS = booleanPreferencesKey("group_digits")
+        val ROUND_DECIMALS = booleanPreferencesKey("round_decimals")
+        val SHOW_PLUS_MINUS = booleanPreferencesKey("show_plus_minus_symbol")
+        val DATE_FORMAT = intPreferencesKey("date_format")
+    }
+
+    val currentWalletId: Flow<String> = dataStore.data
+        .map { preferences ->
+            preferences[CURRENT_WALLET_ID] ?: ""
+        }
+
+    val formattingSettings: Flow<FormattingSettings> = dataStore.data
+        .map { preferences ->
+            FormattingSettings(
+                showCurrency = preferences[SHOW_CURRENCY] ?: true,
+                groupDigits = preferences[GROUP_DIGITS] ?: true,
+                roundDecimals = preferences[ROUND_DECIMALS] ?: false,
+                showPlusMinus = preferences[SHOW_PLUS_MINUS] ?: false,
+                dateFormat = preferences[DATE_FORMAT] ?: 2
+            )
+        }
+
+    suspend fun setCurrentWalletId(id: String) {
+        dataStore.edit { preferences ->
+            preferences[CURRENT_WALLET_ID] = id
+        }
+    }
+
+    suspend fun setShowCurrency(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[SHOW_CURRENCY] = enabled
+        }
+    }
+
+    suspend fun setGroupDigits(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[GROUP_DIGITS] = enabled
+        }
+    }
+
+    suspend fun setRoundDecimals(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[ROUND_DECIMALS] = enabled
+        }
+    }
+
+    suspend fun setShowPlusMinus(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[SHOW_PLUS_MINUS] = enabled
+        }
+    }
+
+    suspend fun setDateFormat(format: Int) {
+        dataStore.edit { preferences ->
+            preferences[DATE_FORMAT] = format
+        }
+    }
+}

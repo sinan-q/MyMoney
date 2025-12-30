@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.entity.TransactionEntity
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
+import com.sinxn.mymoney.core.util.MoneyFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,6 +29,15 @@ fun WalletDetailsScreen(
 ) {
     val wallet by viewModel.wallet.collectAsState(initial = null)
     val transactions by viewModel.transactions.collectAsState(initial = emptyList())
+    val settings by viewModel.formattingSettings.collectAsState()
+
+    // Map Settings to Formatter Config
+    val formatterConfig = MoneyFormatter.Config(
+        showCurrency = settings.showCurrency,
+        groupDigits = settings.groupDigits,
+        roundDecimals = settings.roundDecimals,
+        showPlusMinus = settings.showPlusMinus
+    )
 
     Scaffold(
         topBar = {
@@ -55,7 +65,7 @@ fun WalletDetailsScreen(
         ) {
             // Wallet Summary Header
             wallet?.let { walletData ->
-                WalletHeader(walletData)
+                WalletHeader(walletData, formatterConfig)
             }
 
             // Transactions List
@@ -63,7 +73,8 @@ fun WalletDetailsScreen(
                 TransactionList(
                     items = transactions,
                     decimals = walletData.decimals,
-                    currencyCode = walletData.wallet.currency
+                    currencyCode = walletData.wallet.currency,
+                    formatterConfig = formatterConfig
                 )
             }
         }
@@ -71,7 +82,10 @@ fun WalletDetailsScreen(
 }
 
 @Composable
-fun WalletHeader(wallet: WalletWithBalance) {
+fun WalletHeader(
+    wallet: WalletWithBalance,
+    formatterConfig: MoneyFormatter.Config
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -92,10 +106,11 @@ fun WalletHeader(wallet: WalletWithBalance) {
                 color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
             )
             Spacer(modifier = Modifier.height(8.dp))
-            val formattedBalance = com.sinxn.mymoney.core.util.MoneyFormatter.format(
+            val formattedBalance = MoneyFormatter.format(
                 amount = wallet.currentBalance,
                 currencyCode = wallet.wallet.currency,
-                decimals = wallet.decimals
+                decimals = wallet.decimals,
+                config = formatterConfig
             )
             Text(
                 text = formattedBalance,
@@ -112,7 +127,8 @@ fun WalletHeader(wallet: WalletWithBalance) {
 fun TransactionList(
     items: List<TransactionListItem>,
     decimals: Int,
-    currencyCode: String
+    currencyCode: String,
+    formatterConfig: MoneyFormatter.Config
 ) {
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -121,16 +137,7 @@ fun TransactionList(
     } else {
         LazyColumn(
             contentPadding = PaddingValues(bottom = 16.dp),
-            // verticalArrangement = Arrangement.spacedBy(8.dp) // Removed to handle headers better manually or keep it
         ) {
-            
-            // Group the flat list back into chunks for sticky headers if we want true sticky behavior via 'stickyHeader'
-            // But since our list is already flat with Header items interspersed, we can't use `stickyHeader` easily on a flat list without indices.
-            // Actually, we can iterate.
-            // But idiomatic LazyColumn sticky header works on groups.
-            // Let's regroup simply for UI or iterate manually?
-            // "items" is flat: Header, T1, T2, Header, T3...
-            // Standard approach with flat list:
             
             var currentHeader: TransactionListItem.Header? = null
             val customGrouped = mutableListOf<Pair<TransactionListItem.Header, MutableList<TransactionListItem.Transaction>>>()
@@ -151,12 +158,12 @@ fun TransactionList(
             
             customGrouped.forEach { (header, transactions) ->
                 stickyHeader {
-                    TransactionHeader(header, decimals, currencyCode)
+                    TransactionHeader(header, decimals, currencyCode, formatterConfig)
                 }
                 
                 items(transactions) { transactionItem ->
                      Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-                         TransactionItem(transactionItem.transaction, decimals, currencyCode)
+                         TransactionItem(transactionItem.transaction, decimals, currencyCode, formatterConfig)
                      }
                 }
             }
@@ -168,13 +175,15 @@ fun TransactionList(
 fun TransactionHeader(
     header: TransactionListItem.Header,
     decimals: Int,
-    currencyCode: String
+    currencyCode: String,
+    formatterConfig: MoneyFormatter.Config
 ) {
     val formattedDate = com.sinxn.mymoney.core.util.DateUtils.formatMonthHeader(header.date)
-    val formattedTotal = com.sinxn.mymoney.core.util.MoneyFormatter.format(
+    val formattedTotal = MoneyFormatter.format(
         amount = header.totalAmount,
         currencyCode = currencyCode,
-        decimals = decimals
+        decimals = decimals,
+        config = formatterConfig
     )
     
     Row(
@@ -206,7 +215,8 @@ fun TransactionHeader(
 fun TransactionItem(
     transaction: TransactionEntity,
     decimals: Int,
-    currencyCode: String
+    currencyCode: String,
+    formatterConfig: MoneyFormatter.Config
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -234,16 +244,17 @@ fun TransactionItem(
             
             val isIncome = transaction.direction == 1
             val amountColor = if (isIncome) Color(0xFF4CAF50) else Color(0xFFE53935)
-            val prefix = if (isIncome) "+" else "-"
-            
-            val formattedMoney = com.sinxn.mymoney.core.util.MoneyFormatter.format(
-                amount = transaction.money,
+
+            val amount = if (isIncome) transaction.money else -transaction.money
+            val formattedMoney = MoneyFormatter.format(
+                amount = amount, // Send signed amount
                 currencyCode = currencyCode,
-                decimals = decimals
+                decimals = decimals,
+                config = formatterConfig
             )
             
             Text(
-                text = "$prefix $formattedMoney",
+                text = formattedMoney,
                 style = MaterialTheme.typography.titleMedium,
                 color = amountColor,
                 fontWeight = FontWeight.Bold

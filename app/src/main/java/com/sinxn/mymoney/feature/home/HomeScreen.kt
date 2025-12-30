@@ -36,6 +36,7 @@ import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 fun HomeScreen(
     onNavigateToBackup: () -> Unit,
     onNavigateToWallet: (String) -> Unit,
+    onNavigateToSettings: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -62,6 +63,13 @@ fun HomeScreen(
                             onClick = {
                                 showMenu = false
                                 onNavigateToBackup()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Settings") },
+                            onClick = {
+                                showMenu = false
+                                onNavigateToSettings()
                             }
                         )
                     }
