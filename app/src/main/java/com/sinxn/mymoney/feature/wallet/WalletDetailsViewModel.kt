@@ -39,7 +39,31 @@ class WalletDetailsViewModel @Inject constructor(
     
     // ... rest of the code
 
-    val wallet: Flow<WalletWithBalance?> = moneyDao.getWalletWithBalance(walletId)
+    val wallet: Flow<WalletWithBalance?> = if (walletId == com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID) {
+        moneyDao.getTotalBalance().map { balance ->
+            WalletWithBalance(
+                wallet = com.sinxn.mymoney.core.data.local.entity.WalletEntity(
+                    id = com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID,
+                    name = "Total",
+                    icon = "sigma",
+                    currency = "USD", // Better default?
+                    startMoney = 0,
+                    isArchived = false,
+                    note = null,
+                    countInTotal = false,
+                    index = -1,
+                    isDeleted = false,
+                    lastEdit = 0,
+                    tag = null
+                ),
+                currentBalance = balance,
+                decimals = 2,
+                currencySymbol = "$" // Default
+            )
+        }
+    } else {
+        moneyDao.getWalletWithBalance(walletId)
+    }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -56,7 +80,13 @@ class WalletDetailsViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val transactions: StateFlow<List<TransactionListItem>> = flowOf(walletId)
         .flatMapLatest { id ->
-            moneyDao.getTransactionsForWallet(id) // Assuming getTransactionsForWallet is the correct method, not getWalletTransactions
+            val transactionsFlow = if (id == com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID) {
+                moneyDao.getAllTransactions()
+            } else {
+                moneyDao.getTransactionsForWallet(id)
+            }
+            
+            transactionsFlow
                 .map { list ->
                     // Pre-parse dates to avoid repeated parsing during sort and group
                     val validTransactions = list.map {

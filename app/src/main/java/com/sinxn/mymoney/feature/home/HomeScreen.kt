@@ -40,7 +40,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    val wallets by viewModel.wallets.collectAsState(initial = emptyList())
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
@@ -86,11 +86,30 @@ fun HomeScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(wallets) { walletWithBalance ->
+                // Active Wallets
+                items(uiState.activeWallets) { walletWithBalance ->
                     WalletItem(
                         item = walletWithBalance,
                         onClick = { onNavigateToWallet(walletWithBalance.wallet.id) }
                     )
+                }
+
+                // Archived Wallets
+                if (uiState.archivedWallets.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "Archived",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                        )
+                    }
+                    items(uiState.archivedWallets) { walletWithBalance ->
+                        WalletItem(
+                            item = walletWithBalance,
+                            onClick = { onNavigateToWallet(walletWithBalance.wallet.id) }
+                        )
+                    }
                 }
             }
         }

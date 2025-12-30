@@ -141,6 +141,27 @@ interface MoneyDao {
     
     @Query("SELECT * FROM transactions WHERE walletId = :walletId ORDER BY date DESC")
     fun getTransactionsForWallet(walletId: String): Flow<List<TransactionEntity>>
+
+    @Query("SELECT * FROM transactions WHERE isDeleted = 0 ORDER BY date DESC")
+    fun getAllTransactions(): Flow<List<TransactionEntity>>
+
+    @Query("""
+        SELECT COALESCE(SUM(
+            CASE 
+                WHEN t.direction = 1 THEN t.money 
+                WHEN t.direction = 0 THEN -t.money 
+                ELSE 0 
+            END
+        ), 0)
+        FROM transactions t
+        INNER JOIN wallets w ON t.walletId = w.id
+        WHERE t.isDeleted = 0 
+          AND t.confirmed = 1 
+          AND t.countInTotal = 1
+          AND w.countInTotal = 1
+          AND w.isDeleted = 0
+    """)
+    fun getTotalBalance(): Flow<Long>
     
     @Query("DELETE FROM wallets")
     suspend fun clearWallets()
