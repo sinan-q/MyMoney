@@ -58,7 +58,10 @@ import androidx.room.PrimaryKey
         Index("eventId"),
         Index("debtId"),
         Index("savingId"),
-        Index("recurrenceId")
+        Index("recurrenceId"),
+        // Optimization Indices
+        Index(value = ["walletId", "confirmed", "countInTotal", "isDeleted", "direction", "money"], name = "index_wallet_balance"),
+        Index(value = ["isDeleted", "date"], name = "index_all_transactions_sorted")
     ]
 )
 data class TransactionEntity(

@@ -4,23 +4,31 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.dao.MoneyDao
+import com.sinxn.mymoney.core.data.local.entity.WalletEntity
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
+import com.sinxn.mymoney.core.data.preferences.FormattingSettings
+import com.sinxn.mymoney.core.data.preferences.SettingsRepository
+import com.sinxn.mymoney.core.util.Constants
+import com.sinxn.mymoney.core.util.DateUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.Calendar
 import javax.inject.Inject
 
 @HiltViewModel
 class WalletDetailsViewModel @Inject constructor(
     private val moneyDao: MoneyDao,
-    private val settingsRepository: com.sinxn.mymoney.core.data.preferences.SettingsRepository,
+    private val settingsRepository: SettingsRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -39,11 +47,11 @@ class WalletDetailsViewModel @Inject constructor(
     
     // ... rest of the code
 
-    val wallet: Flow<WalletWithBalance?> = if (walletId == com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID) {
+    val wallet: Flow<WalletWithBalance?> = if (walletId == Constants.TOTAL_WALLET_ID) {
         moneyDao.getTotalBalance().map { balance ->
             WalletWithBalance(
-                wallet = com.sinxn.mymoney.core.data.local.entity.WalletEntity(
-                    id = com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID,
+                wallet = WalletEntity(
+                    id = Constants.TOTAL_WALLET_ID,
                     name = "Total",
                     icon = "sigma",
                     currency = "USD", // Better default?
@@ -74,13 +82,13 @@ class WalletDetailsViewModel @Inject constructor(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = com.sinxn.mymoney.core.data.preferences.FormattingSettings()
+            initialValue = FormattingSettings()
         )
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val transactions: StateFlow<List<TransactionListItem>> = flowOf(walletId)
         .flatMapLatest { id ->
-            val transactionsFlow = if (id == com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID) {
+            val transactionsFlow = if (id == Constants.TOTAL_WALLET_ID) {
                 moneyDao.getAllTransactions()
             } else {
                 moneyDao.getTransactionsForWallet(id)
@@ -90,19 +98,19 @@ class WalletDetailsViewModel @Inject constructor(
                 .map { list ->
                     // Pre-parse dates to avoid repeated parsing during sort and group
                     val validTransactions = list.map {
-                        it to com.sinxn.mymoney.core.util.DateUtils.parseDate(it.date)
+                        it to DateUtils.parseDate(it.date)
                     }
 
                     val grouped = validTransactions
                         .sortedByDescending { it.second }
                         .groupBy { (_, date) ->
-                            val cal = java.util.Calendar.getInstance()
+                            val cal = Calendar.getInstance()
                             cal.time = date
-                            cal.set(java.util.Calendar.DAY_OF_MONTH, 1)
-                            cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
-                            cal.set(java.util.Calendar.MINUTE, 0)
-                            cal.set(java.util.Calendar.SECOND, 0)
-                            cal.set(java.util.Calendar.MILLISECOND, 0)
+                            cal.set(Calendar.DAY_OF_MONTH, 1)
+                            cal.set(Calendar.HOUR_OF_DAY, 0)
+                            cal.set(Calendar.MINUTE, 0)
+                            cal.set(Calendar.SECOND, 0)
+                            cal.set(Calendar.MILLISECOND, 0)
                             cal.time
                         }
 
@@ -125,6 +133,7 @@ class WalletDetailsViewModel @Inject constructor(
                     }
                     result
                 }
+                .flowOn(Dispatchers.Default)
         }
         .stateIn(
             scope = viewModelScope,

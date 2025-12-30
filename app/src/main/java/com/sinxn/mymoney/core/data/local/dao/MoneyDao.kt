@@ -163,6 +163,9 @@ interface MoneyDao {
     """)
     fun getTotalBalance(): Flow<Long>
     
+    @Query("SELECT * FROM wallets WHERE id = :id")
+    suspend fun getWalletById(id: String): WalletEntity?
+    
     @Query("DELETE FROM wallets")
     suspend fun clearWallets()
     

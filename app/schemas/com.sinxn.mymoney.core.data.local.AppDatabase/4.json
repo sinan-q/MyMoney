@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 4,
-    "identityHash": "366aa2396533f7c6579d77abb604ab85",
+    "identityHash": "9962723879281a052101ba63080c12aa",
     "entities": [
       {
         "tableName": "wallets",
@@ -359,6 +359,30 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_recurrenceId` ON `${TABLE_NAME}` (`recurrenceId`)"
+          },
+          {
+            "name": "index_wallet_balance",
+            "unique": false,
+            "columnNames": [
+              "walletId",
+              "confirmed",
+              "countInTotal",
+              "isDeleted",
+              "direction",
+              "money"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_wallet_balance` ON `${TABLE_NAME}` (`walletId`, `confirmed`, `countInTotal`, `isDeleted`, `direction`, `money`)"
+          },
+          {
+            "name": "index_all_transactions_sorted",
+            "unique": false,
+            "columnNames": [
+              "isDeleted",
+              "date"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_all_transactions_sorted` ON `${TABLE_NAME}` (`isDeleted`, `date`)"
           }
         ],
         "foreignKeys": [
@@ -2668,7 +2692,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '366aa2396533f7c6579d77abb604ab85')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9962723879281a052101ba63080c12aa')"
     ]
   }
 }
