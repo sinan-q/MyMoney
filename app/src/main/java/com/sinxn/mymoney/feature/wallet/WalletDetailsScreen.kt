@@ -46,6 +46,13 @@ fun WalletDetailsScreen(
     val wallet by viewModel.wallet.collectAsState(initial = null)
     val transactions by viewModel.transactions.collectAsState(initial = emptyList())
     val settings by viewModel.formattingSettings.collectAsState()
+    
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val showTopBarTitle by remember {
+        androidx.compose.runtime.derivedStateOf {
+            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 300
+        }
+    }
 
     // Map Settings to Formatter Config
     val formatterConfig = MoneyFormatter.Config(
@@ -58,7 +65,15 @@ fun WalletDetailsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = wallet?.wallet?.name ?: "Wallet Details") },
+                title = { 
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = showTopBarTitle,
+                        enter = androidx.compose.animation.fadeIn(),
+                        exit = androidx.compose.animation.fadeOut()
+                    ) {
+                        Text(text = wallet?.wallet?.name ?: "Wallet Details") 
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
                         Icon(
@@ -68,30 +83,25 @@ fun WalletDetailsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = if (showTopBarTitle) MaterialTheme.colorScheme.surface else Color.Transparent,
+                    navigationIconContentColor = if (showTopBarTitle) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .padding(paddingValues)
-                .fillMaxSize()
-        ) {
-            // Wallet Summary Header
-            wallet?.let { walletData ->
-                WalletHeader(walletData, formatterConfig)
-            }
-
-            // Transactions List
-            wallet?.let { walletData ->
+        Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+            if (wallet == null) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            } else {
                 TransactionList(
+                    wallet = wallet!!,
                     items = transactions,
-                    decimals = walletData.decimals,
-                    currencyCode = walletData.wallet.currency,
+                    decimals = wallet!!.decimals,
+                    currencyCode = wallet!!.wallet.currency,
                     formatterConfig = formatterConfig,
-                    dateFormat = settings.dateFormat
+                    dateFormat = settings.dateFormat,
+                    listState = listState
                 )
             }
         }
@@ -219,108 +229,120 @@ fun WalletHeader(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TransactionList(
+    wallet: WalletWithBalance,
     items: List<TransactionListItem>,
     decimals: Int,
     currencyCode: String,
     formatterConfig: MoneyFormatter.Config,
-    dateFormat: Int
+    dateFormat: Int,
+    listState: androidx.compose.foundation.lazy.LazyListState
 ) {
-    if (items.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(text = "No transactions found", style = MaterialTheme.typography.bodyLarge)
+    // State to track collapsed keys (using formatted date string as key)
+    var collapsedGroups by remember { mutableStateOf(setOf<String>()) }
+    
+    LazyColumn(
+        state = listState,
+        contentPadding = PaddingValues(bottom = 16.dp),
+    ) {
+        item {
+            WalletHeader(wallet, formatterConfig)
         }
-    } else {
-        // State to track collapsed keys (using formatted date string as key)
-        var collapsedGroups by remember { mutableStateOf(setOf<String>()) }
         
-        LazyColumn(
-            contentPadding = PaddingValues(bottom = 16.dp),
-        ) {
-            
-            var currentHeader: TransactionListItem.Header? = null
-            // We group items under the Month Header. The list can contain DateHeader or Transaction.
-            val customGrouped = mutableListOf<Pair<TransactionListItem.Header, MutableList<TransactionListItem>>>()
-            
-            items.forEach { item ->
-                when (item) {
-                    is TransactionListItem.Header -> {
-                        currentHeader = item
-                        customGrouped.add(item to mutableListOf())
+        if (items.isEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillParentMaxWidth()
+                        .padding(top = 100.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "No transactions found", style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+        }
+        var currentHeader: TransactionListItem.Header? = null
+        // We group items under the Month Header. The list can contain DateHeader or Transaction.
+        val customGrouped = mutableListOf<Pair<TransactionListItem.Header, MutableList<TransactionListItem>>>()
+
+        items.forEach { item ->
+            when (item) {
+                is TransactionListItem.Header -> {
+                    currentHeader = item
+                    customGrouped.add(item to mutableListOf())
+                }
+                is TransactionListItem.DateHeader -> {
+                     currentHeader?.let {
+                         customGrouped.lastOrNull()?.second?.add(item)
                     }
-                    is TransactionListItem.DateHeader -> {
-                         currentHeader?.let { 
-                             customGrouped.lastOrNull()?.second?.add(item)
-                        }
-                    }
-                    is TransactionListItem.Transaction -> {
-                        currentHeader?.let { 
-                             customGrouped.lastOrNull()?.second?.add(item)
-                        }
+                }
+                is TransactionListItem.Transaction -> {
+                    currentHeader?.let {
+                         customGrouped.lastOrNull()?.second?.add(item)
                     }
                 }
             }
-            
-            customGrouped.forEach { (header, groupItems) ->
-                val headerKey = com.sinxn.mymoney.core.util.DateUtils.formatMonthHeader(header.date)
-                val isCollapsed = collapsedGroups.contains(headerKey)
-                
-                stickyHeader(key = headerKey) {
-                    TransactionHeader(
-                        header = header,
-                        decimals = decimals,
-                        currencyCode = currencyCode,
-                        formatterConfig = formatterConfig,
-                        isCollapsed = isCollapsed,
-                        onToggle = {
-                            collapsedGroups = if (isCollapsed) {
-                                collapsedGroups - headerKey
-                            } else {
-                                collapsedGroups + headerKey
-                            }
+        }
+
+        customGrouped.forEach { (header, groupItems) ->
+            val headerKey = com.sinxn.mymoney.core.util.DateUtils.formatMonthHeader(header.date)
+            val isCollapsed = collapsedGroups.contains(headerKey)
+
+            stickyHeader(key = headerKey) {
+                TransactionHeader(
+                    header = header,
+                    decimals = decimals,
+                    currencyCode = currencyCode,
+                    formatterConfig = formatterConfig,
+                    isCollapsed = isCollapsed,
+                    onToggle = {
+                        collapsedGroups = if (isCollapsed) {
+                            collapsedGroups - headerKey
+                        } else {
+                            collapsedGroups + headerKey
                         }
-                    )
-                }
-                
-                if (!isCollapsed) {
-                    itemsIndexed(
-                        items = groupItems,
-                        // Use ID for transactions, Use date hash for DateHeader
-                        key = { _, item -> 
-                            when(item) {
-                                is TransactionListItem.Transaction -> item.transaction.transaction.id
-                                is TransactionListItem.DateHeader -> "DH_${item.date.time}"
-                                else -> "Unknown"
-                            }
-                        }
-                    ) { index, item ->
-                        
-                         // Determine if this is the last item visually in this group
-                         // Only Transactions can be the "Last Item" that stops the line.
-                         // DateHeader always has content below it (Transactions).
-                         val isLastItem = index == groupItems.lastIndex
-                         
-                         Box(
-                             modifier = Modifier.animateItem() 
-                         ) {
-                             when (item) {
-                                 is TransactionListItem.DateHeader -> {
-                                     DateHeaderItem(item, dateFormat)
-                                 }
-                                 is TransactionListItem.Transaction -> {
-                                     TransactionItem(
-                                         item = item.transaction,
-                                         decimals = decimals,
-                                         currencyCode = currencyCode,
-                                         formatterConfig = formatterConfig,
-                                         dateFormat = dateFormat,
-                                         isLastItem = isLastItem,
-                                         showDate = false // Date is now in header
-                                     )
-                                 }
-                                 else -> {}
-                             }
-                         }
                     }
+                )
+            }
+
+            if (!isCollapsed) {
+                itemsIndexed(
+                    items = groupItems,
+                    // Use ID for transactions, Use date hash for DateHeader
+                    key = { _, item ->
+                        when(item) {
+                            is TransactionListItem.Transaction -> item.transaction.transaction.id
+                            is TransactionListItem.DateHeader -> "DH_${item.date.time}"
+                            else -> "Unknown"
+                        }
+                    }
+                ) { index, item ->
+
+                     // Determine if this is the last item visually in this group
+                     // Only Transactions can be the "Last Item" that stops the line.
+                     // DateHeader always has content below it (Transactions).
+                     val isLastItem = index == groupItems.lastIndex
+
+                     Box(
+                         modifier = Modifier.animateItem()
+                     ) {
+                         when (item) {
+                             is TransactionListItem.DateHeader -> {
+                                 DateHeaderItem(item, dateFormat)
+                             }
+                             is TransactionListItem.Transaction -> {
+                                 TransactionItem(
+                                     item = item.transaction,
+                                     decimals = decimals,
+                                     currencyCode = currencyCode,
+                                     formatterConfig = formatterConfig,
+                                     dateFormat = dateFormat,
+                                     isLastItem = isLastItem,
+                                     showDate = false // Date is now in header
+                                 )
+                             }
+                             else -> {}
+                         }
+                     }
                 }
             }
         }
