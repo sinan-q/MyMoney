@@ -153,13 +153,19 @@ fun TransactionList(
         ) {
             
             var currentHeader: TransactionListItem.Header? = null
-            val customGrouped = mutableListOf<Pair<TransactionListItem.Header, MutableList<TransactionListItem.Transaction>>>()
+            // We group items under the Month Header. The list can contain DateHeader or Transaction.
+            val customGrouped = mutableListOf<Pair<TransactionListItem.Header, MutableList<TransactionListItem>>>()
             
             items.forEach { item ->
                 when (item) {
                     is TransactionListItem.Header -> {
                         currentHeader = item
                         customGrouped.add(item to mutableListOf())
+                    }
+                    is TransactionListItem.DateHeader -> {
+                         currentHeader?.let { 
+                             customGrouped.lastOrNull()?.second?.add(item)
+                        }
                     }
                     is TransactionListItem.Transaction -> {
                         currentHeader?.let { 
@@ -169,7 +175,7 @@ fun TransactionList(
                 }
             }
             
-            customGrouped.forEach { (header, transactions) ->
+            customGrouped.forEach { (header, groupItems) ->
                 val headerKey = com.sinxn.mymoney.core.util.DateUtils.formatMonthHeader(header.date)
                 val isCollapsed = collapsedGroups.contains(headerKey)
                 
@@ -192,25 +198,42 @@ fun TransactionList(
                 
                 if (!isCollapsed) {
                     itemsIndexed(
-                        items = transactions,
-                        key = { _, it -> it.transaction.transaction.id }
-                    ) { index, transactionItem ->
-                         val isLastItem = index == transactions.lastIndex
+                        items = groupItems,
+                        // Use ID for transactions, Use date hash for DateHeader
+                        key = { _, item -> 
+                            when(item) {
+                                is TransactionListItem.Transaction -> item.transaction.transaction.id
+                                is TransactionListItem.DateHeader -> "DH_${item.date.time}"
+                                else -> "Unknown"
+                            }
+                        }
+                    ) { index, item ->
+                        
+                         // Determine if this is the last item visually in this group
+                         // Only Transactions can be the "Last Item" that stops the line.
+                         // DateHeader always has content below it (Transactions).
+                         val isLastItem = index == groupItems.lastIndex
+                         
                          Box(
-                             modifier = Modifier
-                                 // Removed padding(horizontal) to allow timeline to flush left
-                                 // Added padding(end = 16.dp) via the inner card/row logic instead?
-                                 // Let's keep minimal padding here.
-                                 .animateItem() 
+                             modifier = Modifier.animateItem() 
                          ) {
-                             TransactionItem(
-                                 item = transactionItem.transaction,
-                                 decimals = decimals,
-                                 currencyCode = currencyCode,
-                                 formatterConfig = formatterConfig,
-                                 dateFormat = dateFormat,
-                                 isLastItem = isLastItem
-                             )
+                             when (item) {
+                                 is TransactionListItem.DateHeader -> {
+                                     DateHeaderItem(item, dateFormat)
+                                 }
+                                 is TransactionListItem.Transaction -> {
+                                     TransactionItem(
+                                         item = item.transaction,
+                                         decimals = decimals,
+                                         currencyCode = currencyCode,
+                                         formatterConfig = formatterConfig,
+                                         dateFormat = dateFormat,
+                                         isLastItem = isLastItem,
+                                         showDate = false // Date is now in header
+                                     )
+                                 }
+                                 else -> {}
+                             }
                          }
                     }
                 }
@@ -312,13 +335,53 @@ fun TransactionHeader(
 }
 
 @Composable
+fun DateHeaderItem(
+    item: TransactionListItem.DateHeader,
+    dateFormat: Int
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min)
+    ) {
+        // Timeline Column
+        Box(
+            modifier = Modifier
+                .width(56.dp)
+                .fillMaxHeight(),
+            contentAlignment = Alignment.Center
+        ) {
+            // Continuous Vertical Line
+            Box(
+                modifier = Modifier
+                    .width(2.dp)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            )
+        }
+        
+        // Date Text
+        Text(
+            text = com.sinxn.mymoney.core.util.DateUtils.formatDate(item.date, dateFormat),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary, // Highlight color
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .padding(vertical = 12.dp)
+                .padding(end = 16.dp)
+        )
+    }
+}
+
+@Composable
 fun TransactionItem(
     item: com.sinxn.mymoney.core.data.local.model.TransactionWithCategory,
     decimals: Int,
     currencyCode: String,
     formatterConfig: MoneyFormatter.Config,
     dateFormat: Int,
-    isLastItem: Boolean
+    isLastItem: Boolean,
+    showDate: Boolean = true
 ) {
     val transaction = item.transaction
     
@@ -424,14 +487,16 @@ fun TransactionItem(
                         fontWeight = FontWeight.Bold
                     )
                     
-                    val dateObj = com.sinxn.mymoney.core.util.DateUtils.parseDate(transaction.date)
-                    val formattedDate = com.sinxn.mymoney.core.util.DateUtils.formatDate(dateObj, dateFormat)
-                    
-                    Text(
-                        text = formattedDate,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
+                    if (showDate) {
+                        val dateObj = com.sinxn.mymoney.core.util.DateUtils.parseDate(transaction.date)
+                        val formattedDate = com.sinxn.mymoney.core.util.DateUtils.formatDate(dateObj, dateFormat)
+                        
+                        Text(
+                            text = formattedDate,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
                 }
             }
         }

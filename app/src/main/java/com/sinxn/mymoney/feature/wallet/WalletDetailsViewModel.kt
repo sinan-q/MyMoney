@@ -110,14 +110,13 @@ class WalletDetailsViewModel @Inject constructor(
                 val result = ArrayList<TransactionListItem>(list.size + grouped.size) // Pre-allocate
 
                 grouped.forEach { (monthDate, transactionsInGroup) ->
-                    // Calculate total efficiently
+                    // Calculate Month Totals
                     var total = 0L
                     var income = 0L
                     var expense = 0L
-                    val transactionItems = ArrayList<TransactionListItem.Transaction>(transactionsInGroup.size)
-
-                    for ((t, _) in transactionsInGroup) {
-                        if (t.transaction.countInTotal && t.transaction.confirmed) {
+                    
+                    transactionsInGroup.forEach { (t, _) ->
+                         if (t.transaction.countInTotal && t.transaction.confirmed) {
                             if (t.transaction.direction == 1) {
                                 total += t.transaction.money
                                 income += t.transaction.money
@@ -126,11 +125,35 @@ class WalletDetailsViewModel @Inject constructor(
                                 expense += t.transaction.money
                             }
                         }
-                        transactionItems.add(TransactionListItem.Transaction(t))
                     }
 
                     result.add(TransactionListItem.Header(monthDate, total, income, expense))
-                    result.addAll(transactionItems)
+                    
+                    // Group by Day within the month
+                     val dayGrouped = transactionsInGroup.groupBy { (_, date) ->
+                        val cal = Calendar.getInstance()
+                        cal.time = date
+                        cal.set(Calendar.HOUR_OF_DAY, 0)
+                        cal.set(Calendar.MINUTE, 0)
+                        cal.set(Calendar.SECOND, 0)
+                        cal.set(Calendar.MILLISECOND, 0)
+                        cal.time
+                    }
+                    
+                    dayGrouped.forEach { (dayDate, transactionsInDay) ->
+                        // Calculate Daily Total
+                         var dailyTotal = 0L
+                         transactionsInDay.forEach { (t, _) ->
+                             val amount = if(t.transaction.direction == 1) t.transaction.money else -t.transaction.money
+                             dailyTotal += amount
+                         }
+
+                        result.add(TransactionListItem.DateHeader(dayDate, dailyTotal))
+                        
+                        transactionsInDay.forEach { (t, _) ->
+                             result.add(TransactionListItem.Transaction(t))
+                        }
+                    }
                 }
                 result
             }

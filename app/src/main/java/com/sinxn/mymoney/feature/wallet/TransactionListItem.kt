@@ -11,6 +11,11 @@ sealed class TransactionListItem {
         val expense: Long
     ) : TransactionListItem()
 
+    data class DateHeader(
+        val date: Date,
+        val totalAmount: Long
+    ) : TransactionListItem()
+
     data class Transaction(
         val transaction: com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
     ) : TransactionListItem()
