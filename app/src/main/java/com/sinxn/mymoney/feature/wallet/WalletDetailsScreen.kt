@@ -80,7 +80,8 @@ fun WalletDetailsScreen(
                     items = transactions,
                     decimals = walletData.decimals,
                     currencyCode = walletData.wallet.currency,
-                    formatterConfig = formatterConfig
+                    formatterConfig = formatterConfig,
+                    dateFormat = settings.dateFormat
                 )
             }
         }
@@ -134,7 +135,8 @@ fun TransactionList(
     items: List<TransactionListItem>,
     decimals: Int,
     currencyCode: String,
-    formatterConfig: MoneyFormatter.Config
+    formatterConfig: MoneyFormatter.Config,
+    dateFormat: Int
 ) {
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -196,7 +198,7 @@ fun TransactionList(
                                  .padding(horizontal = 16.dp, vertical = 4.dp)
                                  .animateItem()
                          ) {
-                             TransactionItem(transactionItem.transaction, decimals, currencyCode, formatterConfig)
+                             TransactionItem(transactionItem.transaction, decimals, currencyCode, formatterConfig, dateFormat)
                          }
                     }
                 }
@@ -302,7 +304,8 @@ fun TransactionItem(
     item: com.sinxn.mymoney.core.data.local.model.TransactionWithCategory,
     decimals: Int,
     currencyCode: String,
-    formatterConfig: MoneyFormatter.Config
+    formatterConfig: MoneyFormatter.Config,
+    dateFormat: Int
 ) {
     val transaction = item.transaction
     
@@ -372,8 +375,11 @@ fun TransactionItem(
                     fontWeight = FontWeight.Bold
                 )
                 
+                val dateObj = com.sinxn.mymoney.core.util.DateUtils.parseDate(transaction.date)
+                val formattedDate = com.sinxn.mymoney.core.util.DateUtils.formatDate(dateObj, dateFormat)
+                
                 Text(
-                    text = transaction.date, // Todo: Use formatted date
+                    text = formattedDate,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.outline
                 )

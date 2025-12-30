@@ -47,13 +47,66 @@ object DateUtils {
         return Date()
     }
 
+    private val DATE_FORMATS = arrayOf(
+        "EEEE dd MMMM yyyy",
+        "EEEE dd MMM yyyy",
+        "EEE dd MMM yyyy",
+        "dd MMM yyyy",
+        "EEE dd/MM/yyyy",
+        "dd/MM/yyyy",
+        "yyyy/MM/dd",
+        "MM/dd/yyyy",
+        "EEE MM/dd/yyyy"
+    )
+
+    fun formatDate(date: Date, index: Int): String {
+        val safeIndex = if (index in DATE_FORMATS.indices) index else 2 // Default to medium
+        return SimpleDateFormat(DATE_FORMATS[safeIndex], Locale.getDefault()).format(date)
+    }
+
+    /**
+     * Determines the start of the budget month for a given transaction date.
+     * E.g. Date=Jan 1, StartDay=15 -> BudgetMonth=Dec 15 (Prev Year)
+     * Date=Jan 15, StartDay=15 -> BudgetMonth=Jan 15
+     */
+    fun getStartOfBudgetMonth(date: Date, firstDayOfMonth: Int): Date {
+        val cal = Calendar.getInstance()
+        cal.time = date
+        
+        val currentDay = cal.get(Calendar.DAY_OF_MONTH)
+        
+        // Reset time
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+
+        // If current day is before the start day, it belongs to previous month's cycle
+        if (currentDay < firstDayOfMonth) {
+             cal.add(Calendar.MONTH, -1)
+        }
+        
+        // Ensure day is valid (e.g. Feb 30 -> Feb 28)
+        val maxDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
+        val targetDay = if (firstDayOfMonth > maxDay) maxDay else firstDayOfMonth
+        
+        cal.set(Calendar.DAY_OF_MONTH, targetDay)
+        
+        return cal.time
+    }
+
     fun formatMonthHeader(date: Date): String {
+        // ... (Existing logic can remain or be updated to show range if desired, e.g. "Dec 15 - Jan 14")
+        // For now keep simple MMMM yyyy, but maybe based on the budget start date?
+        // Standard behavior: Just show the month name of the *Start Date*.
         val calendar = Calendar.getInstance()
         calendar.time = date
         val year = calendar.get(Calendar.YEAR)
         
         val currentYear = Calendar.getInstance().get(Calendar.YEAR)
         
+        // If it's a budget cycle, user might prefer range. But legacy just shows Month. 
+        // We will stick to Month of the start date.
         val pattern = if (year == currentYear) {
             "MMMM"
         } else {

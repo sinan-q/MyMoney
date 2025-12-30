@@ -86,63 +86,56 @@ class WalletDetailsViewModel @Inject constructor(
         )
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val transactions: StateFlow<List<TransactionListItem>> = flowOf(walletId)
-        .flatMapLatest { id ->
-            val transactionsFlow = if (id == Constants.TOTAL_WALLET_ID) {
+    val transactions: StateFlow<List<TransactionListItem>> = formattingSettings
+        .flatMapLatest { settings ->
+            val transactionsFlow = if (walletId == Constants.TOTAL_WALLET_ID) {
                 moneyDao.getAllTransactions()
             } else {
-                moneyDao.getTransactionsForWallet(id)
+                moneyDao.getTransactionsForWallet(walletId)
             }
             
-            transactionsFlow
-                .map { list ->
-                    // Pre-parse dates to avoid repeated parsing during sort and group
-                    val validTransactions = list.map {
-                        it to DateUtils.parseDate(it.transaction.date)
-                    }
-
-                    val grouped = validTransactions
-                        .sortedByDescending { it.second }
-                        .groupBy { (_, date) ->
-                            val cal = Calendar.getInstance()
-                            cal.time = date
-                            cal.set(Calendar.DAY_OF_MONTH, 1)
-                            cal.set(Calendar.HOUR_OF_DAY, 0)
-                            cal.set(Calendar.MINUTE, 0)
-                            cal.set(Calendar.SECOND, 0)
-                            cal.set(Calendar.MILLISECOND, 0)
-                            cal.time
-                        }
-
-                    val result = ArrayList<TransactionListItem>(list.size + grouped.size) // Pre-allocate
-
-                    grouped.forEach { (monthDate, transactionsInGroup) ->
-                        // Calculate total efficiently
-                        var total = 0L
-                        var income = 0L
-                        var expense = 0L
-                        val transactionItems = ArrayList<TransactionListItem.Transaction>(transactionsInGroup.size)
-
-                        for ((t, _) in transactionsInGroup) {
-                            if (t.transaction.countInTotal && t.transaction.confirmed) {
-                                if (t.transaction.direction == 1) {
-                                    total += t.transaction.money
-                                    income += t.transaction.money
-                                } else {
-                                    total -= t.transaction.money
-                                    expense += t.transaction.money
-                                }
-                            }
-                            transactionItems.add(TransactionListItem.Transaction(t))
-                        }
-
-                        result.add(TransactionListItem.Header(monthDate, total, income, expense))
-                        result.addAll(transactionItems)
-                    }
-                    result
+            transactionsFlow.map { list ->
+                // Pre-parse dates to avoid repeated parsing during sort and group
+                val validTransactions = list.map {
+                    it to DateUtils.parseDate(it.transaction.date)
                 }
-                .flowOn(Dispatchers.Default)
+
+                val grouped = validTransactions
+                    .sortedByDescending { it.second }
+                    .groupBy { (_, date) ->
+                        // Use firstDayOfMonth from settings
+                        DateUtils.getStartOfBudgetMonth(date, settings.firstDayOfMonth)
+                    }
+
+                val result = ArrayList<TransactionListItem>(list.size + grouped.size) // Pre-allocate
+
+                grouped.forEach { (monthDate, transactionsInGroup) ->
+                    // Calculate total efficiently
+                    var total = 0L
+                    var income = 0L
+                    var expense = 0L
+                    val transactionItems = ArrayList<TransactionListItem.Transaction>(transactionsInGroup.size)
+
+                    for ((t, _) in transactionsInGroup) {
+                        if (t.transaction.countInTotal && t.transaction.confirmed) {
+                            if (t.transaction.direction == 1) {
+                                total += t.transaction.money
+                                income += t.transaction.money
+                            } else {
+                                total -= t.transaction.money
+                                expense += t.transaction.money
+                            }
+                        }
+                        transactionItems.add(TransactionListItem.Transaction(t))
+                    }
+
+                    result.add(TransactionListItem.Header(monthDate, total, income, expense))
+                    result.addAll(transactionItems)
+                }
+                result
+            }
         }
+        .flowOn(Dispatchers.Default)
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),

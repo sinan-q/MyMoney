@@ -22,7 +22,9 @@ data class FormattingSettings(
     val groupDigits: Boolean = true,
     val roundDecimals: Boolean = false,
     val showPlusMinus: Boolean = false,
-    val dateFormat: Int = 2 // Default to medium date format
+    val dateFormat: Int = 2,
+    val firstDayOfWeek: Int = java.util.Calendar.getInstance().firstDayOfWeek, // Default to system locale
+    val firstDayOfMonth: Int = 1
 )
 
 @Singleton
@@ -39,6 +41,8 @@ class SettingsRepository @Inject constructor(
         val ROUND_DECIMALS = booleanPreferencesKey("round_decimals")
         val SHOW_PLUS_MINUS = booleanPreferencesKey("show_plus_minus_symbol")
         val DATE_FORMAT = intPreferencesKey("date_format")
+        val FIRST_DAY_OF_WEEK = intPreferencesKey("first_day_of_week")
+        val FIRST_DAY_OF_MONTH = intPreferencesKey("first_day_of_month")
     }
 
     val currentWalletId: Flow<String> = dataStore.data
@@ -53,7 +57,9 @@ class SettingsRepository @Inject constructor(
                 groupDigits = preferences[GROUP_DIGITS] ?: true,
                 roundDecimals = preferences[ROUND_DECIMALS] ?: false,
                 showPlusMinus = preferences[SHOW_PLUS_MINUS] ?: false,
-                dateFormat = preferences[DATE_FORMAT] ?: 2
+                dateFormat = preferences[DATE_FORMAT] ?: 2,
+                firstDayOfWeek = preferences[FIRST_DAY_OF_WEEK] ?: java.util.Calendar.getInstance().firstDayOfWeek,
+                firstDayOfMonth = preferences[FIRST_DAY_OF_MONTH] ?: 1
             )
         }
 
@@ -90,6 +96,18 @@ class SettingsRepository @Inject constructor(
     suspend fun setDateFormat(format: Int) {
         dataStore.edit { preferences ->
             preferences[DATE_FORMAT] = format
+        }
+    }
+
+    suspend fun setFirstDayOfWeek(day: Int) {
+        dataStore.edit { preferences ->
+            preferences[FIRST_DAY_OF_WEEK] = day
+        }
+    }
+
+    suspend fun setFirstDayOfMonth(day: Int) {
+        dataStore.edit { preferences ->
+            preferences[FIRST_DAY_OF_MONTH] = day
         }
     }
 }
