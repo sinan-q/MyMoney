@@ -112,6 +112,11 @@ class BackupImporter @Inject constructor(
             return com.sinxn.mymoney.core.data.importBackup.model.EntityStats(total, soft, zombies, invalid)
         }
 
+        // Log Category Icons as requested
+        root.categories?.forEach {
+            android.util.Log.d("BackupAnalysis", "Category: ${it.name}, Icon: ${it.icon}")
+        }
+
         val wallets = calcStats(root.wallets, { it.deleted == true })
         val categories = calcStats(root.categories, { it.deleted == true }) // Parent check could be zombie check? Skipping for simplicity
         val places = calcStats(root.places, { it.deleted == true })

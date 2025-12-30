@@ -98,7 +98,7 @@ class WalletDetailsViewModel @Inject constructor(
                 .map { list ->
                     // Pre-parse dates to avoid repeated parsing during sort and group
                     val validTransactions = list.map {
-                        it to DateUtils.parseDate(it.date)
+                        it to DateUtils.parseDate(it.transaction.date)
                     }
 
                     val grouped = validTransactions
@@ -122,8 +122,8 @@ class WalletDetailsViewModel @Inject constructor(
                         val transactionItems = ArrayList<TransactionListItem.Transaction>(transactionsInGroup.size)
 
                         for ((t, _) in transactionsInGroup) {
-                            if (t.countInTotal && t.confirmed) {
-                                if (t.direction == 1) total += t.money else total -= t.money
+                            if (t.transaction.countInTotal && t.transaction.confirmed) {
+                                if (t.transaction.direction == 1) total += t.transaction.money else total -= t.transaction.money
                             }
                             transactionItems.add(TransactionListItem.Transaction(t))
                         }

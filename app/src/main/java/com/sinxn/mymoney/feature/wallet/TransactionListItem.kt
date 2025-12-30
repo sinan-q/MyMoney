@@ -10,6 +10,6 @@ sealed class TransactionListItem {
     ) : TransactionListItem()
 
     data class Transaction(
-        val transaction: TransactionEntity
+        val transaction: com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
     ) : TransactionListItem()
 }

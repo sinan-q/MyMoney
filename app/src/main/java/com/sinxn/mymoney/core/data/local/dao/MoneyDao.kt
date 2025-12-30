@@ -139,11 +139,25 @@ interface MoneyDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTransactions(transactions: List<TransactionEntity>)
     
-    @Query("SELECT * FROM transactions WHERE walletId = :walletId ORDER BY date DESC")
-    fun getTransactionsForWallet(walletId: String): Flow<List<TransactionEntity>>
+    @androidx.room.Transaction
+    @Query("""
+        SELECT t.*, c.name as categoryName, c.icon as categoryIcon
+        FROM transactions t
+        LEFT JOIN categories c ON t.categoryId = c.id
+        WHERE t.walletId = :walletId 
+        ORDER BY t.date DESC
+    """)
+    fun getTransactionsForWallet(walletId: String): Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory>>
 
-    @Query("SELECT * FROM transactions WHERE isDeleted = 0 ORDER BY date DESC")
-    fun getAllTransactions(): Flow<List<TransactionEntity>>
+    @androidx.room.Transaction
+    @Query("""
+        SELECT t.*, c.name as categoryName, c.icon as categoryIcon
+        FROM transactions t
+        LEFT JOIN categories c ON t.categoryId = c.id
+        WHERE t.isDeleted = 0 
+        ORDER BY t.date DESC
+    """)
+    fun getAllTransactions(): Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory>>
 
     @Query("""
         SELECT COALESCE(SUM(

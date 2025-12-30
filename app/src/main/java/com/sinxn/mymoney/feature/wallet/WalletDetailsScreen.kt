@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -213,52 +214,153 @@ fun TransactionHeader(
 
 @Composable
 fun TransactionItem(
-    transaction: TransactionEntity,
+    item: com.sinxn.mymoney.core.data.local.model.TransactionWithCategory,
     decimals: Int,
     currencyCode: String,
     formatterConfig: MoneyFormatter.Config
 ) {
+    val transaction = item.transaction
+    
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(12.dp)
                 .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Icon
+            CategoryIcon(
+                iconString = item.categoryIcon,
+                categoryName = item.categoryName ?: "?",
+                modifier = Modifier.size(40.dp)
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Middle: Category & Description
             Column(modifier = Modifier.weight(1f)) {
+                // Category Name
+                item.categoryName?.let { categoryName ->
+                     Text(
+                        text = categoryName,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                // Description (or "No Description" if empty, but maybe cleaner to show note or type if empty?)
+                val descriptionText = if (!transaction.description.isNullOrEmpty()) {
+                    transaction.description
+                } else {
+                    "Transaction" 
+                }
+                
                 Text(
-                    text = transaction.description ?: "No Description",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = transaction.date, // Note: This could also be formatted nicely now
+                    text = descriptionText,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             
-            val isIncome = transaction.direction == 1
-            val amountColor = if (isIncome) Color(0xFF4CAF50) else Color(0xFFE53935)
-
-            val amount = if (isIncome) transaction.money else -transaction.money
-            val formattedMoney = MoneyFormatter.format(
-                amount = amount, // Send signed amount
-                currencyCode = currencyCode,
-                decimals = decimals,
-                config = formatterConfig
-            )
-            
-            Text(
-                text = formattedMoney,
-                style = MaterialTheme.typography.titleMedium,
-                color = amountColor,
-                fontWeight = FontWeight.Bold
-            )
+            // Right Side: Amount & Date
+            Column(horizontalAlignment = Alignment.End) {
+                val isIncome = transaction.direction == 1
+                val amountColor = if (isIncome) Color(0xFF4CAF50) else Color(0xFFE53935)
+    
+                val amount = if (isIncome) transaction.money else -transaction.money
+                val formattedMoney = MoneyFormatter.format(
+                    amount = amount, // Send signed amount
+                    currencyCode = currencyCode,
+                    decimals = decimals,
+                    config = formatterConfig
+                )
+                
+                Text(
+                    text = formattedMoney,
+                    style = MaterialTheme.typography.bodyLarge, // Slightly larger for emphasis
+                    color = amountColor,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Text(
+                    text = transaction.date, // Todo: Use formatted date
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            }
         }
     }
+}
+
+@Composable
+fun CategoryIcon(
+    iconString: String?,
+    categoryName: String,
+    modifier: Modifier = Modifier
+) {
+    val iconData = remember(iconString, categoryName) {
+        parseIconData(iconString, categoryName)
+    }
+    
+    Box(
+        modifier = modifier
+            .background(iconData.color, androidx.compose.foundation.shape.CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = iconData.text,
+            style = MaterialTheme.typography.titleMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+data class IconData(val color: Color, val text: String)
+
+fun parseIconData(iconString: String?, categoryName: String): IconData {
+    val defaultText = categoryName.firstOrNull()?.toString()?.uppercase() ?: "?"
+    val defaultColor = generateColor(categoryName)
+
+    if (iconString.isNullOrEmpty()) {
+        return IconData(defaultColor, defaultText)
+    }
+
+    try {
+        if (iconString.trim().startsWith("{")) {
+            val json = org.json.JSONObject(iconString)
+            val type = json.optString("type")
+            
+            if (type == "color") {
+                val colorHex = json.optString("color")
+                val name = json.optString("name")
+                
+                val color = if (colorHex.isNotEmpty()) {
+                    try {
+                         Color(android.graphics.Color.parseColor(colorHex))
+                    } catch (e: Exception) { defaultColor }
+                } else defaultColor
+                
+                val text = if (name.isNotEmpty()) name else defaultText
+                return IconData(color, text)
+            }
+            // If "resource" or other JSON type, fallback to default (Letter Avatar)
+        }
+    } catch (e: Exception) {
+        // Not a JSON string or parse error, fallback to default
+    }
+    
+    // If raw string (e.g. "ic_food") or failed JSON, use default logic
+    return IconData(defaultColor, defaultText)
+}
+
+fun generateColor(name: String): Color {
+    val hash = name.hashCode()
+    val hue = kotlin.math.abs(hash % 360).toFloat()
+    return Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, 0.6f, 0.8f)))
 }
