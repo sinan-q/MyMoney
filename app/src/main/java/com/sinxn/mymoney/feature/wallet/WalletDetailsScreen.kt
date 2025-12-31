@@ -1,5 +1,7 @@
 package com.sinxn.mymoney.feature.wallet
 
+import android.graphics.Color.HSVToColor
+import android.graphics.Color.colorToHSV
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,11 +38,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.entity.TransactionEntity
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.util.MoneyFormatter
+import com.sinxn.mymoney.core.ui.components.CategoryIcon
+import com.sinxn.mymoney.core.ui.components.generateColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WalletDetailsScreen(
     onNavigateUp: () -> Unit,
+    onTransactionClick: (String) -> Unit,
     viewModel: WalletDetailsViewModel = hiltViewModel()
 ) {
     val wallet by viewModel.wallet.collectAsState(initial = null)
@@ -101,7 +106,8 @@ fun WalletDetailsScreen(
                     currencyCode = wallet!!.wallet.currency,
                     formatterConfig = formatterConfig,
                     dateFormat = settings.dateFormat,
-                    listState = listState
+                    listState = listState,
+                    onTransactionClick = onTransactionClick
                 )
             }
         }
@@ -116,8 +122,8 @@ fun WalletHeader(
     val baseColor = remember(wallet.wallet.name) { generateColor(wallet.wallet.name) }
     val secondaryColor = remember(baseColor) { 
         // Derive a darker/different hue for gradient
-        Color(android.graphics.Color.HSVToColor(FloatArray(3).apply {
-            android.graphics.Color.colorToHSV(baseColor.toArgb(), this)
+        Color(HSVToColor(FloatArray(3).apply {
+            colorToHSV(baseColor.toArgb(), this)
             this[2] *= 0.7f // Darken
             this[0] = (this[0] + 30) % 360 // Shift hue
         }))
@@ -235,7 +241,8 @@ fun TransactionList(
     currencyCode: String,
     formatterConfig: MoneyFormatter.Config,
     dateFormat: Int,
-    listState: androidx.compose.foundation.lazy.LazyListState
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    onTransactionClick: (String) -> Unit
 ) {
     // State to track collapsed keys (using formatted date string as key)
     var collapsedGroups by remember { mutableStateOf(setOf<String>()) }
@@ -337,7 +344,8 @@ fun TransactionList(
                                      formatterConfig = formatterConfig,
                                      dateFormat = dateFormat,
                                      isLastItem = isLastItem,
-                                     showDate = false // Date is now in header
+                                     showDate = false, // Date is now in header
+                                     onClick = { onTransactionClick(item.transaction.transaction.id) }
                                  )
                              }
                              else -> {}
@@ -488,7 +496,8 @@ fun TransactionItem(
     formatterConfig: MoneyFormatter.Config,
     dateFormat: Int,
     isLastItem: Boolean,
-    showDate: Boolean = true
+    showDate: Boolean = true,
+    onClick: () -> Unit = {}
 ) {
     val transaction = item.transaction
     
@@ -538,7 +547,8 @@ fun TransactionItem(
                 .padding(top = 8.dp, bottom = 8.dp, end = 16.dp)
                 .fillMaxWidth(),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            onClick = onClick
         ) {
             Row(
                 modifier = Modifier
@@ -610,70 +620,3 @@ fun TransactionItem(
     }
 }
 
-@Composable
-fun CategoryIcon(
-    iconString: String?,
-    categoryName: String,
-    modifier: Modifier = Modifier
-) {
-    val iconData = remember(iconString, categoryName) {
-        parseIconData(iconString, categoryName)
-    }
-    
-    Box(
-        modifier = modifier
-            .background(iconData.color, CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = iconData.text,
-            style = MaterialTheme.typography.titleMedium,
-            color = Color.White,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-data class IconData(val color: Color, val text: String)
-
-fun parseIconData(iconString: String?, categoryName: String): IconData {
-    val defaultText = categoryName.firstOrNull()?.toString()?.uppercase() ?: "?"
-    val defaultColor = generateColor(categoryName)
-
-    if (iconString.isNullOrEmpty()) {
-        return IconData(defaultColor, defaultText)
-    }
-
-    try {
-        if (iconString.trim().startsWith("{")) {
-            val json = org.json.JSONObject(iconString)
-            val type = json.optString("type")
-            
-            if (type == "color") {
-                val colorHex = json.optString("color")
-                val name = json.optString("name")
-                
-                val color = if (colorHex.isNotEmpty()) {
-                    try {
-                         Color(android.graphics.Color.parseColor(colorHex))
-                    } catch (e: Exception) { defaultColor }
-                } else defaultColor
-                
-                val text = name.ifEmpty { defaultText }
-                return IconData(color, text)
-            }
-            // If "resource" or other JSON type, fallback to default (Letter Avatar)
-        }
-    } catch (e: Exception) {
-        // Not a JSON string or parse error, fallback to default
-    }
-    
-    // If raw string (e.g. "ic_food") or failed JSON, use default logic
-    return IconData(defaultColor, defaultText)
-}
-
-fun generateColor(name: String): Color {
-    val hash = name.hashCode()
-    val hue = kotlin.math.abs(hash % 360).toFloat()
-    return Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, 0.6f, 0.8f)))
-}

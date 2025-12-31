@@ -65,7 +65,15 @@ class MainActivity : ComponentActivity() {
                                                 popUpTo("wallet_details/{walletId}") { inclusive = true }
                                             }
                                         }
+                                    },
+                                    onTransactionClick = { transactionId ->
+                                        navController.navigate("transaction_details/$transactionId")
                                     }
+                                )
+                            }
+                            composable("transaction_details/{transactionId}") {
+                                com.sinxn.mymoney.feature.transaction.TransactionDetailsScreen(
+                                    onNavigateBack = { navController.navigateUp() }
                                 )
                             }
                         }

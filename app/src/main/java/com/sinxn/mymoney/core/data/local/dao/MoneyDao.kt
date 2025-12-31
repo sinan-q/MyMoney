@@ -47,9 +47,6 @@ interface MoneyDao {
     suspend fun insertBudgetWallets(budgetWallets: List<com.sinxn.mymoney.core.data.local.entity.BudgetWalletEntity>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertTransactionPeople(items: List<com.sinxn.mymoney.core.data.local.entity.TransactionPeopleEntity>)
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTransferPeople(items: List<com.sinxn.mymoney.core.data.local.entity.TransferPeopleEntity>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -76,7 +73,7 @@ interface MoneyDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDebtPeople(items: List<com.sinxn.mymoney.core.data.local.entity.DebtPeopleEntity>)
 
-    @Query("SELECT * FROM wallets WHERE isDeleted = 0 ORDER BY `index` ASC")
+    @Query("SELECT * FROM wallets WHERE isDeleted = 0 AND isArchived = 0 ORDER BY `index` ASC")
     fun getWallets(): Flow<List<WalletEntity>>
 
     @androidx.room.Transaction
@@ -132,7 +129,7 @@ interface MoneyDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCategories(categories: List<CategoryEntity>)
 
-    @Query("SELECT * FROM categories")
+    @Query("SELECT * FROM categories WHERE isDeleted = 0")
     fun getCategories(): Flow<List<CategoryEntity>>
 
     // Transactions
@@ -158,6 +155,21 @@ interface MoneyDao {
         ORDER BY t.date DESC
     """)
     fun getAllTransactions(): Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory>>
+
+    @androidx.room.Transaction
+    @Query("""
+        SELECT t.*, c.name as categoryName, c.icon as categoryIcon
+        FROM transactions t
+        LEFT JOIN categories c ON t.categoryId = c.id
+        WHERE t.id = :transactionId
+    """)
+    fun getTransactionWithCategory(transactionId: String): Flow<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory?>
+
+    @Query("SELECT * FROM transactions WHERE id = :id")
+    suspend fun getTransactionById(id: String): TransactionEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTransaction(transaction: TransactionEntity)
 
     @Query("""
         SELECT COALESCE(SUM(
@@ -195,4 +207,45 @@ interface MoneyDao {
         clearCategories()
         clearWallets()
     }
+
+    // Places
+    @Query("SELECT * FROM places WHERE isDeleted = 0")
+    fun getPlaces(): Flow<List<com.sinxn.mymoney.core.data.local.entity.PlaceEntity>>
+
+    @Query("SELECT * FROM places WHERE id = :id")
+    suspend fun getPlaceById(id: String): com.sinxn.mymoney.core.data.local.entity.PlaceEntity?
+
+    // Events
+    @Query("SELECT * FROM events WHERE isDeleted = 0")
+    fun getEvents(): Flow<List<com.sinxn.mymoney.core.data.local.entity.EventEntity>>
+
+    @Query("SELECT * FROM events WHERE id = :id")
+    suspend fun getEventById(id: String): com.sinxn.mymoney.core.data.local.entity.EventEntity?
+
+    // People
+    @Query("SELECT * FROM people WHERE isDeleted = 0")
+    fun getPeople(): Flow<List<com.sinxn.mymoney.core.data.local.entity.PersonEntity>>
+
+    @Query("""
+        SELECT p.* 
+        FROM people p
+        INNER JOIN transaction_people tp ON p.id = tp.personId
+        WHERE tp.transactionId = :transactionId AND p.isDeleted = 0
+    """)
+    fun getPeopleForTransaction(transactionId: String): Flow<List<com.sinxn.mymoney.core.data.local.entity.PersonEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTransactionPeople(links: List<com.sinxn.mymoney.core.data.local.entity.TransactionPeopleEntity>)
+
+    @Query("DELETE FROM transaction_people WHERE transactionId = :transactionId")
+    suspend fun deletePeopleForTransaction(transactionId: String)
+
+    // Attachments
+    @Query("""
+        SELECT a.* 
+        FROM attachments a
+        INNER JOIN transaction_attachment ta ON a.id = ta.attachmentId
+        WHERE ta.transactionId = :transactionId
+    """)
+    fun getAttachmentsForTransaction(transactionId: String): Flow<List<com.sinxn.mymoney.core.data.local.entity.AttachmentEntity>>
 }

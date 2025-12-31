@@ -22,6 +22,10 @@ object DateUtils {
         }
     }
 
+    fun getSQLDateTimeString(date: Date): String {
+        return sqlDateFormat.get()?.format(date) ?: ""
+    }
+
     fun parseDate(dateString: String): Date {
         // FAST PATH: Try SQL Format (legacy default) first
         try {
