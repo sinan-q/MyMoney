@@ -107,7 +107,10 @@ fun HomeScreen(
             // Grand Total Header
             totalWallet?.let {
                 item {
-                    GrandTotalHeader(it)
+                    GrandTotalHeader(
+                        wallet = it,
+                        onClick = { onNavigateToWallet(it.wallet.id) }
+                    )
                 }
             }
 
@@ -153,8 +156,12 @@ fun HomeScreen(
 }
 
 @Composable
-fun GrandTotalHeader(wallet: WalletWithBalance) {
+fun GrandTotalHeader(
+    wallet: WalletWithBalance,
+    onClick: () -> Unit
+) {
     Card(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),

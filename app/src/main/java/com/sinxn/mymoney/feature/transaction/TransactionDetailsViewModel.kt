@@ -173,8 +173,8 @@ class TransactionDetailsViewModel @Inject constructor(
                 .filter { !it.wallet.isArchived || it.wallet.id == transaction?.transaction?.walletId }
                 .map { it.wallet },
             availableCategories = lists.categories,
-            availableIncomeCategories = lists.categories.filter { it.type == 1 },
-            availableExpenseCategories = lists.categories.filter { it.type == 0 },
+            availableIncomeCategories = lists.categories.filter { it.type == 0 },
+            availableExpenseCategories = lists.categories.filter { it.type == 1 },
             availablePlaces = lists.places,
             availableEvents = lists.events,
             availablePeople = lists.people,
@@ -299,7 +299,7 @@ class TransactionDetailsViewModel @Inject constructor(
         // Update direction based on category if found
         value?.let { id ->
             uiState.value.availableCategories.find { it.id == id }?.let { category ->
-                _editDirection.value = category.type
+                _editDirection.value = if (category.type == 0) 1 else 0
             }
         }
     }
