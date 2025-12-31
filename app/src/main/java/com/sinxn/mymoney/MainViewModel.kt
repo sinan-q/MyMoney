@@ -25,7 +25,7 @@ class MainViewModel @Inject constructor(
             } else {
                 // Check if wallet exists
                 val wallet = moneyDao.getWalletById(id)
-                if (wallet != null && !wallet.isDeleted && !wallet.isArchived) {
+                if (wallet != null && !wallet.isDeleted) {
                     "wallet_details/$id"
                 } else {
                     // Invalid or deleted wallet, reset preference and go home

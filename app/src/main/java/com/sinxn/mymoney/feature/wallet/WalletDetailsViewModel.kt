@@ -38,7 +38,15 @@ class WalletDetailsViewModel @Inject constructor(
         // Save as current wallet accessible on launch
         viewModelScope.launch {
             try {
-                settingsRepository.setCurrentWalletId(walletId)
+                if (walletId == Constants.TOTAL_WALLET_ID) {
+                    settingsRepository.setCurrentWalletId(walletId)
+                } else {
+                    moneyDao.getWalletById(walletId)?.let { wallet ->
+                        if (!wallet.isArchived) {
+                            settingsRepository.setCurrentWalletId(walletId)
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 // Ignore
             }
@@ -164,4 +172,31 @@ class WalletDetailsViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+    fun toggleCountInTotal() {
+        if (walletId == Constants.TOTAL_WALLET_ID) return // Cannot toggle for "Total"
+        
+        viewModelScope.launch {
+            moneyDao.getWalletById(walletId)?.let { current ->
+                moneyDao.updateWalletCountInTotal(
+                    walletId = walletId,
+                    countInTotal = !current.countInTotal,
+                    lastEdit = System.currentTimeMillis()
+                )
+            }
+        }
+    }
+    fun toggleArchived() {
+        if (walletId == Constants.TOTAL_WALLET_ID) return
+        
+        viewModelScope.launch {
+            moneyDao.getWalletById(walletId)?.let { current ->
+                moneyDao.updateWalletArchived(
+                    walletId = walletId,
+                    isArchived = !current.isArchived,
+                    lastEdit = System.currentTimeMillis()
+                )
+            }
+        }
+    }
 }

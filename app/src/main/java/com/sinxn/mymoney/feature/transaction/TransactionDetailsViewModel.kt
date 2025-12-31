@@ -371,7 +371,7 @@ class TransactionDetailsViewModel @Inject constructor(
                     countInTotal = _editCountInTotal.value,
                     lastEdit = System.currentTimeMillis()
                 )
-                moneyDao.insertTransaction(updated)
+                moneyDao.updateTransaction(updated)
                 
                 // Update People
                 moneyDao.deletePeopleForTransaction(transactionId)

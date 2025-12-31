@@ -11,7 +11,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -52,6 +56,9 @@ fun WalletDetailsScreen(
     val transactions by viewModel.transactions.collectAsState(initial = emptyList())
     val settings by viewModel.formattingSettings.collectAsState()
     
+    var showSettings by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
+    
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val showTopBarTitle by remember {
         androidx.compose.runtime.derivedStateOf {
@@ -87,6 +94,17 @@ fun WalletDetailsScreen(
                         )
                     }
                 },
+                actions = {
+                    if (wallet?.wallet?.id != com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID) {
+                        IconButton(onClick = { showSettings = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Wallet Settings",
+                                tint = if (showTopBarTitle) MaterialTheme.colorScheme.primary else Color.White
+                            )
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = if (showTopBarTitle) MaterialTheme.colorScheme.surface else Color.Transparent,
                     navigationIconContentColor = if (showTopBarTitle) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary,
@@ -110,6 +128,177 @@ fun WalletDetailsScreen(
                     onTransactionClick = onTransactionClick
                 )
             }
+
+            if (showSettings && wallet != null) {
+                WalletSettingsBottomSheet(
+                    wallet = wallet!!,
+                    onDismiss = { showSettings = false },
+                    onToggleCountInTotal = { viewModel.toggleCountInTotal() },
+                    onToggleArchived = { viewModel.toggleArchived() },
+                    sheetState = sheetState
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WalletSettingsBottomSheet(
+    wallet: WalletWithBalance,
+    onDismiss: () -> Unit,
+    onToggleCountInTotal: () -> Unit,
+    onToggleArchived: () -> Unit,
+    sheetState: SheetState
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 48.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            Text(
+                text = "Wallet Settings",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            // Show in Total Toggle
+            Surface(
+                onClick = onToggleCountInTotal,
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp, 
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                    shape = CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        
+                        Column {
+                            Text(
+                                text = "Show in Total",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Include this wallet in global balance",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    
+                    Switch(
+                        checked = wallet.wallet.countInTotal,
+                        onCheckedChange = { onToggleCountInTotal() }
+                    )
+                }
+            }
+            
+            // Archive Toggle
+            Surface(
+                onClick = onToggleArchived,
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp, 
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                    shape = CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (wallet.wallet.isArchived) Icons.Default.Unarchive else Icons.Default.Archive,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        
+                        Column {
+                            Text(
+                                text = if (wallet.wallet.isArchived) "Unarchive Wallet" else "Archive Wallet",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = if (wallet.wallet.isArchived) "Restore wallet to active list" else "Hide wallet from active list",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    
+                    Switch(
+                        checked = wallet.wallet.isArchived,
+                        onCheckedChange = { onToggleArchived() }
+                    )
+                }
+            }
+            
+            // Helpful note
+            Text(
+                text = "Settings changed here will immediately affect your budget and global totals.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
         }
     }
 }
