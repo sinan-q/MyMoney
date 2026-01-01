@@ -19,7 +19,8 @@ import kotlinx.coroutines.flow.SharingStarted
 
 data class HomeUiState(
     val activeWallets: List<WalletWithBalance> = emptyList(),
-    val archivedWallets: List<WalletWithBalance> = emptyList()
+    val archivedWallets: List<WalletWithBalance> = emptyList(),
+    val isTotalValid: Boolean = true
 )
 
 @HiltViewModel
@@ -35,9 +36,10 @@ class HomeViewModel @Inject constructor(
         Log.d("HomeViewModel", "Wallets emitted: ${list.size}")
         
         // Calculate Total
-        val totalBalance = list.filter { 
+        val walletsInTotal = list.filter { 
             it.wallet.countInTotal && (!settings.excludeArchivedFromTotal || !it.wallet.isArchived)
-        }.sumOf { it.currentBalance }
+        }
+        val totalBalance = walletsInTotal.sumOf { it.currentBalance }
         
         val totalWallet = WalletWithBalance(
             wallet = WalletEntity(
@@ -59,9 +61,13 @@ class HomeViewModel @Inject constructor(
             currencySymbol = list.firstOrNull()?.currencySymbol ?: "$"
         )
 
+        val currencies = walletsInTotal.map { it.wallet.currency }.distinct()
+        val isTotalValid = currencies.size <= 1
+
         HomeUiState(
             activeWallets = listOf(totalWallet) + list.filter { !it.wallet.isArchived },
-            archivedWallets = list.filter { it.wallet.isArchived }
+            archivedWallets = list.filter { it.wallet.isArchived },
+            isTotalValid = isTotalValid
         )
     }
         .stateIn(

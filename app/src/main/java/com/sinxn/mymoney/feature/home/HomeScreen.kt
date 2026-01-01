@@ -121,6 +121,7 @@ fun HomeScreen(
                 item {
                     GrandTotalHeader(
                         wallet = it,
+                        isTotalValid = uiState.isTotalValid,
                         onClick = { onNavigateToWallet(it.wallet.id) }
                     )
                 }
@@ -170,16 +171,21 @@ fun HomeScreen(
 @Composable
 fun GrandTotalHeader(
     wallet: WalletWithBalance,
+    isTotalValid: Boolean,
     onClick: () -> Unit
 ) {
     Card(
         onClick = onClick,
+        enabled = isTotalValid,
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(32.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+            containerColor = if (isTotalValid) 
+                MaterialTheme.colorScheme.primaryContainer 
+            else 
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -192,20 +198,34 @@ fun GrandTotalHeader(
             Text(
                 text = "Global Balance",
                 style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = if (isTotalValid) 0.7f else 0.4f)
             )
             Spacer(modifier = Modifier.height(8.dp))
-            val formattedBalance = com.sinxn.mymoney.core.util.MoneyFormatter.format(
-                amount = wallet.currentBalance,
-                currencyCode = wallet.wallet.currency,
-                decimals = wallet.decimals
-            )
-            Text(
-                text = formattedBalance,
-                style = MaterialTheme.typography.displayMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                fontWeight = FontWeight.Black
-            )
+            if (isTotalValid) {
+                val formattedBalance = com.sinxn.mymoney.core.util.MoneyFormatter.format(
+                    amount = wallet.currentBalance,
+                    currencyCode = wallet.wallet.currency,
+                    decimals = wallet.decimals
+                )
+                Text(
+                    text = formattedBalance,
+                    style = MaterialTheme.typography.displayMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.Black
+                )
+            } else {
+                Text(
+                    text = "Multi-Currency",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Conversion not supported yet",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                )
+            }
         }
     }
 }
