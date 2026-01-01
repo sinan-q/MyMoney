@@ -21,10 +21,10 @@ data class HomeUiState(
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    moneyDao: MoneyDao
+    private val moneyDao: MoneyDao
 ) : ViewModel() {
 
-    val uiState = moneyDao.getWalletsWithBalance()
+    val uiState = moneyDao.getWalletsWithBalance(com.sinxn.mymoney.core.util.DateUtils.getSQLDateTimeString(java.util.Date()))
         .onEach { Log.d("HomeViewModel", "Wallets emitted: ${it.size}") }
         .map { list ->
             // Calculate Total

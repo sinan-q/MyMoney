@@ -102,12 +102,13 @@ interface MoneyDao {
             AND t.confirmed = 1 
             AND t.countInTotal = 1
             AND t.isDeleted = 0
+            AND t.date <= :maxDate
         LEFT JOIN currencies c ON w.currency = c.iso
         WHERE w.isDeleted = 0
         GROUP BY w.id 
         ORDER BY w.`index` ASC
     """)
-    fun getWalletsWithBalance(): Flow<List<com.sinxn.mymoney.core.data.local.model.WalletWithBalance>>
+    fun getWalletsWithBalance(maxDate: String): Flow<List<com.sinxn.mymoney.core.data.local.model.WalletWithBalance>>
 
     @androidx.room.Transaction
     @Query("""
@@ -127,11 +128,12 @@ interface MoneyDao {
             AND t.confirmed = 1 
             AND t.countInTotal = 1
             AND t.isDeleted = 0
+            AND t.date <= :maxDate
         LEFT JOIN currencies c ON w.currency = c.iso
         WHERE w.isDeleted = 0 AND w.id = :walletId
         GROUP BY w.id
     """)
-    fun getWalletWithBalance(walletId: String): Flow<com.sinxn.mymoney.core.data.local.model.WalletWithBalance?>
+    fun getWalletWithBalance(walletId: String, maxDate: String): Flow<com.sinxn.mymoney.core.data.local.model.WalletWithBalance?>
 
     // Categories
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -165,9 +167,10 @@ interface MoneyDao {
         FROM transactions t
         LEFT JOIN categories c ON t.categoryId = c.id
         WHERE t.walletId = :walletId 
+          AND t.date <= :maxDate
         ORDER BY t.date DESC
     """)
-    fun getTransactionsForWallet(walletId: String): Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory>>
+    fun getTransactionsForWallet(walletId: String, maxDate: String): Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory>>
 
     @androidx.room.Transaction
     @Query("""
@@ -176,9 +179,10 @@ interface MoneyDao {
         LEFT JOIN categories c ON t.categoryId = c.id
         INNER JOIN wallets w ON t.walletId = w.id
         WHERE t.isDeleted = 0 AND w.isDeleted = 0 AND w.countInTotal = 1
+          AND t.date <= :maxDate
         ORDER BY t.date DESC
     """)
-    fun getAllTransactions(): Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory>>
+    fun getAllTransactions(maxDate: String): Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory>>
 
     @androidx.room.Transaction
     @Query("""
@@ -210,8 +214,9 @@ interface MoneyDao {
           AND t.countInTotal = 1
           AND w.countInTotal = 1
           AND w.isDeleted = 0
+          AND t.date <= :maxDate
     """)
-    fun getTotalBalance(): Flow<Long>
+    fun getTotalBalance(maxDate: String): Flow<Long>
     
     @Query("SELECT * FROM wallets WHERE id = :id")
     suspend fun getWalletById(id: String): WalletEntity?

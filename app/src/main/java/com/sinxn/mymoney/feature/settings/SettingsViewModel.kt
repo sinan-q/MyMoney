@@ -52,4 +52,10 @@ class SettingsViewModel @Inject constructor(
             settingsRepository.setDateFormat(format)
         }
     }
+
+    fun updateIncludeFutureTransactions(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setIncludeFutureTransactions(enabled)
+        }
+    }
 }

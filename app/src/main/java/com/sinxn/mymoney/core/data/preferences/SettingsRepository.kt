@@ -16,15 +16,15 @@ import javax.inject.Singleton
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
-@Singleton
 data class FormattingSettings(
     val showCurrency: Boolean = true,
     val groupDigits: Boolean = true,
     val roundDecimals: Boolean = false,
     val showPlusMinus: Boolean = false,
     val dateFormat: Int = 2,
-    val firstDayOfWeek: Int = java.util.Calendar.getInstance().firstDayOfWeek, // Default to system locale
-    val firstDayOfMonth: Int = 1
+    val firstDayOfWeek: Int = java.util.Calendar.getInstance().firstDayOfWeek,
+    val firstDayOfMonth: Int = 1,
+    val includeFutureTransactions: Boolean = false
 )
 
 @Singleton
@@ -43,6 +43,7 @@ class SettingsRepository @Inject constructor(
         val DATE_FORMAT = intPreferencesKey("date_format")
         val FIRST_DAY_OF_WEEK = intPreferencesKey("first_day_of_week")
         val FIRST_DAY_OF_MONTH = intPreferencesKey("first_day_of_month")
+        val INCLUDE_FUTURE_TRANSACTIONS = booleanPreferencesKey("include_future_transactions")
     }
 
     val currentWalletId: Flow<String> = dataStore.data
@@ -59,7 +60,8 @@ class SettingsRepository @Inject constructor(
                 showPlusMinus = preferences[SHOW_PLUS_MINUS] ?: false,
                 dateFormat = preferences[DATE_FORMAT] ?: 2,
                 firstDayOfWeek = preferences[FIRST_DAY_OF_WEEK] ?: java.util.Calendar.getInstance().firstDayOfWeek,
-                firstDayOfMonth = preferences[FIRST_DAY_OF_MONTH] ?: 1
+                firstDayOfMonth = preferences[FIRST_DAY_OF_MONTH] ?: 1,
+                includeFutureTransactions = preferences[INCLUDE_FUTURE_TRANSACTIONS] ?: false
             )
         }
 
@@ -108,6 +110,12 @@ class SettingsRepository @Inject constructor(
     suspend fun setFirstDayOfMonth(day: Int) {
         dataStore.edit { preferences ->
             preferences[FIRST_DAY_OF_MONTH] = day
+        }
+    }
+
+    suspend fun setIncludeFutureTransactions(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[INCLUDE_FUTURE_TRANSACTIONS] = enabled
         }
     }
 }

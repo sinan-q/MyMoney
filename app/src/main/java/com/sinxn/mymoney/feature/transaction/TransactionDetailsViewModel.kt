@@ -151,7 +151,7 @@ class TransactionDetailsViewModel @Inject constructor(
         fullEditState,
         settingsRepository.currentWalletId,
         combine(
-            moneyDao.getWalletsWithBalance(),
+            moneyDao.getWalletsWithBalance(DateUtils.getSQLDateTimeString(java.util.Date())),
             moneyDao.getCategories(),
             moneyDao.getPlaces(),
             moneyDao.getEvents(),
@@ -163,10 +163,13 @@ class TransactionDetailsViewModel @Inject constructor(
         val attachments = data.attachments
         val enriched = enrichTransaction(transaction)
         
-        // For new transactions, prefer the saved current wallet id, fall back to first available
+        // For new transactions, prefer the saved current wallet id, fall back to first available active wallet
         if (isNewTransaction && _editWalletId.value.isEmpty() && lists.wallets.isNotEmpty()) {
-            val preferredWalletId = lists.wallets.find { it.wallet.id == currentWalletId }?.wallet?.id
-            _editWalletId.value = preferredWalletId ?: lists.wallets.first().wallet.id
+            val preferredWallet = lists.wallets.find { it.wallet.id == currentWalletId }
+                ?: lists.wallets.firstOrNull { !it.wallet.isArchived }
+                ?: lists.wallets.firstOrNull()
+            
+            _editWalletId.value = preferredWallet?.wallet?.id ?: ""
         }
 
         val activeWalletId = if (edit.isEdit && edit.e2.walletId.isNotEmpty()) edit.e2.walletId else transaction?.transaction?.walletId

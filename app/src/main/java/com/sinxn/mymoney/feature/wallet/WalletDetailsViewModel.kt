@@ -56,7 +56,7 @@ class WalletDetailsViewModel @Inject constructor(
     // ... rest of the code
 
     val wallet: Flow<WalletWithBalance?> = if (walletId == Constants.TOTAL_WALLET_ID) {
-        moneyDao.getTotalBalance().map { balance ->
+        moneyDao.getTotalBalance(DateUtils.getSQLDateTimeString(java.util.Date())).map { balance ->
             WalletWithBalance(
                 wallet = WalletEntity(
                     id = Constants.TOTAL_WALLET_ID,
@@ -78,7 +78,7 @@ class WalletDetailsViewModel @Inject constructor(
             )
         }
     } else {
-        moneyDao.getWalletWithBalance(walletId)
+        moneyDao.getWalletWithBalance(walletId, DateUtils.getSQLDateTimeString(java.util.Date()))
     }
         .stateIn(
             scope = viewModelScope,
@@ -96,10 +96,11 @@ class WalletDetailsViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val transactions: StateFlow<List<TransactionListItem>> = formattingSettings
         .flatMapLatest { settings ->
+            val maxDate = if (settings.includeFutureTransactions) "9999-12-31 23:59:59" else DateUtils.getSQLDateTimeString(java.util.Date())
             val transactionsFlow = if (walletId == Constants.TOTAL_WALLET_ID) {
-                moneyDao.getAllTransactions()
+                moneyDao.getAllTransactions(maxDate)
             } else {
-                moneyDao.getTransactionsForWallet(walletId)
+                moneyDao.getTransactionsForWallet(walletId, maxDate)
             }
             
             transactionsFlow.map { list ->

@@ -43,8 +43,12 @@ We avoid standard Material 3 defaults in favor of a custom "Premium" aesthetic:
 
 ## 6. Current Progress (as of Dec 2025)
 - [x] Full Backup Import parity.
-- [x] Wallet & Transaction browsing.
-- [x] Advanced Timeline UI (Daily grouping, Income/Expense summaries).
+- [x] Implement App Shortcuts (Quick Actions) <!-- id: 8 -->
+- [/] Implement M3 Design Refinements <!-- id: 9 -->
+    - [ ] Enable true Edge-to-Edge in `MainActivity` <!-- id: 10 -->
+    - [ ] Modernize `HomeScreen` (M3 FAB, Centered Header, Tonal Depth) <!-- id: 11 -->
+    - [ ] Refine `TransactionDetailsScreen` (Immersive Header, M3 FAB) <!-- id: 12 -->
+- [x] Verify implementation in `AndroidManifest.xml` and resource folders <!-- id: 4 -->
 - [x] Settings management (Formatting & Default Wallet).
 - [x] Home Screen Redesign (Grand Total hero card).
 - [x] Dynamic TopBar implementation.

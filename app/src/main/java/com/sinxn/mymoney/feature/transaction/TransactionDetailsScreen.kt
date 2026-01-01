@@ -61,6 +61,7 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -105,8 +106,8 @@ fun TransactionDetailsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                    containerColor = Color.Transparent,
+                    titleContentColor = Color.White
                 )
             )
         },
@@ -115,6 +116,7 @@ fun TransactionDetailsScreen(
                 onClick = { if (uiState.isEditMode) viewModel.saveChanges() else viewModel.toggleEditMode() },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = RoundedCornerShape(16.dp),
                 icon = {
                     Crossfade(targetState = uiState.isEditMode, label = "fabIcon") { isEdit ->
                         Icon(
@@ -131,14 +133,15 @@ fun TransactionDetailsScreen(
             )
         }
     ) { padding ->
-        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize()) {
             if (uiState.isLoading) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else {
                 TransactionContent(
                     uiState = uiState,
                     settings = settings,
-                    viewModel = viewModel
+                    viewModel = viewModel,
+                    contentPadding = padding
                 )
             }
         }
@@ -149,7 +152,8 @@ fun TransactionDetailsScreen(
 fun TransactionContent(
     uiState: TransactionDetailsUiState,
     settings: com.sinxn.mymoney.core.data.preferences.FormattingSettings,
-    viewModel: TransactionDetailsViewModel
+    viewModel: TransactionDetailsViewModel,
+    contentPadding: androidx.compose.foundation.layout.PaddingValues = androidx.compose.foundation.layout.PaddingValues()
 ) {
     if (uiState.transaction == null && !uiState.isNewTransaction) return
     val scrollState = rememberScrollState()
@@ -184,7 +188,7 @@ fun TransactionContent(
             amount = if (displayDirection == 1) rawAmount else -rawAmount,
             categoryIcon = displayCategoryIcon,
             categoryName = displayCategoryName,
-            currencySymbol = uiState.currencySymbol, 
+            currencyCode = uiState.currencyCode, 
             currencyDecimals = uiState.currencyDecimals, 
             settings = settings,
             categoryColor = uiState.categoryColor
@@ -220,7 +224,8 @@ fun TransactionContent(
             }
         }
         
-        Spacer(modifier = Modifier.height(100.dp)) // FAB spacing
+        // Respect the bottom padding from Scaffold (FAB/Nav bar)
+        Spacer(modifier = Modifier.height(contentPadding.calculateBottomPadding() + 80.dp))
     }
 }
 
@@ -229,7 +234,7 @@ fun TransactionHeroHeader(
     amount: Long,
     categoryIcon: String?,
     categoryName: String,
-    currencySymbol: String,
+    currencyCode: String,
     currencyDecimals: Int,
     settings: com.sinxn.mymoney.core.data.preferences.FormattingSettings,
     categoryColor: Color
@@ -268,7 +273,8 @@ fun TransactionHeroHeader(
         Column(
             modifier = Modifier
                 .padding(32.dp)
-                .fillMaxSize(),
+                .fillMaxSize()
+                .statusBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -291,7 +297,7 @@ fun TransactionHeroHeader(
 
             val formattedMoney = MoneyFormatter.format(
                 amount = amount,
-                currencyCode = currencySymbol,
+                currencyCode = currencyCode,
                 decimals = currencyDecimals,
                 config = MoneyFormatter.Config(
                     showCurrency = settings.showCurrency,

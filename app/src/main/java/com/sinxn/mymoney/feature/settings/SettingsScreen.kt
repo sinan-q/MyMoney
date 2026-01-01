@@ -88,6 +88,21 @@ fun SettingsScreen(
             )
             
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+            Text(
+                text = "Transactions",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+
+            SettingsSwitchItem(
+                title = "Show Future Transactions",
+                checked = settings.includeFutureTransactions,
+                onCheckedChange = viewModel::updateIncludeFutureTransactions
+            )
+            
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
             
             // Date Format could be a dropdown, keeping plain for now or adding later
             // The request focused on boolean toggles mostly from sharedPrefs list
