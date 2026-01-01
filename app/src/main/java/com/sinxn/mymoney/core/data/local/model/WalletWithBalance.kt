@@ -7,5 +7,6 @@ data class WalletWithBalance(
     @Embedded val wallet: WalletEntity,
     val currentBalance: Long,
     val decimals: Int = 2,
-    val currencySymbol: String? = null
+    val currencySymbol: String? = null,
+    val isTotalValid: Boolean = true
 )

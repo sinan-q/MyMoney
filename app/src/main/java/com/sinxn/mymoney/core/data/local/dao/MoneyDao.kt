@@ -4,6 +4,7 @@ import androidx.room.*
 import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
 import com.sinxn.mymoney.core.data.local.entity.TransactionEntity
 import com.sinxn.mymoney.core.data.local.entity.WalletEntity
+import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -84,7 +85,7 @@ interface MoneyDao {
     @Query("SELECT * FROM wallets WHERE isDeleted = 0 AND isArchived = 0 ORDER BY `index` ASC")
     fun getWallets(): Flow<List<WalletEntity>>
 
-    @androidx.room.Transaction
+    @Transaction
     @Query("""
         SELECT 
             w.*, 
@@ -96,7 +97,8 @@ interface MoneyDao {
                 END
             ), 0)) AS currentBalance,
             COALESCE(c.decimals, 2) as decimals,
-            c.symbol as currencySymbol
+            c.symbol as currencySymbol,
+            1 AS isTotalValid
         FROM wallets w 
         LEFT JOIN transactions t ON w.id = t.walletId 
             AND t.confirmed = 1 
@@ -108,9 +110,9 @@ interface MoneyDao {
         GROUP BY w.id 
         ORDER BY w.`index` ASC
     """)
-    fun getWalletsWithBalance(maxDate: String): Flow<List<com.sinxn.mymoney.core.data.local.model.WalletWithBalance>>
+    fun getWalletsWithBalance(maxDate: String): Flow<List<WalletWithBalance>>
 
-    @androidx.room.Transaction
+    @Transaction
     @Query("""
         SELECT 
             w.*, 
@@ -122,7 +124,8 @@ interface MoneyDao {
                 END
             ), 0)) AS currentBalance,
             COALESCE(c.decimals, 2) as decimals,
-            c.symbol as currencySymbol
+            c.symbol as currencySymbol,
+            1 AS isTotalValid
         FROM wallets w 
         LEFT JOIN transactions t ON w.id = t.walletId 
             AND t.confirmed = 1 
@@ -133,7 +136,7 @@ interface MoneyDao {
         WHERE w.isDeleted = 0 AND w.id = :walletId
         GROUP BY w.id
     """)
-    fun getWalletWithBalance(walletId: String, maxDate: String): Flow<com.sinxn.mymoney.core.data.local.model.WalletWithBalance?>
+    fun getWalletWithBalance(walletId: String, maxDate: String): Flow<WalletWithBalance?>
 
     // Categories
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -163,9 +166,13 @@ interface MoneyDao {
     
     @androidx.room.Transaction
     @Query("""
-        SELECT t.*, c.name as categoryName, c.icon as categoryIcon
+        SELECT t.*, c.name as categoryName, c.icon as categoryIcon,
+               COALESCE(curr.decimals, 2) as decimals, curr.symbol as currencySymbol,
+               w.currency as currencyCode
         FROM transactions t
         LEFT JOIN categories c ON t.categoryId = c.id
+        INNER JOIN wallets w ON t.walletId = w.id
+        LEFT JOIN currencies curr ON w.currency = curr.iso
         WHERE t.walletId = :walletId 
           AND t.date <= :maxDate
         ORDER BY t.date DESC
@@ -174,10 +181,13 @@ interface MoneyDao {
 
     @androidx.room.Transaction
     @Query("""
-        SELECT t.*, c.name as categoryName, c.icon as categoryIcon
+        SELECT t.*, c.name as categoryName, c.icon as categoryIcon,
+               COALESCE(curr.decimals, 2) as decimals, curr.symbol as currencySymbol,
+               w.currency as currencyCode
         FROM transactions t
         LEFT JOIN categories c ON t.categoryId = c.id
         INNER JOIN wallets w ON t.walletId = w.id
+        LEFT JOIN currencies curr ON w.currency = curr.iso
         WHERE t.isDeleted = 0 AND w.isDeleted = 0 AND w.countInTotal = 1
           AND t.date <= :maxDate
         ORDER BY t.date DESC
@@ -186,9 +196,13 @@ interface MoneyDao {
 
     @androidx.room.Transaction
     @Query("""
-        SELECT t.*, c.name as categoryName, c.icon as categoryIcon
+        SELECT t.*, c.name as categoryName, c.icon as categoryIcon,
+               COALESCE(curr.decimals, 2) as decimals, curr.symbol as currencySymbol,
+               w.currency as currencyCode
         FROM transactions t
         LEFT JOIN categories c ON t.categoryId = c.id
+        INNER JOIN wallets w ON t.walletId = w.id
+        LEFT JOIN currencies curr ON w.currency = curr.iso
         WHERE t.id = :transactionId
     """)
     fun getTransactionWithCategory(transactionId: String): Flow<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory?>

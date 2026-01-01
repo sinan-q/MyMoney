@@ -8,12 +8,14 @@ sealed class TransactionListItem {
         val date: Date,
         val totalAmount: Long,
         val income: Long,
-        val expense: Long
+        val expense: Long,
+        val isTotalValid: Boolean = true
     ) : TransactionListItem()
 
     data class DateHeader(
         val date: Date,
-        val totalAmount: Long
+        val totalAmount: Long,
+        val isTotalValid: Boolean = true
     ) : TransactionListItem()
 
     data class Transaction(

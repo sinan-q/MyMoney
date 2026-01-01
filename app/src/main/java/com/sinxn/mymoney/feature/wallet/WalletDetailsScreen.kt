@@ -395,18 +395,33 @@ fun WalletHeader(
             
             // Large Bold Balance
             Text(
-                text = formattedBalance,
-                style = MaterialTheme.typography.displayMedium.copy(
-                    shadow = Shadow(
-                        color = Color.Black.copy(alpha = 0.1f),
-                        offset = Offset(2f, 4f),
-                        blurRadius = 8f
+                text = if (wallet.isTotalValid) formattedBalance else "Multi-Currency",
+                style = if (wallet.isTotalValid) {
+                    MaterialTheme.typography.displayMedium.copy(
+                        shadow = Shadow(
+                            color = Color.Black.copy(alpha = 0.1f),
+                            offset = Offset(2f, 4f),
+                            blurRadius = 8f
+                        )
                     )
-                ),
+                } else {
+                    MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Black,
+                        color = Color.White.copy(alpha = 0.9f)
+                    )
+                },
                 color = Color.White,
                 fontWeight = FontWeight.Black,
                 letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified
             )
+
+            if (!wallet.isTotalValid) {
+                Text(
+                    text = "Conversion not supported yet",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.7f)
+                )
+            }
             
             if (!wallet.wallet.note.isNullOrEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -526,15 +541,17 @@ fun TransactionList(
                                  DateHeaderItem(item, dateFormat)
                              }
                              is TransactionListItem.Transaction -> {
+                                 val trans = item.transaction
                                  TransactionItem(
-                                     item = item.transaction,
-                                     decimals = decimals,
-                                     currencyCode = currencyCode,
+                                     item = trans,
+                                     decimals = trans.decimals,
+                                     // Priority: DB Symbol -> DB ISO Code -> Wallet ISO Code
+                                     currencyCode = trans.currencySymbol ?: trans.currencyCode ?: currencyCode,
                                      formatterConfig = formatterConfig,
                                      dateFormat = dateFormat,
                                      isLastItem = isLastItem,
                                      showDate = false, // Date is now in header
-                                     onClick = { onTransactionClick(item.transaction.transaction.id) }
+                                     onClick = { onTransactionClick(trans.transaction.id) }
                                  )
                              }
                              else -> {}
@@ -610,28 +627,42 @@ fun TransactionHeader(
         
         Column(horizontalAlignment = Alignment.End) {
             Text(
-                text = formattedTotal,
+                text = if (header.isTotalValid) formattedTotal else "Multi-Currency",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = if (header.totalAmount >= 0) Color(0xFF4CAF50) else Color(0xFFE53935)
+                color = if (!header.isTotalValid) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else if (header.totalAmount >= 0) {
+                    Color(0xFF4CAF50)
+                } else {
+                    Color(0xFFE53935)
+                }
             )
             
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                 if (header.income > 0) {
-                     Text(
-                        text = "+$formattedIncome",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF4CAF50),
-                        modifier = Modifier.padding(end = 6.dp)
-                    )
-                 }
-                 if (header.expense > 0) {
-                     Text(
-                        text = "-$formattedExpense",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFFE53935)
-                    )
-                 }
+            if (header.isTotalValid) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                     if (header.income > 0) {
+                         Text(
+                            text = "+$formattedIncome",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF4CAF50),
+                            modifier = Modifier.padding(end = 6.dp)
+                        )
+                     }
+                     if (header.expense > 0) {
+                         Text(
+                            text = "-$formattedExpense",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFFE53935)
+                        )
+                     }
+                }
+            } else {
+                Text(
+                    text = "Mixed currencies",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
             }
         }
     }

@@ -16,6 +16,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
@@ -56,37 +57,49 @@ class WalletDetailsViewModel @Inject constructor(
     // ... rest of the code
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val wallet: StateFlow<WalletWithBalance?> = settingsRepository.formattingSettings
-        .flatMapLatest { settings ->
-            if (walletId == Constants.TOTAL_WALLET_ID) {
-                moneyDao.getTotalBalance(
-                    DateUtils.getSQLDateTimeString(java.util.Date()),
-                    settings.excludeArchivedFromTotal
-                ).map { balance ->
-                    WalletWithBalance(
-                        wallet = WalletEntity(
-                            id = Constants.TOTAL_WALLET_ID,
-                            name = "Total",
-                            icon = "sigma",
-                            currency = "USD", // Better default?
-                            startMoney = 0,
-                            isArchived = false,
-                            note = null,
-                            countInTotal = false,
-                            index = -1,
-                            isDeleted = false,
-                            lastEdit = 0,
-                            tag = null
-                        ),
-                        currentBalance = balance ?: 0L,
-                        decimals = 2,
-                        currencySymbol = "$" // Default
-                    )
-                }
-            } else {
-                moneyDao.getWalletWithBalance(walletId, DateUtils.getSQLDateTimeString(java.util.Date()))
+    val wallet: StateFlow<WalletWithBalance?> = combine(
+        settingsRepository.formattingSettings,
+        moneyDao.getWalletsWithBalance(DateUtils.getSQLDateTimeString(java.util.Date()))
+    ) { settings, allWallets ->
+        if (walletId == Constants.TOTAL_WALLET_ID) {
+            val walletsInTotal = allWallets.filter {
+                it.wallet.countInTotal && (!settings.excludeArchivedFromTotal || !it.wallet.isArchived)
             }
+            val totalBalance = walletsInTotal.sumOf { it.currentBalance }
+            val globalCurrency = settings.globalCurrency
+            val currency = try {
+                java.util.Currency.getInstance(globalCurrency)
+            } catch (e: Exception) {
+                null
+            }
+
+            val distinctCurrencies = walletsInTotal.map { it.wallet.currency }.distinct()
+            val isTotalValid = distinctCurrencies.size <= 1 && (distinctCurrencies.isEmpty() || distinctCurrencies.first() == globalCurrency)
+
+            WalletWithBalance(
+                wallet = WalletEntity(
+                    id = Constants.TOTAL_WALLET_ID,
+                    name = "Total",
+                    icon = "sigma",
+                    currency = globalCurrency,
+                    startMoney = 0,
+                    isArchived = false,
+                    note = null,
+                    countInTotal = false,
+                    index = -1,
+                    isDeleted = false,
+                    lastEdit = 0,
+                    tag = null
+                ),
+                currentBalance = totalBalance,
+                decimals = currency?.defaultFractionDigits ?: 2,
+                currencySymbol = currency?.symbol ?: globalCurrency,
+                isTotalValid = isTotalValid
+            )
+        } else {
+            allWallets.find { it.wallet.id == walletId }
         }
+    }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -101,79 +114,78 @@ class WalletDetailsViewModel @Inject constructor(
         )
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val transactions: StateFlow<List<TransactionListItem>> = formattingSettings
-        .flatMapLatest { settings ->
-            val maxDate = if (settings.includeFutureTransactions) "9999-12-31 23:59:59" else DateUtils.getSQLDateTimeString(java.util.Date())
-            val transactionsFlow = if (walletId == Constants.TOTAL_WALLET_ID) {
-                moneyDao.getAllTransactions(maxDate)
-            } else {
-                moneyDao.getTransactionsForWallet(walletId, maxDate)
-            }
-            
-            transactionsFlow.map { list ->
-                // Pre-parse dates to avoid repeated parsing during sort and group
-                val validTransactions = list.map {
-                    it to DateUtils.parseDate(it.transaction.date)
-                }
-
-                val grouped = validTransactions
-                    .sortedByDescending { it.second }
-                    .groupBy { (_, date) ->
-                        // Use firstDayOfMonth from settings
-                        DateUtils.getStartOfBudgetMonth(date, settings.firstDayOfMonth)
-                    }
-
-                val result = ArrayList<TransactionListItem>(list.size + grouped.size) // Pre-allocate
-
-                grouped.forEach { (monthDate, transactionsInGroup) ->
-                    // Calculate Month Totals
-                    var total = 0L
-                    var income = 0L
-                    var expense = 0L
-                    
-                    transactionsInGroup.forEach { (t, _) ->
-                         if (t.transaction.countInTotal && t.transaction.confirmed) {
-                            if (t.transaction.direction == 1) {
-                                total += t.transaction.money
-                                income += t.transaction.money
-                            } else {
-                                total -= t.transaction.money
-                                expense += t.transaction.money
-                            }
-                        }
-                    }
-
-                    result.add(TransactionListItem.Header(monthDate, total, income, expense))
-                    
-                    // Group by Day within the month
-                     val dayGrouped = transactionsInGroup.groupBy { (_, date) ->
-                        val cal = Calendar.getInstance()
-                        cal.time = date
-                        cal.set(Calendar.HOUR_OF_DAY, 0)
-                        cal.set(Calendar.MINUTE, 0)
-                        cal.set(Calendar.SECOND, 0)
-                        cal.set(Calendar.MILLISECOND, 0)
-                        cal.time
-                    }
-                    
-                    dayGrouped.forEach { (dayDate, transactionsInDay) ->
-                        // Calculate Daily Total
-                         var dailyTotal = 0L
-                         transactionsInDay.forEach { (t, _) ->
-                             val amount = if(t.transaction.direction == 1) t.transaction.money else -t.transaction.money
-                             dailyTotal += amount
-                         }
-
-                        result.add(TransactionListItem.DateHeader(dayDate, dailyTotal))
-                        
-                        transactionsInDay.forEach { (t, _) ->
-                             result.add(TransactionListItem.Transaction(t))
-                        }
-                    }
-                }
-                result
-            }
+    val transactions: StateFlow<List<TransactionListItem>> = combine(
+        formattingSettings,
+        wallet
+    ) { settings, walletInfo ->
+        val isTotalValid = walletInfo?.isTotalValid ?: true
+        val maxDate = if (settings.includeFutureTransactions) "9999-12-31 23:59:59" else DateUtils.getSQLDateTimeString(java.util.Date())
+        val transactionsFlow = if (walletId == Constants.TOTAL_WALLET_ID) {
+            moneyDao.getAllTransactions(maxDate)
+        } else {
+            moneyDao.getTransactionsForWallet(walletId, maxDate)
         }
+        
+        transactionsFlow.map { list ->
+            // Pre-parse dates to avoid repeated parsing during sort and group
+            val validTransactions = list.map {
+                it to DateUtils.parseDate(it.transaction.date)
+            }
+
+            val grouped = validTransactions
+                .sortedByDescending { it.second }
+                .groupBy { (_, date) ->
+                    DateUtils.getStartOfBudgetMonth(date, settings.firstDayOfMonth)
+                }
+
+            val result = ArrayList<TransactionListItem>(list.size + grouped.size)
+
+            grouped.forEach { (monthDate, transactionsInGroup) ->
+                var total = 0L
+                var income = 0L
+                var expense = 0L
+                
+                transactionsInGroup.forEach { (t, _) ->
+                     if (t.transaction.countInTotal && t.transaction.confirmed) {
+                        if (t.transaction.direction == 1) {
+                            total += t.transaction.money
+                            income += t.transaction.money
+                        } else {
+                            total -= t.transaction.money
+                            expense += t.transaction.money
+                        }
+                    }
+                }
+
+                result.add(TransactionListItem.Header(monthDate, total, income, expense, isTotalValid))
+                
+                val dayGrouped = transactionsInGroup.groupBy { (_, date) ->
+                    val cal = Calendar.getInstance()
+                    cal.time = date
+                    cal.set(Calendar.HOUR_OF_DAY, 0)
+                    cal.set(Calendar.MINUTE, 0)
+                    cal.set(Calendar.SECOND, 0)
+                    cal.set(Calendar.MILLISECOND, 0)
+                    cal.time
+                }
+                
+                dayGrouped.forEach { (dayDate, transactionsInDay) ->
+                     var dailyTotal = 0L
+                     transactionsInDay.forEach { (t, _) ->
+                         val amount = if(t.transaction.direction == 1) t.transaction.money else -t.transaction.money
+                         dailyTotal += amount
+                     }
+
+                    result.add(TransactionListItem.DateHeader(dayDate, dailyTotal, isTotalValid))
+                    
+                    transactionsInDay.forEach { (t, _) ->
+                         result.add(TransactionListItem.Transaction(t))
+                    }
+                }
+            }
+            result
+        }
+    }.flatMapLatest { it }
         .flowOn(Dispatchers.Default)
         .stateIn(
             scope = viewModelScope,
