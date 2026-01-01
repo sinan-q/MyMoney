@@ -58,6 +58,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -99,6 +101,8 @@ enum class RecapSlideType {
     ROLLERCOASTER,
     LONGEST_STREAK,
     BUSIEST_DAY,
+    BIGGEST_PURCHASE,
+    INCOME_EXPENSE,
     OUTRO
 }
 
@@ -106,19 +110,26 @@ data class RecapData(
     val year: Int = 2025,
     val totalSpent: String = "₹4,52,000",
     val totalTransactionCount: Int = 542,
-    val busiestDay: String = "Thursday",
+    // Busiest day by COUNT
+    val busiestDayByCount: String = "Thursday",
     val busiestDayCount: Int = 45,
-    val busiestDayAmount: String = "₹12,400",
+    // Busiest day by AMOUNT
+    val busiestDayByAmount: String = "Saturday",
+    val busiestDayAmount: String = "₹18,500",
     val weekendPercentage: Int = 65,
     val weekendAmount: String = "₹12,500",
     val coffeeMetricLowCount: Int = 142,
     val coffeeMetricHighCount: Int = 12,
     val coffeeMetricAmount: String = "₹4,200",
     val foodiePercentage: Int = 40,
+    val foodieCount: Int = 156,
     val foodieAmount: String = "₹1,85,000",
     val longestStreakDays: Int = 15,
+    val longestStreakDateRange: String = "Mar 5 - Mar 19",
+    val longestStreakCount: Int = 32,
     val longestStreakAmount: String = "₹15,000",
     val topCategories: List<Pair<String, String>> = listOf("Food" to "₹1.2L", "Travel" to "₹80k", "Gadgets" to "₹50k"),
+    val topCategoriesByCount: List<Pair<String, Int>> = listOf("Groceries" to 89, "Food" to 72, "Transport" to 58),
     // Top by COUNT (for TopSpentTimesSlide)
     val topMonthByCount: String = "October",
     val topMonthCount: Int = 142,
@@ -148,7 +159,16 @@ data class RecapData(
     val movieHours: Int = 36,
     val movieCount: Int = 14,
     val movieAmount: String = "₹6,500",
-    val lifestyleAmount: String = "₹45,000"
+    val lifestyleAmount: String = "₹45,000",
+    // New Slides Stats
+    val biggestPurchaseName: String = "Apple MacBook Air",
+    val biggestPurchaseAmount: String = "₹1,14,900",
+    val biggestPurchaseDate: String = "Oct 15",
+    val smallestPurchaseName: String = "Matches",
+    val smallestPurchaseAmount: String = "₹1.00",
+    val totalIncome: String = "₹8,50,000",
+    val totalExpense: String = "₹4,52,000",
+    val incomeExpenseRatio: Int = 53 // 53% of income spent
 )
 
 // --- Main Screen ---
@@ -158,6 +178,32 @@ fun YearRecapScreen(
     data: RecapData = RecapData(),
     onClose: () -> Unit
 ) {
+    // Audio Playback - OUTSIDE MaterialTheme to prevent recomposition issues
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val mediaPlayer = remember {
+        MediaPlayer.create(context, com.sinxn.mymoney.R.raw.recap_bg_music)?.apply {
+            isLooping = true
+        }
+    }
+    
+    var isPaused by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        mediaPlayer?.start()
+        onDispose {
+            mediaPlayer?.stop()
+            mediaPlayer?.release()
+        }
+    }
+
+    LaunchedEffect(isPaused) {
+        if (isPaused) {
+            if (mediaPlayer?.isPlaying == true) mediaPlayer.pause()
+        } else {
+            if (mediaPlayer?.isPlaying == false) mediaPlayer.start()
+        }
+    }
+
     // Premium Dark Theme Override
     MaterialTheme(
         colorScheme = MaterialTheme.colorScheme.copy(
@@ -167,31 +213,6 @@ fun YearRecapScreen(
     ) {
         var currentSlideIndex by remember { mutableIntStateOf(0) }
         val slides = RecapSlideType.entries.toTypedArray()
-        var isPaused by remember { mutableStateOf(false) }
-
-        // Audio Playback
-        val context = androidx.compose.ui.platform.LocalContext.current
-        val mediaPlayer = remember {
-            MediaPlayer.create(context, com.sinxn.mymoney.R.raw.recap_bg_music).apply {
-                isLooping = true
-            }
-        }
-
-        DisposableEffect(Unit) {
-            mediaPlayer?.start()
-            onDispose {
-                mediaPlayer?.stop()
-                mediaPlayer?.release()
-            }
-        }
-
-        LaunchedEffect(isPaused) {
-            if (isPaused) {
-                if (mediaPlayer?.isPlaying == true) mediaPlayer?.pause()
-            } else {
-                if (mediaPlayer?.isPlaying == false) mediaPlayer?.start()
-            }
-        }
 
         Box(
             modifier = Modifier
@@ -270,6 +291,8 @@ fun YearRecapScreen(
                         RecapSlideType.ROLLERCOASTER -> RollercoasterSlide(data)
                         RecapSlideType.LONGEST_STREAK -> LongestStreakSlide(data)
                         RecapSlideType.BUSIEST_DAY -> BusiestDaySlide(data)
+                        RecapSlideType.BIGGEST_PURCHASE -> BiggestPurchaseSlide(data)
+                        RecapSlideType.INCOME_EXPENSE -> IncomeExpenseSlide(data)
                         RecapSlideType.OUTRO -> OutroSlide()
                     }
                 }
@@ -359,45 +382,56 @@ fun CoffeeMetricSlide(data: RecapData) {
 fun FoodieFactorSlide(data: RecapData) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
          PremiumLineBackground(LinePattern.RINGS, color = Color.White.copy(alpha = 0.05f))
-         Box(
-            modifier = Modifier
-                .size(300.dp)
-                .background(Color.White.copy(alpha = 0.1f), CircleShape),
-             contentAlignment = Alignment.Center
+         Column(
+             horizontalAlignment = Alignment.CenterHorizontally,
+             modifier = Modifier.padding(24.dp)
          ) {
-             Box(
-                modifier = Modifier
-                    .size(200.dp)
-                    .background(Color(0xFFFF5722), CircleShape) // Pizza Sauce Color
-             )
-         }
-         
-         Column(horizontalAlignment = Alignment.CenterHorizontally) {
              Text(
                  text = "FOODIE FACTOR",
-                 style = MaterialTheme.typography.labelLarge,
+                 style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                  color = Color.White
              )
+             Spacer(modifier = Modifier.height(32.dp))
+             
+             // Circle visual with percentage inside
+             Box(
+                 modifier = Modifier
+                     .size(180.dp)
+                     .background(Color(0xFFFF5722), CircleShape),
+                 contentAlignment = Alignment.Center
+             ) {
+                 Text(
+                     text = "${data.foodiePercentage}%",
+                     style = MaterialTheme.typography.displayLarge.copy(
+                         fontSize = 56.sp,
+                         fontWeight = FontWeight.Black
+                     ),
+                     color = Color.White
+                 )
+             }
+             
+             Spacer(modifier = Modifier.height(32.dp))
              Text(
-                 text = "${data.foodiePercentage}%",
-                 style = MaterialTheme.typography.displayLarge.copy(
-                     fontSize = 100.sp,
-                     fontWeight = FontWeight.Black
-                 ),
-                 color = Color.White
-             )
-             Text(
-                 text = "of your income went to satisfying your cravings.",
-                 style = MaterialTheme.typography.bodyLarge,
+                 text = "of your income went to food",
+                 style = MaterialTheme.typography.titleMedium,
                  color = Color.White.copy(alpha = 0.8f),
-                 modifier = Modifier.padding(horizontal = 32.dp),
                  textAlign = TextAlign.Center
              )
              Spacer(modifier = Modifier.height(16.dp))
              Text(
-                 text = "That's ${data.foodieAmount} in deliciousness.",
-                 style = MaterialTheme.typography.titleMedium,
-                 color = Color(0xFFFF5722)
+                 text = data.foodieAmount,
+                 style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+                 color = Color(0xFFFFD54F)
+             )
+             Text(
+                 text = "${data.foodieCount} transactions",
+                 style = MaterialTheme.typography.bodyMedium,
+                 color = Color.White.copy(alpha = 0.6f)
+             )
+             Text(
+                 text = "in deliciousness",
+                 style = MaterialTheme.typography.bodyLarge,
+                 color = Color.White.copy(alpha = 0.6f)
              )
          }
     }
@@ -407,39 +441,87 @@ fun FoodieFactorSlide(data: RecapData) {
 fun TopCategoriesSlide(data: RecapData) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopStart) {
         PremiumLineBackground(LinePattern.NET)
-        Column(modifier = Modifier.padding(24.dp).padding(top = 64.dp)) {
-            Text("THE BIG THREE", style = MaterialTheme.typography.displayMedium.copy(fontFamily = FontFamily.Serif), color = Color.White)
-            Spacer(modifier = Modifier.height(32.dp))
+        Column(modifier = Modifier.padding(24.dp).padding(top = 48.dp)) {
+            // By Amount Section
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "TOP BY AMOUNT",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = Color(0xFFFFD54F)
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
             
             data.topCategories.forEachIndexed { index, (name, amount) ->
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = "#${index + 1}",
-                            style = MaterialTheme.typography.headlineSmall,
+                            style = MaterialTheme.typography.titleMedium,
                             color = Color.White.copy(alpha = 0.5f),
-                            modifier = Modifier.width(48.dp)
+                            modifier = Modifier.width(32.dp)
                         )
                         Text(
                             text = name,
-                            style = MaterialTheme.typography.headlineMedium,
+                            style = MaterialTheme.typography.titleLarge,
                             color = Color.White,
                             fontWeight = FontWeight.Bold
                         )
                     }
                     Text(
                         text = amount,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color(0xFFFFD54F)
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            androidx.compose.material3.HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // By Count Section
+            Text(
+                "TOP BY COUNT",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = Color(0xFF64FFDA)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            data.topCategoriesByCount.forEachIndexed { index, (name, count) ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "#${index + 1}",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.width(32.dp)
+                        )
+                        Text(
+                            text = name,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Text(
+                        text = "$count txns",
+                        style = MaterialTheme.typography.titleMedium,
                         color = Color(0xFF64FFDA)
                     )
                 }
-                androidx.compose.material3.HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
             }
         }
     }
@@ -523,10 +605,10 @@ fun TimeStatItemByAmount(label: String, value: String, amount: String) {
 fun LongestStreakSlide(data: RecapData) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
          PremiumLineBackground(LinePattern.RINGS)
-         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
              Text(
                  text = "${data.longestStreakDays} DAYS",
-                 style = MaterialTheme.typography.displayLarge.copy(fontSize = 100.sp, fontWeight = FontWeight.Bold),
+                 style = MaterialTheme.typography.displayLarge.copy(fontSize = 80.sp, fontWeight = FontWeight.Bold),
                  color = Color(0xFF00E676)
              )
              Text(
@@ -534,12 +616,42 @@ fun LongestStreakSlide(data: RecapData) {
                  style = MaterialTheme.typography.headlineSmall,
                  color = Color.White
              )
-             Spacer(modifier = Modifier.height(16.dp))
+             Spacer(modifier = Modifier.height(8.dp))
              Text(
-                 text = "Spending a total of ${data.longestStreakAmount}",
+                 text = data.longestStreakDateRange,
                  style = MaterialTheme.typography.titleMedium,
-                 color = Color.White.copy(alpha = 0.8f)
+                 color = Color.White.copy(alpha = 0.6f)
              )
+             Spacer(modifier = Modifier.height(32.dp))
+             Row(
+                 modifier = Modifier.fillMaxWidth(),
+                 horizontalArrangement = Arrangement.SpaceEvenly
+             ) {
+                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                     Text(
+                         text = "${data.longestStreakCount}",
+                         style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+                         color = Color(0xFF64FFDA)
+                     )
+                     Text(
+                         text = "Transactions",
+                         style = MaterialTheme.typography.labelMedium,
+                         color = Color.White.copy(alpha = 0.7f)
+                     )
+                 }
+                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                     Text(
+                         text = data.longestStreakAmount,
+                         style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+                         color = Color(0xFFFFD54F)
+                     )
+                     Text(
+                         text = "Spent",
+                         style = MaterialTheme.typography.labelMedium,
+                         color = Color.White.copy(alpha = 0.7f)
+                     )
+                 }
+             }
         }
     }
 }
@@ -745,8 +857,21 @@ fun PremiumLineBackground(pattern: LinePattern, color: Color = Color.White.copy(
 
 @Composable
 fun TotalSpentSlide(data: RecapData) {
+    // Parse amount for animation (Assuming format "₹4,52,000")
+    val rawAmount = data.totalSpent.filter { it.isDigit() }.toIntOrNull() ?: 0
+    val animatedAmount by animateIntAsState(
+        targetValue = rawAmount,
+        animationSpec = tween(durationMillis = 2000, easing = FastOutSlowInEasing),
+        label = "amount"
+    )
+    
+    // Quick formatter to put commas back (Simplified for Indian Locale usually)
+    val formattedAnimatedAmount = "₹" + java.text.NumberFormat.getIntegerInstance(java.util.Locale("en", "IN")).format(animatedAmount)
+
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         PremiumLineBackground(LinePattern.NET)
+        ParticleEffect(modifier = Modifier.fillMaxSize()) // Add floating particles
+        
         Column(modifier = Modifier.padding(24.dp)) {
             Text(
                 text = "This year, you spent a grand total of...",
@@ -754,8 +879,10 @@ fun TotalSpentSlide(data: RecapData) {
                 color = Color.White.copy(alpha = 0.8f)
             )
             Spacer(modifier = Modifier.height(32.dp))
+            
+            // Animated Number
             Text(
-                text = data.totalSpent,
+                text = formattedAnimatedAmount,
                 style = MaterialTheme.typography.displayLarge.copy(
                     fontFamily = FontFamily.Serif,
                     fontWeight = FontWeight.ExtraBold
@@ -843,9 +970,13 @@ fun WeekendWarriorSlide(data: RecapData) {
 
 @Composable
 fun BusiestDaySlide(data: RecapData) {
-    val days = listOf("M", "T", "W", "T", "F", "S", "S")
-    // Fake graph data relative to the busy day
-    val heights = listOf(0.4f, 0.6f, 0.3f, 1.0f, 0.8f, 0.9f, 0.5f) // Thursday is max
+    val days = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+    // Fake graph data
+    val heights = listOf(0.4f, 0.6f, 0.3f, 1.0f, 0.5f, 0.9f, 0.5f)
+    
+    // Determine which days to highlight (based on dummy data - Thursday=3 for count, Saturday=5 for amount)
+    val countDayIndex = 3 // Thursday
+    val amountDayIndex = 5 // Saturday
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         PremiumLineBackground(LinePattern.CROSSHATCH)
@@ -854,106 +985,105 @@ fun BusiestDaySlide(data: RecapData) {
             modifier = Modifier.padding(24.dp)
         ) {
             Text(
-                text = "Your fingers were busiest on",
-                style = MaterialTheme.typography.headlineSmall,
-                color = Color.White.copy(alpha = 0.8f)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = data.busiestDay,
-                style = MaterialTheme.typography.displayMedium.copy(
-                    fontFamily = FontFamily.Serif,
-                    fontWeight = FontWeight.Bold
-                ),
-                color = Color(0xFF64FFDA), // Teal accent
-                textAlign = TextAlign.Center
+                "BUSIEST DAYS",
+                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                color = Color.White
             )
             
-            Spacer(modifier = Modifier.height(56.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            // Graph visual
+            // Week Graph
             Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.Bottom,
-                modifier = Modifier.height(200.dp)
+                modifier = Modifier.height(160.dp)
             ) {
                 days.forEachIndexed { index, day ->
-                    val isBusyDay = day == "T" && index == 3 // Simple check for Thursday
+                    val isCountDay = index == countDayIndex
+                    val isAmountDay = index == amountDayIndex
+                    
+                    val barColor = when {
+                        isCountDay -> Color(0xFF64FFDA) // Teal for count
+                        isAmountDay -> Color(0xFFFFD54F) // Amber for amount
+                        else -> Color.White.copy(alpha = 0.2f)
+                    }
+                    val textColor = when {
+                        isCountDay -> Color(0xFF64FFDA)
+                        isAmountDay -> Color(0xFFFFD54F)
+                        else -> Color.White.copy(alpha = 0.5f)
+                    }
                     
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Box(
                             modifier = Modifier
-                                .width(24.dp)
-                                .fillMaxSize(fraction = 0.8f * heights[index]) // reduced height for safety
+                                .width(32.dp)
+                                .fillMaxHeight(fraction = 0.8f * heights[index])
                                 .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                                .background(
-                                    if (isBusyDay) Color(0xFF64FFDA) else Color.White.copy(alpha = 0.2f)
-                                )
+                                .background(barColor)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = day,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (isBusyDay) Color(0xFF64FFDA) else Color.White.copy(alpha = 0.5f)
+                            text = day.take(1),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = textColor
                         )
                     }
                 }
             }
-             Spacer(modifier = Modifier.height(32.dp))
-             Row(
-                 modifier = Modifier.fillMaxWidth(),
-                 horizontalArrangement = Arrangement.SpaceEvenly
-             ) {
-                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                     Text(
-                         text = "${data.busiestDayCount}",
-                         style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
-                         color = Color(0xFF64FFDA) // Teal for count
-                     )
-                     Text(
-                         text = "Transactions",
-                         style = MaterialTheme.typography.labelMedium,
-                         color = Color.White.copy(alpha = 0.7f)
-                     )
-                 }
-                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                     Text(
-                         text = data.busiestDayAmount,
-                         style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
-                         color = Color(0xFFFFD54F) // Amber/Gold for amount
-                     )
-                     Text(
-                         text = "Spent",
-                         style = MaterialTheme.typography.labelMedium,
-                         color = Color.White.copy(alpha = 0.7f)
-                     )
-                 }
-             }
-        }
-    }
-}
-
-
-
-@Composable
-fun OutroSlide() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-             Icon(
-                 imageVector = Icons.Rounded.Star,
-                 contentDescription = "Star",
-                 modifier = Modifier.size(64.dp),
-                 tint = Color(0xFFFFD700)
-             )
-             Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = "See you in 2026!",
-                style = MaterialTheme.typography.displayMedium.copy(
-                    fontFamily = FontFamily.Serif,
-                    fontWeight = FontWeight.Bold
-                ),
-                color = Color.White
-            )
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // Legend
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                // By Count
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .background(Color(0xFF64FFDA), CircleShape)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("By Count", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
+                    }
+                    Text(
+                        data.busiestDayByCount,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = Color(0xFF64FFDA)
+                    )
+                    Text(
+                        "${data.busiestDayCount} txns",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.6f)
+                    )
+                }
+                
+                // By Amount
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .background(Color(0xFFFFD54F), CircleShape)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("By Amount", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
+                    }
+                    Text(
+                        data.busiestDayByAmount,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = Color(0xFFFFD54F)
+                    )
+                    Text(
+                        data.busiestDayAmount,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.6f)
+                    )
+                }
+            }
         }
     }
 }
@@ -1170,6 +1300,206 @@ fun AnimatedBackground(slideIndex: Int) {
     ) {
         // Overlay some "noise" or blobs for premium feel using Canvas if needed
         // For now, the distinct gradients provide the shift.
+    }
+}
+
+@Composable
+fun OutroSlide() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        PremiumLineBackground(LinePattern.WAVES, color = Color.White.copy(alpha = 0.05f))
+        
+        // Confetti!
+        ConfettiExplosion(modifier = Modifier.fillMaxSize())
+        
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(32.dp)
+        ) {
+            Text(
+                "See you in 2026!",
+                style = MaterialTheme.typography.displayMedium.copy(
+                    fontFamily = FontFamily.Serif,
+                    fontWeight = FontWeight.Bold
+                ),
+                color = Color.White,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                "Keep making every\ntransaction count.",
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+// --- New Slides ---
+
+@Composable
+fun BiggestPurchaseSlide(data: RecapData) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        PremiumLineBackground(LinePattern.CROSSHATCH)
+        ParticleEffect(modifier = Modifier.fillMaxSize()) // Add floating particles
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(24.dp)
+        ) {
+            Text(
+                "BIGGEST SPEND",
+                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                color = Color(0xFFFF4081)
+            )
+            Spacer(modifier = Modifier.height(40.dp))
+            
+            // Icon or Visual
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .background(Color.White.copy(alpha = 0.1f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                 Icon(
+                     imageVector = Icons.Rounded.ShoppingBag,
+                     contentDescription = null,
+                     tint = Color.White,
+                     modifier = Modifier.size(48.dp)
+                 )
+            }
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            Text(
+                data.biggestPurchaseName,
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                color = Color.White,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                data.biggestPurchaseAmount,
+                style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+                color = Color(0xFFFFD54F)
+            )
+             Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "on ${data.biggestPurchaseDate}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.6f)
+            )
+            
+            Spacer(modifier = Modifier.height(48.dp))
+            androidx.compose.material3.HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // Smallest Purchase Section
+             Text(
+                "SMALLEST SPEND",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = Color(0xFF64FFDA)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    data.smallestPurchaseName,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    "•",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White.copy(alpha = 0.4f)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    data.smallestPurchaseAmount,
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = Color(0xFF64FFDA)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun IncomeExpenseSlide(data: RecapData) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        PremiumLineBackground(LinePattern.NET)
+        
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(24.dp)
+        ) {
+            Text(
+                "MONEY FLOW",
+                style = MaterialTheme.typography.displaySmall.copy(fontFamily = FontFamily.Serif),
+                color = Color.White
+            )
+            Spacer(modifier = Modifier.height(48.dp))
+            
+            // Income
+             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    "TOTAL INCOME",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White.copy(alpha = 0.6f)
+                )
+                Text(
+                    data.totalIncome,
+                    style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+                    color = Color(0xFF00E676) // Green
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // Visual Ratio Bar
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(24.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF00E676).copy(alpha = 0.3f))
+            ) {
+                // Expense portion
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(data.incomeExpenseRatio / 100f)
+                        .background(Color(0xFFFF5252)) // Red
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+             Text(
+                "You spent ${data.incomeExpenseRatio}% of what you earned",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.7f)
+            )
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // Expense
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    "TOTAL EXPENSE",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White.copy(alpha = 0.6f)
+                )
+                Text(
+                    data.totalExpense,
+                    style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+                    color = Color(0xFFFF5252) // Red
+                )
+            }
+        }
     }
 }
 
