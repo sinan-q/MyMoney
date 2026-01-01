@@ -85,6 +85,9 @@ interface MoneyDao {
     @Query("SELECT * FROM wallets WHERE isDeleted = 0 AND isArchived = 0 ORDER BY `index` ASC")
     fun getWallets(): Flow<List<WalletEntity>>
 
+    @Query("SELECT * FROM wallets WHERE isDeleted = 0 ORDER BY `index` ASC")
+    fun getAllWalletsIncludingArchived(): Flow<List<WalletEntity>>
+
     @Transaction
     @Query("""
         SELECT 

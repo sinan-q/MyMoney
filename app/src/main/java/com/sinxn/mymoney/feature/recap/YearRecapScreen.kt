@@ -9,6 +9,8 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -48,6 +50,7 @@ import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Subway
 import androidx.compose.material.icons.rounded.Train
 import androidx.compose.material.icons.rounded.LocalGasStation
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -56,10 +59,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.withFrameNanos
-import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -78,10 +83,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
@@ -91,7 +98,7 @@ enum class RecapSlideType {
     INTRO,
     TOTAL_SPENT,
     WEEKEND_WARRIOR,
-    COFFEE_METRIC,
+    SPENDING_DISTRIBUTION,
     FOODIE_FACTOR,
     TRAVEL_STATS,    // New
     MOVIE_STATS,     // New
@@ -108,24 +115,25 @@ enum class RecapSlideType {
 
 // Dummy Wallet Data for UI
 data class WalletItem(
-    val id: Long,
+    val id: String,
     val name: String,
     val balance: String,
     val isArchived: Boolean = false
 )
 
 val dummyWallets = listOf(
-    WalletItem(1, "Main Account", "₹2,50,000"),
-    WalletItem(2, "Savings", "₹1,00,000"),
-    WalletItem(3, "Credit Card", "-₹25,000"),
-    WalletItem(4, "Cash", "₹5,000"),
-    WalletItem(5, "Old Bank (Archived)", "₹0", isArchived = true),
-    WalletItem(6, "Closed Card (Archived)", "₹0", isArchived = true)
+    WalletItem("1", "Main Account", "₹2,50,000"),
+    WalletItem("2", "Savings", "₹1,00,000"),
+    WalletItem("3", "Credit Card", "-₹25,000"),
+    WalletItem("4", "Cash", "₹5,000"),
+    WalletItem("5", "Old Bank (Archived)", "₹0", isArchived = true),
+    WalletItem("6", "Closed Card (Archived)", "₹0", isArchived = true)
 )
 
 data class RecapData(
     val year: Int = 2025,
     val totalSpent: String = "₹4,52,000",
+    val totalSpentRaw: Long = 452000,
     val totalTransactionCount: Int = 542,
     // Busiest day by COUNT
     val busiestDayByCount: String = "Thursday",
@@ -133,59 +141,84 @@ data class RecapData(
     // Busiest day by AMOUNT
     val busiestDayByAmount: String = "Saturday",
     val busiestDayAmount: String = "₹18,500",
+    val busiestDayAmountRaw: Long = 18500,
     val weekendPercentage: Int = 65,
     val weekendAmount: String = "₹12,500",
-    val coffeeMetricLowCount: Int = 142,
-    val coffeeMetricHighCount: Int = 12,
-    val coffeeMetricAmount: String = "₹4,200",
+    val weekendAmountRaw: Long = 12500,
+    // Spending Distribution: <50, 50-100, 100-200, 200-500, 500+
+    val spendingDistribution: Map<String, Int> = mapOf(
+        "< 50" to 0, "50-100" to 0, "100-200" to 0, "200-500" to 0, "500+" to 0
+    ),
     val foodiePercentage: Int = 40,
     val foodieCount: Int = 156,
     val foodieAmount: String = "₹1,85,000",
+    val foodieAmountRaw: Long = 185000,
+    val highestFoodPurchaseName: String = "Fancy Dinner",
+    val highestFoodPurchaseAmount: String = "₹4,500",
+    val highestFoodPurchaseAmountRaw: Long = 4500,
+    val highestFoodPurchaseDate: String = "Oct 12",
     val longestStreakDays: Int = 15,
     val longestStreakDateRange: String = "Mar 5 - Mar 19",
     val longestStreakCount: Int = 32,
     val longestStreakAmount: String = "₹15,000",
-    val topCategories: List<Pair<String, String>> = listOf("Food" to "₹1.2L", "Travel" to "₹80k", "Gadgets" to "₹50k"),
+    val longestStreakAmountRaw: Long = 15000,
+    val topCategories: List<Pair<String, Long>> = listOf("Food" to 120000L, "Travel" to 80000L, "Gadgets" to 50000L),
+    
     val topCategoriesByCount: List<Pair<String, Int>> = listOf("Groceries" to 89, "Food" to 72, "Transport" to 58),
-    // Top by COUNT (for TopSpentTimesSlide)
+    // Top by COUNT
     val topMonthByCount: String = "October",
     val topMonthCount: Int = 142,
     val topWeekByCount: String = "Nov 12-19",
     val topWeekCount: Int = 38,
     val topDayByCount: String = "Oct 25",
     val topDayCount: Int = 12,
-    // Top by AMOUNT (for RollercoasterSlide)
+    // Top by AMOUNT
     val topMonthByAmount: String = "December",
     val topMonthAmount: String = "₹85,000",
+    val topMonthAmountRaw: Long = 85000,
     val topWeekByAmount: String = "Dec 20-26",
     val topWeekAmount: String = "₹28,000",
+    val topWeekAmountRaw: Long = 28000,
     val topDayByAmount: String = "Dec 25",
     val topDayAmount: String = "₹12,500",
-    // Travel Params - using data class for richer info
+    val topDayAmountRaw: Long = 12500,
+    // Travel Params
     val uberCount: Int = 43,
     val uberAmount: String = "₹8,500",
+    val uberAmountRaw: Long = 8500,
     val busCount: Int = 16,
     val busAmount: String = "₹320",
+    val busAmountRaw: Long = 320,
     val trainCount: Int = 8,
     val trainAmount: String = "₹1,200",
+    val trainAmountRaw: Long = 1200,
     val metroRechargeCount: Int = 40,
     val metroAmount: String = "₹6,000",
+    val metroAmountRaw: Long = 6000,
     val fuelCount: Int = 24,
     val fuelAmount: String = "₹12,500",
+    val fuelAmountRaw: Long = 12500,
     val travelTotalAmount: String = "₹28,520",
+    val travelTotalAmountRaw: Long = 28520,
     val movieHours: Int = 36,
     val movieCount: Int = 14,
     val movieAmount: String = "₹6,500",
+    val movieAmountRaw: Long = 6500,
     val lifestyleAmount: String = "₹45,000",
+    val lifestyleAmountRaw: Long = 45000,
     // New Slides Stats
     val biggestPurchaseName: String = "Apple MacBook Air",
     val biggestPurchaseAmount: String = "₹1,14,900",
+    val biggestPurchaseAmountRaw: Long = 114900,
     val biggestPurchaseDate: String = "Oct 15",
     val smallestPurchaseName: String = "Matches",
     val smallestPurchaseAmount: String = "₹1.00",
+    val smallestPurchaseAmountRaw: Long = 100, // 1.00
     val totalIncome: String = "₹8,50,000",
+    val totalIncomeRaw: Long = 850000,
     val totalExpense: String = "₹4,52,000",
-    val incomeExpenseRatio: Int = 53 // 53% of income spent
+    val totalExpenseRaw: Long = 452000,
+    val incomeExpenseRatio: Int = 53
 )
 
 // --- Main Screen ---
@@ -228,22 +261,55 @@ fun YearRecapScreen(
             onSurface = Color.White
         )
     ) {
+        val viewModel: YearRecapViewModel = hiltViewModel()
+        val wallets by viewModel.wallets.collectAsState()
+        val recapState by viewModel.recapState.collectAsState()
+        val loading by viewModel.loadingState.collectAsState()
+        
         var showWalletSelection by remember { mutableStateOf(true) }
-        var selectedWalletIds by remember { mutableStateOf(setOf<Long>()) }
+        var selectedWalletIds by remember { mutableStateOf(setOf<String>()) }
         var currentSlideIndex by remember { mutableIntStateOf(0) }
         val slides = RecapSlideType.entries.toTypedArray()
+
+        // Map Entities to UI Model for Selection
+        val uiWallets = remember(wallets) {
+            wallets.map { 
+                WalletItem(
+                    id = it.id,
+                    name = it.name,
+                    balance = "", // Balance not strictly needed for selection, or fetch if needed
+                    isArchived = it.isArchived
+                )
+            }
+        }
 
         if (showWalletSelection) {
             // Wallet Selection Screen
             WalletSelectionScreen(
-                wallets = dummyWallets,
+                wallets = uiWallets,
                 selectedIds = selectedWalletIds,
                 onSelectionChanged = { selectedWalletIds = it },
-                onProceed = { showWalletSelection = false }
+                onProceed = { 
+                    viewModel.generateRecap(selectedWalletIds)
+                    showWalletSelection = false 
+                }
             )
-        } else {
-
-        Box(
+        } else if (loading) {
+             Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = Color(0xFF64FFDA))
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Crunching the numbers...", color = Color.White, style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+        } else if (recapState != null) {
+            val data = recapState!!
+            Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black)
@@ -310,7 +376,7 @@ fun YearRecapScreen(
                         RecapSlideType.INTRO -> IntroSlide(data.year)
                         RecapSlideType.TOTAL_SPENT -> TotalSpentSlide(data)
                         RecapSlideType.WEEKEND_WARRIOR -> WeekendWarriorSlide(data)
-                        RecapSlideType.COFFEE_METRIC -> CoffeeMetricSlide(data)
+                        RecapSlideType.SPENDING_DISTRIBUTION -> SpendingDistributionSlide(data)
                         RecapSlideType.FOODIE_FACTOR -> FoodieFactorSlide(data)
                         RecapSlideType.TRAVEL_STATS -> TravelStatsSlide(data)
                         RecapSlideType.MOVIE_STATS -> MovieStatsSlide(data)
@@ -352,8 +418,8 @@ fun YearRecapScreen(
 @Composable
 fun WalletSelectionScreen(
     wallets: List<WalletItem>,
-    selectedIds: Set<Long>,
-    onSelectionChanged: (Set<Long>) -> Unit,
+    selectedIds: Set<String>,
+    onSelectionChanged: (Set<String>) -> Unit,
     onProceed: () -> Unit
 ) {
     val activeWallets = wallets.filter { !it.isArchived }
@@ -371,58 +437,41 @@ fun WalletSelectionScreen(
                 .padding(top = 48.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Header
-            Text(
-                "SELECT WALLETS",
-                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                color = Color.White
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                "Choose which wallets to include in your recap",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.6f)
-            )
-            
-            Spacer(modifier = Modifier.height(32.dp))
-            
-            // Active Wallets Section
-            Text(
-                "ACTIVE WALLETS",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color(0xFF64FFDA),
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            activeWallets.forEach { wallet ->
-                WalletSelectionItem(
-                    wallet = wallet,
-                    isSelected = selectedIds.contains(wallet.id),
-                    onToggle = {
-                        val newSet = if (selectedIds.contains(wallet.id)) {
-                            selectedIds - wallet.id
-                        } else {
-                            selectedIds + wallet.id
-                        }
-                        onSelectionChanged(newSet)
-                    }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-            
-            // Archived Wallets Section
-            if (archivedWallets.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(
-                    "ARCHIVED WALLETS",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color.White.copy(alpha = 0.5f),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(12.dp))
+            // Content List
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Header
+                item {
+                    Text(
+                        "SELECT WALLETS",
+                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Choose which wallets to include in your recap",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.6f)
+                    )
+                    Spacer(modifier = Modifier.height(32.dp))
+                }
                 
-                archivedWallets.forEach { wallet ->
+                // Active Wallets Section
+                item {
+                    Text(
+                        "ACTIVE WALLETS",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color(0xFF64FFDA),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+                
+                items(activeWallets) { wallet ->
                     WalletSelectionItem(
                         wallet = wallet,
                         isSelected = selectedIds.contains(wallet.id),
@@ -437,11 +486,44 @@ fun WalletSelectionScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
+                
+                // Archived Wallets Section
+                if (archivedWallets.isNotEmpty()) {
+                    item {
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text(
+                            "ARCHIVED WALLETS",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+                    
+                    items(archivedWallets) { wallet ->
+                        WalletSelectionItem(
+                            wallet = wallet,
+                            isSelected = selectedIds.contains(wallet.id),
+                            onToggle = {
+                                val newSet = if (selectedIds.contains(wallet.id)) {
+                                    selectedIds - wallet.id
+                                } else {
+                                    selectedIds + wallet.id
+                                }
+                                onSelectionChanged(newSet)
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+                
+                item {
+                     Spacer(modifier = Modifier.height(16.dp))
+                }
             }
             
-            Spacer(modifier = Modifier.weight(1f))
-            
             // Proceed Button
+            Spacer(modifier = Modifier.height(16.dp))
             androidx.compose.material3.Button(
                 onClick = onProceed,
                 enabled = selectedIds.isNotEmpty(),
@@ -527,59 +609,86 @@ fun WalletSelectionItem(
 
 
 
+
 @Composable
-fun CoffeeMetricSlide(data: RecapData) {
-     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        PremiumLineBackground(LinePattern.CURVES)
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
+fun SpendingDistributionSlide(data: RecapData) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        PremiumLineBackground(LinePattern.CURVES, color = Color.White.copy(alpha = 0.05f))
+        
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(24.dp).fillMaxWidth()
+        ) {
             Text(
-                text = "THE COFFEE METRIC",
+                text = "SPENDING SPECTRUM",
                 style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                color = Color.White
-            )
-            Spacer(modifier = Modifier.height(48.dp))
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.Bottom
-            ) {
-                // Small Cup
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Rounded.ShoppingBag, // Placeholder for Cup
-                        contentDescription = "Small",
-                        modifier = Modifier.size(40.dp),
-                        tint = Color(0xFFBCAAA4)
-                    )
-                    Text("${data.coffeeMetricLowCount}", style = MaterialTheme.typography.displayMedium, color = Color.White)
-                    Text("< ₹50", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha=0.5f))
-                }
-                
-                // Big Cup
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Rounded.Star, // Placeholder for Luxury
-                        contentDescription = "Big",
-                        modifier = Modifier.size(80.dp),
-                        tint = Color(0xFFFFD700)
-                    )
-                    Text("${data.coffeeMetricHighCount}", style = MaterialTheme.typography.displayMedium, color = Color.White)
-                    Text("> ₹500", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha=0.5f))
-                }
-            }
-            Spacer(modifier = Modifier.height(32.dp))
-            Text(
-                text = "${data.coffeeMetricLowCount} small purchases under ₹50",
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White
+                color = Color(0xFF00E676)
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "You love the little things!",
-                style = MaterialTheme.typography.headlineSmall,
-                color = Color.White.copy(alpha = 0.8f)
+                  text = "Transaction count by amount",
+                  style = MaterialTheme.typography.titleMedium,
+                  color = Color.White.copy(alpha = 0.6f)
             )
+            Spacer(modifier = Modifier.height(40.dp))
+            
+            // Bar Chart
+            val maxCount = data.spendingDistribution.values.maxOrNull() ?: 1
+            
+            Row(
+                modifier = Modifier.fillMaxWidth().height(300.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                val orderedKeys = listOf("< 50", "50-100", "100-200", "200-500", "500+")
+                
+                orderedKeys.forEachIndexed { index, range ->
+                    val count = data.spendingDistribution[range] ?: 0
+                    val heightRatio = if (maxCount > 0) count.toFloat() / maxCount else 0f
+                    
+                    var animatedRatio by remember { mutableStateOf(0f) }
+                    LaunchedEffect(Unit) {
+                         animatedRatio = heightRatio
+                    }
+                    val animatedHeight by animateFloatAsState(
+                         targetValue = animatedRatio, 
+                         animationSpec = tween(1000, delayMillis = index * 100)
+                    )
+                    val barHeight = 200f * (if (animatedHeight < 0.02f && count > 0) 0.02f else animatedHeight)
+                    
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.weight(1f) // Just width weight
+                    ) {
+                        AnimatedNumberText(
+                            value = count,
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        
+                        Box(
+                            modifier = Modifier
+                                .width(30.dp)
+                                .height(barHeight.dp) // Fixed Max Height 200dp
+                                .background(
+                                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                        colors = listOf(Color(0xFF00E676), Color(0xFF69F0AE))
+                                    ),
+                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)
+                                )
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = range, // Simplifed text display to fix alignment
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            color = Color.White.copy(alpha = 0.7f),
+                            textAlign = TextAlign.Center,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -605,16 +714,27 @@ fun FoodieFactorSlide(data: RecapData) {
                      .size(180.dp)
                      .background(Color(0xFFFF5722), CircleShape),
                  contentAlignment = Alignment.Center
-             ) {
-                 Text(
-                     text = "${data.foodiePercentage}%",
-                     style = MaterialTheme.typography.displayLarge.copy(
-                         fontSize = 56.sp,
-                         fontWeight = FontWeight.Black
-                     ),
-                     color = Color.White
-                 )
-             }
+                 ) {
+                     Row(verticalAlignment = Alignment.Top) {
+                         AnimatedNumberText(
+                             value = data.foodiePercentage,
+                             style = MaterialTheme.typography.displayLarge.copy(
+                                 fontSize = 56.sp,
+                                 fontWeight = FontWeight.Black
+                             ),
+                             color = Color.White
+                         )
+                         Text(
+                             text = "%",
+                             style = MaterialTheme.typography.displayLarge.copy(
+                                 fontSize = 32.sp,
+                                 fontWeight = FontWeight.Black
+                             ),
+                             color = Color.White,
+                             modifier = Modifier.padding(top = 12.dp)
+                         )
+                     }
+                 }
              
              Spacer(modifier = Modifier.height(32.dp))
              Text(
@@ -624,14 +744,49 @@ fun FoodieFactorSlide(data: RecapData) {
                  textAlign = TextAlign.Center
              )
              Spacer(modifier = Modifier.height(16.dp))
+              AnimatedNumberText(
+                  value = data.foodieAmountRaw,
+                  style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+                  color = Color(0xFFFFD54F),
+                  format = { "₹" + java.text.NumberFormat.getIntegerInstance(java.util.Locale("en", "IN")).format(it) }
+              )
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                  AnimatedNumberText(
+                      value = data.foodieCount,
+                      style = MaterialTheme.typography.bodyMedium,
+                      color = Color.White.copy(alpha = 0.6f)
+                  )
+                  Text(
+                      text = " transactions",
+                      style = MaterialTheme.typography.bodyMedium,
+                      color = Color.White.copy(alpha = 0.6f)
+                  )
+              }
+             
+             Spacer(modifier = Modifier.height(32.dp))
+             androidx.compose.material3.HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
+             Spacer(modifier = Modifier.height(24.dp))
+             
              Text(
-                 text = data.foodieAmount,
-                 style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
-                 color = Color(0xFFFFD54F)
+                 "HIGHEST MEAL",
+                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                 color = Color(0xFFFFD54F) 
+             )
+             Spacer(modifier = Modifier.height(8.dp))
+             Text(
+                 data.highestFoodPurchaseName,
+                 style = MaterialTheme.typography.titleMedium,
+                 color = Color.White
+             )
+              AnimatedNumberText(
+                 value = data.highestFoodPurchaseAmountRaw,
+                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                 color = Color(0xFFFFD54F),
+                 format = { "₹" + java.text.NumberFormat.getIntegerInstance(java.util.Locale("en", "IN")).format(it) }
              )
              Text(
-                 text = "${data.foodieCount} transactions",
-                 style = MaterialTheme.typography.bodyMedium,
+                 "on ${data.highestFoodPurchaseDate}",
+                 style = MaterialTheme.typography.bodySmall,
                  color = Color.White.copy(alpha = 0.6f)
              )
              Text(
@@ -648,6 +803,14 @@ fun TopCategoriesSlide(data: RecapData) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopStart) {
         PremiumLineBackground(LinePattern.NET)
         Column(modifier = Modifier.padding(24.dp).padding(top = 48.dp)) {
+            Text(
+                "TOP CATEGORIES",
+                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                color = Color.White,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+
             // By Amount Section
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -682,10 +845,11 @@ fun TopCategoriesSlide(data: RecapData) {
                             fontWeight = FontWeight.Bold
                         )
                     }
-                    Text(
-                        text = amount,
+                    AnimatedNumberText(
+                        value = amount,
                         style = MaterialTheme.typography.titleMedium,
-                        color = Color(0xFFFFD54F)
+                        color = Color(0xFFFFD54F),
+                        format = { "₹" + java.text.NumberFormat.getIntegerInstance(java.util.Locale("en", "IN")).format(it) }
                     )
                 }
             }
@@ -722,11 +886,18 @@ fun TopCategoriesSlide(data: RecapData) {
                             fontWeight = FontWeight.Bold
                         )
                     }
-                    Text(
-                        text = "$count txns",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color(0xFF64FFDA)
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        AnimatedNumberText(
+                            value = count,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color(0xFF64FFDA)
+                        )
+                        Text(
+                            text = " txns",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color(0xFF64FFDA)
+                        )
+                    }
                 }
             }
         }
@@ -766,7 +937,14 @@ fun TimeStatItemByCount(label: String, value: String, count: Int) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label.uppercase(), style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.6f))
         Text(value, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = Color.White)
-        Text("$count transactions", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF64FFDA))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            AnimatedNumberText(
+                value = count,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFF64FFDA)
+            )
+            Text(" transactions", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF64FFDA))
+        }
     }
 }
 
@@ -789,21 +967,26 @@ fun RollercoasterSlide(data: RecapData) {
                 color = Color.White.copy(alpha = 0.6f)
             )
             Spacer(modifier = Modifier.height(40.dp))
-            TimeStatItemByAmount("Month", data.topMonthByAmount, data.topMonthAmount)
+            TimeStatItemByAmount("Month", data.topMonthByAmount, data.topMonthAmountRaw)
             Spacer(modifier = Modifier.height(24.dp))
-            TimeStatItemByAmount("Week", data.topWeekByAmount, data.topWeekAmount)
+            TimeStatItemByAmount("Week", data.topWeekByAmount, data.topWeekAmountRaw)
             Spacer(modifier = Modifier.height(24.dp))
-            TimeStatItemByAmount("Day", data.topDayByAmount, data.topDayAmount)
+            TimeStatItemByAmount("Day", data.topDayByAmount, data.topDayAmountRaw)
         }
     }
 }
 
 @Composable
-fun TimeStatItemByAmount(label: String, value: String, amount: String) {
+fun TimeStatItemByAmount(label: String, value: String, amountRaw: Long) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label.uppercase(), style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.6f))
         Text(value, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = Color.White)
-        Text(amount, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFFFFD54F))
+        AnimatedNumberText(
+            value = amountRaw,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            color = Color(0xFFFFD54F),
+            format = { "₹" + java.text.NumberFormat.getIntegerInstance(java.util.Locale("en", "IN")).format(it) }
+        )
     }
 }
 
@@ -834,8 +1017,8 @@ fun LongestStreakSlide(data: RecapData) {
                  horizontalArrangement = Arrangement.SpaceEvenly
              ) {
                  Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                     Text(
-                         text = "${data.longestStreakCount}",
+                     AnimatedNumberText(
+                         value = data.longestStreakCount,
                          style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
                          color = Color(0xFF64FFDA)
                      )
@@ -846,10 +1029,11 @@ fun LongestStreakSlide(data: RecapData) {
                      )
                  }
                  Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                     Text(
-                         text = data.longestStreakAmount,
+                     AnimatedNumberText(
+                         value = data.longestStreakAmountRaw,
                          style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
-                         color = Color(0xFFFFD54F)
+                         color = Color(0xFFFFD54F),
+                         format = { "₹" + java.text.NumberFormat.getIntegerInstance(java.util.Locale("en", "IN")).format(it) }
                      )
                      Text(
                          text = "Spent",
@@ -922,7 +1106,7 @@ fun StoryProgressBar(
                     progress.snapTo(0f)
                 }
                 
-                val duration = (5000 * (1f - progress.value)).toInt()
+                val duration = (10000 * (1f - progress.value)).toInt()
                 if (duration > 0) {
                      progress.animateTo(
                          targetValue = 1f,
@@ -1061,22 +1245,20 @@ fun PremiumLineBackground(pattern: LinePattern, color: Color = Color.White.copy(
 
 // --- Specific Category Slides ---
 
+
+
 @Composable
 fun TotalSpentSlide(data: RecapData) {
-    // Parse amount for animation (Assuming format "₹4,52,000")
-    val rawAmount = data.totalSpent.filter { it.isDigit() }.toIntOrNull() ?: 0
-    val animatedAmount by animateIntAsState(
-        targetValue = rawAmount,
-        animationSpec = tween(durationMillis = 2000, easing = FastOutSlowInEasing),
-        label = "amount"
-    )
-    
-    // Quick formatter to put commas back (Simplified for Indian Locale usually)
-    val formattedAnimatedAmount = "₹" + java.text.NumberFormat.getIntegerInstance(java.util.Locale("en", "IN")).format(animatedAmount)
+    // Quick formatter to put commas back
+    // We can just use the provided formatted string to extract symbol/decimals?
+    // Or just simple standard java format.
+    val formatMoney: (Number) -> String = { num ->
+         "₹" + java.text.NumberFormat.getIntegerInstance(java.util.Locale("en", "IN")).format(num)
+    }
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         PremiumLineBackground(LinePattern.NET)
-        ParticleEffect(modifier = Modifier.fillMaxSize()) // Add floating particles
+        ParticleEffect(modifier = Modifier.fillMaxSize()) 
         
         Column(modifier = Modifier.padding(24.dp)) {
             Text(
@@ -1087,15 +1269,16 @@ fun TotalSpentSlide(data: RecapData) {
             Spacer(modifier = Modifier.height(32.dp))
             
             // Animated Number
-            Text(
-                text = formattedAnimatedAmount,
+            AnimatedNumberText(
+                value = data.totalSpentRaw,
                 style = MaterialTheme.typography.displayLarge.copy(
                     fontFamily = FontFamily.Serif,
                     fontWeight = FontWeight.ExtraBold
                 ),
                 color = Color.White,
-                lineHeight = 64.sp
+                format = formatMoney
             )
+
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "That's a lot of memories!",
@@ -1103,11 +1286,20 @@ fun TotalSpentSlide(data: RecapData) {
                 color = Color.White.copy(alpha = 0.6f)
             )
             Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = "${data.totalTransactionCount} Transactions",
-                style = MaterialTheme.typography.titleLarge,
-                color = Color(0xFF64FFDA)
-            )
+            
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AnimatedNumberText(
+                    value = data.totalTransactionCount,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color(0xFF64FFDA)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "Transactions",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color(0xFF64FFDA)
+                )
+            }
         }
     }
 }
@@ -1156,18 +1348,36 @@ fun WeekendWarriorSlide(data: RecapData) {
                 Text("Sat-Sun", color = Color.White, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
             }
             Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "${data.weekendPercentage}% of your spending happened on weekends.",
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center,
-                color = Color.White
-            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                 AnimatedNumberText(
+                    value = data.weekendPercentage,
+                    style = MaterialTheme.typography.titleLarge.copy(textAlign = TextAlign.Center),
+                    color = Color.White,
+                    format = { "$it% of your spending happened on weekends." }
+                )
+            }   
              Spacer(modifier = Modifier.height(8.dp))
-             Text(
-                text = "Totaling ${data.weekendAmount}",
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.White.copy(alpha = 0.7f)
-            )
+             Row(
+                 verticalAlignment = Alignment.CenterVertically,
+                 horizontalArrangement = Arrangement.Center,
+                 modifier = Modifier.fillMaxWidth()
+             ) {
+                 Text(
+                    text = "Totaling ",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White.copy(alpha = 0.7f)
+                )
+                AnimatedNumberText(
+                     value = data.weekendAmountRaw,
+                     style = MaterialTheme.typography.bodyLarge,
+                     color = Color.White.copy(alpha = 0.7f),
+                     format = { "₹" + java.text.NumberFormat.getIntegerInstance(java.util.Locale("en", "IN")).format(it) }
+                 )
+             }
         }
     }
 }
@@ -1316,31 +1526,31 @@ fun TravelStatsSlide(data: RecapData) {
             TravelStatRow(
                 icon = Icons.Rounded.LocalTaxi,
                 label = "${data.uberCount} Uber travels",
-                amount = data.uberAmount
+                amountRaw = data.uberAmountRaw
             )
             // Bus
             TravelStatRow(
                 icon = Icons.Rounded.DirectionsBus,
                 label = "${data.busCount} Bus rides",
-                amount = data.busAmount
+                amountRaw = data.busAmountRaw
             )
             // Train
             TravelStatRow(
                 icon = Icons.Rounded.Train,
                 label = "${data.trainCount} Train journeys",
-                amount = data.trainAmount
+                amountRaw = data.trainAmountRaw
             )
             // Metro
             TravelStatRow(
                 icon = Icons.Rounded.Subway,
                 label = "${data.metroRechargeCount} Metro recharges",
-                amount = data.metroAmount
+                amountRaw = data.metroAmountRaw
             )
             // Fuel/Oil
             TravelStatRow(
                 icon = Icons.Rounded.LocalGasStation,
                 label = "${data.fuelCount} Fuel fill-ups",
-                amount = data.fuelAmount
+                amountRaw = data.fuelAmountRaw
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -1356,10 +1566,11 @@ fun TravelStatsSlide(data: RecapData) {
                     style = MaterialTheme.typography.titleMedium,
                     color = Color.White.copy(alpha = 0.8f)
                 )
-                Text(
-                    data.travelTotalAmount,
+                AnimatedNumberText(
+                    value = data.travelTotalAmountRaw,
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = Color(0xFF00E5FF)
+                    color = Color(0xFF00E5FF),
+                    format = { "₹" + java.text.NumberFormat.getIntegerInstance(java.util.Locale("en", "IN")).format(it) }
                 )
             }
         }
@@ -1367,7 +1578,7 @@ fun TravelStatsSlide(data: RecapData) {
 }
 
 @Composable
-fun TravelStatRow(icon: ImageVector, label: String, amount: String) {
+fun TravelStatRow(icon: ImageVector, label: String, amountRaw: Long) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1380,51 +1591,168 @@ fun TravelStatRow(icon: ImageVector, label: String, amount: String) {
             Spacer(modifier = Modifier.width(16.dp))
             Text(label, style = MaterialTheme.typography.bodyLarge, color = Color.White)
         }
-        Text(amount, style = MaterialTheme.typography.titleMedium, color = Color(0xFF64FFDA), fontWeight = FontWeight.Bold)
+        AnimatedNumberText(
+            value = amountRaw,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            color = Color(0xFF64FFDA),
+            format = { "₹" + java.text.NumberFormat.getIntegerInstance(java.util.Locale("en", "IN")).format(it) }
+        )
     }
 }
 
 @Composable
 fun MovieStatsSlide(data: RecapData) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        PremiumLineBackground(LinePattern.CURVES)
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            // Ticket Stub Visual
+        // Projector Light Effect (Conical/Radial Gradient from top)
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val centerTop = androidx.compose.ui.geometry.Offset(size.width / 2, -100f)
+            val brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                colors = listOf(
+                    Color(0xFF64FFDA).copy(alpha = 0.15f),
+                    Color.Transparent
+                ),
+                center = centerTop,
+                radius = size.height * 0.8f
+            )
+            drawRect(brush = brush)
+            
+            // Film Strip Sprocket Holes
+            val holeWidth = 12.dp.toPx()
+            val holeHeight = 18.dp.toPx()
+            val gap = 12.dp.toPx()
+            val sidePadding = 8.dp.toPx()
+            
+            val totalPatternHeight = holeHeight + gap
+            val count = (size.height / totalPatternHeight).toInt() + 1
+            
+            for (i in 0 until count) {
+                val y = i * totalPatternHeight
+                
+                // Left Sprocket
+                drawRoundRect(
+                    color = Color.White.copy(alpha = 0.1f),
+                    topLeft = androidx.compose.ui.geometry.Offset(sidePadding, y),
+                    size = androidx.compose.ui.geometry.Size(holeWidth, holeHeight),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx())
+                )
+                
+                // Right Sprocket
+                drawRoundRect(
+                    color = Color.White.copy(alpha = 0.1f),
+                    topLeft = androidx.compose.ui.geometry.Offset(size.width - sidePadding - holeWidth, y),
+                    size = androidx.compose.ui.geometry.Size(holeWidth, holeHeight),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx())
+                )
+            }
+        }
+        
+        PremiumLineBackground(LinePattern.CURVES, color = Color.White.copy(alpha = 0.05f))
+        
+        // Floating Particles
+        ParticleEffect(modifier = Modifier.fillMaxSize())
+        
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally, 
+            modifier = Modifier.padding(24.dp)
+        ) {
+            // Icon & Title
             Box(
                 modifier = Modifier
-                    .width(240.dp)
-                    .height(140.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFFFFC107)) // Gold/Yellow Ticket
+                    .size(80.dp)
+                    .background(Color(0xFF6200EA).copy(alpha = 0.2f), CircleShape)
+                    .border(1.dp, Color(0xFF6200EA).copy(alpha = 0.5f), CircleShape),
+                contentAlignment = Alignment.Center
             ) {
-                 Column(
-                     modifier = Modifier.fillMaxSize(),
-                     horizontalAlignment = Alignment.CenterHorizontally,
-                     verticalArrangement = Arrangement.Center
-                 ) {
-                     Text("CINEMA TICKET", style = MaterialTheme.typography.labelSmall, color = Color.Black.copy(alpha = 0.6f))
-                     Text("${data.movieCount} MOVIES", style = MaterialTheme.typography.titleLarge, color = Color.Black, fontWeight = FontWeight.Black)
-                     androidx.compose.material3.HorizontalDivider(
-                         modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp),
-                         color = Color.Black.copy(alpha = 0.2f),
-                         thickness = 2.dp
-                     )
-                     Text("${data.movieHours} HOURS", style = MaterialTheme.typography.displayMedium, color = Color.Black, fontWeight = FontWeight.Black)
-                 }
+                Icon(
+                    imageVector = Icons.Rounded.Star, // Fallback to Star if Movie not found, or use standard
+                    contentDescription = "Cinema",
+                    modifier = Modifier.size(40.dp),
+                    tint = Color(0xFFE040FB)
+                )
             }
             
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+            
             Text(
-                text = "Spending ${data.movieAmount}",
-                style = MaterialTheme.typography.titleMedium,
+                "CINEMA BUFF",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 2.sp
+                ),
                 color = Color.White
             )
-             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "That's a lot of popcorn!",
-                style = MaterialTheme.typography.headlineSmall,
-                color = Color.White
-            )
+            
+            Spacer(modifier = Modifier.height(48.dp))
+            
+            // Main Stat: Movies Watched
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                AnimatedNumberText(
+                    value = data.movieCount,
+                    style = MaterialTheme.typography.displayLarge.copy(
+                        fontSize = 80.sp,
+                        fontWeight = FontWeight.Black
+                    ),
+                    color = Color(0xFF00E5FF) // Cyan
+                )
+                Text(
+                    "MOVIES WATCHED",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White.copy(alpha = 0.6f)
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(48.dp))
+            
+            // Grid Stats: Hours & Spent
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                // Hours
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Row(verticalAlignment = Alignment.Bottom) {
+                         AnimatedNumberText(
+                            value = data.movieHours,
+                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                            color = Color(0xFFE040FB) // Purple
+                        )
+                        Text(
+                            " hrs",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFFE040FB).copy(alpha = 0.8f),
+                            modifier = Modifier.padding(bottom = 2.dp)
+                        )
+                    }
+                    Text(
+                        "SCREEN TIME",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.4f)
+                    )
+                }
+                
+                // Divider
+                Box(
+                    modifier = Modifier
+                        .height(40.dp)
+                        .width(1.dp)
+                        .background(Color.White.copy(alpha = 0.1f))
+                )
+                
+                // Spent
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                     AnimatedNumberText(
+                        value = data.movieAmountRaw,
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                        color = Color(0xFFFFD54F), // Gold
+                        format = { "₹" + java.text.NumberFormat.getIntegerInstance(java.util.Locale("en", "IN")).format(it) }
+                    )
+                    Text(
+                        "TOTAL SPENT",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.4f)
+                    )
+                }
+            }
         }
     }
 }
@@ -1434,7 +1762,16 @@ fun LifestyleStatsSlide(data: RecapData) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         PremiumLineBackground(LinePattern.NET)
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-             Text("TREAT YOURSELF", style = MaterialTheme.typography.displayMedium.copy(fontFamily = FontFamily.Serif), color = Color(0xFFE040FB))
+             Text(
+                 "TREAT YOURSELF",
+                 style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                 color = Color(0xFFE040FB)
+             )
+             Text(
+                 "Lifestyle & Personal Care",
+                 style = MaterialTheme.typography.labelMedium,
+                 color = Color.White.copy(alpha = 0.6f)
+             )
              Spacer(modifier = Modifier.height(48.dp))
              
              // Battery/Meter
@@ -1465,10 +1802,11 @@ fun LifestyleStatsSlide(data: RecapData) {
                  style = MaterialTheme.typography.bodyLarge,
                  color = Color.White.copy(alpha = 0.7f)
              )
-             Text(
-                 text = data.lifestyleAmount,
+             AnimatedNumberText(
+                 value = data.lifestyleAmountRaw,
                  style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.Bold),
-                 color = Color.White
+                 color = Color.White,
+                 format = { "₹" + java.text.NumberFormat.getIntegerInstance(java.util.Locale("en", "IN")).format(it) }
              )
              Text(
                  text = "in yourself.",
@@ -1585,10 +1923,11 @@ fun BiggestPurchaseSlide(data: RecapData) {
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                data.biggestPurchaseAmount,
+            AnimatedNumberText(
+                value = data.biggestPurchaseAmountRaw,
                 style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
-                color = Color(0xFFFFD54F)
+                color = Color(0xFFFFD54F),
+                format = { "₹" + java.text.NumberFormat.getIntegerInstance(java.util.Locale("en", "IN")).format(it) }
             )
              Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -1625,10 +1964,16 @@ fun BiggestPurchaseSlide(data: RecapData) {
                     color = Color.White.copy(alpha = 0.4f)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    data.smallestPurchaseAmount,
+                AnimatedNumberText(
+                    value = data.smallestPurchaseAmountRaw,
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = Color(0xFF64FFDA)
+                    color = Color(0xFF64FFDA),
+                    format = { 
+                        // It serves as raw 'cents' here. Default is 2 digits usually. 
+                        // Assuming 2 decimals for now as we don't have multiplier in UI
+                        val amount = it.toDouble() / 100.0
+                        "₹" + java.text.DecimalFormat("#,##0.00").format(amount) 
+                    }
                 )
             }
         }
@@ -1658,10 +2003,11 @@ fun IncomeExpenseSlide(data: RecapData) {
                     style = MaterialTheme.typography.labelMedium,
                     color = Color.White.copy(alpha = 0.6f)
                 )
-                Text(
-                    data.totalIncome,
+                AnimatedNumberText(
+                    value = data.totalIncomeRaw,
                     style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
-                    color = Color(0xFF00E676) // Green
+                    color = Color(0xFF00E676),
+                    format = { "₹" + java.text.NumberFormat.getIntegerInstance(java.util.Locale("en", "IN")).format(it) }
                 )
             }
             
@@ -1699,10 +2045,11 @@ fun IncomeExpenseSlide(data: RecapData) {
                     style = MaterialTheme.typography.labelMedium,
                     color = Color.White.copy(alpha = 0.6f)
                 )
-                Text(
-                    data.totalExpense,
+                AnimatedNumberText(
+                    value = data.totalExpenseRaw,
                     style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
-                    color = Color(0xFFFF5252) // Red
+                    color = Color(0xFFFF5252),
+                    format = { "₹" + java.text.NumberFormat.getIntegerInstance(java.util.Locale("en", "IN")).format(it) }
                 )
             }
         }
