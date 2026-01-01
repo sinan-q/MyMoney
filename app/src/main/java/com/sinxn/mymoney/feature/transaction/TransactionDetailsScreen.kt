@@ -88,6 +88,27 @@ import com.sinxn.mymoney.core.ui.components.SelectionDialog
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import kotlin.math.pow
 
+import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
+
+private fun resolveCategoryHierarchy(
+    categoryId: String?, 
+    allCategories: List<CategoryEntity>
+): Pair<String, String?> {
+    val category = allCategories.find { it.id == categoryId }
+    if (category == null) return "No Category" to null
+
+    val cleanName = category.name.replace("  ↳ ", "")
+    val parent = category.parentId?.let { parentId ->
+        allCategories.find { it.id == parentId }
+    }
+
+    return if (parent != null) {
+        cleanName to parent.name.replace("  ↳ ", "")
+    } else {
+        cleanName to null
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionDetailsScreen(
@@ -162,11 +183,13 @@ fun TransactionContent(
         }
         
         val displayDirection = if (uiState.isEditMode) uiState.editDirection else uiState.transaction?.transaction?.direction ?: 0
-        val displayCategoryName = if (uiState.isEditMode) {
-            uiState.availableCategories.find { it.id == uiState.editCategoryId }?.name ?: "No Category"
+        val (displayCategoryName, displayParentName) = if (uiState.isEditMode) {
+            resolveCategoryHierarchy(uiState.editCategoryId, uiState.availableCategories)
         } else {
-            uiState.transaction?.categoryName ?: "No Category"
+            // authentic lookup from full list even in view mode to get hierarchy
+            resolveCategoryHierarchy(uiState.transaction?.transaction?.categoryId, uiState.availableCategories)
         }
+
         val displayCategoryIcon = if (uiState.isEditMode) {
             uiState.availableCategories.find { it.id == uiState.editCategoryId }?.icon
         } else {
@@ -177,6 +200,7 @@ fun TransactionContent(
             amount = if (displayDirection == 1) rawAmount else -rawAmount,
             categoryIcon = displayCategoryIcon,
             categoryName = displayCategoryName,
+            parentCategoryName = displayParentName,
             currencyCode = uiState.currencyCode, 
             currencyDecimals = uiState.currencyDecimals, 
             settings = settings,
@@ -225,6 +249,7 @@ fun TransactionHeroHeader(
     amount: Long,
     categoryIcon: String?,
     categoryName: String,
+    parentCategoryName: String? = null,
     currencyCode: String,
     currencyDecimals: Int,
     settings: com.sinxn.mymoney.core.data.preferences.FormattingSettings,
@@ -343,6 +368,16 @@ fun TransactionHeroHeader(
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
+                
+                if (parentCategoryName != null) {
+                    Text(
+                        text = "$parentCategoryName • ",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontWeight = FontWeight.Normal
+                    )
+                }
+                
                 Text(
                     text = categoryName,
                     style = MaterialTheme.typography.labelLarge,
@@ -485,7 +520,7 @@ fun EditForm(
             value = datePart,
             onValueChange = {},
             label = { Text("Date") },
-            modifier = Modifier.weight(1f).clickable { showDatePicker = true },
+            modifier = Modifier.weight(1.6f).clickable { showDatePicker = true },
             enabled = false,
             shape = RoundedCornerShape(16.dp),
             leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
@@ -513,10 +548,13 @@ fun EditForm(
     
     // Pickers
     if (showCategory) {
+        val (catName, parentName) = resolveCategoryHierarchy(uiState.editCategoryId, uiState.availableCategories)
+        val displayValue = if (parentName != null) "$parentName / $catName" else catName
+
         PickerField(
             icon = Icons.Default.Inventory,
             label = "Category",
-            value = uiState.availableCategories.find { it.id == uiState.editCategoryId }?.name ?: "Select Category",
+            value = displayValue,
             onClick = { showCategoryPicker = true }
         )
     }
