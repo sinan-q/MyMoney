@@ -450,23 +450,35 @@ fun TopSpentTimesSlide(data: RecapData) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         PremiumLineBackground(LinePattern.CROSSHATCH)
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally, 
-            verticalArrangement = Arrangement.spacedBy(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(24.dp)
         ) {
-            TimeStatItem("Top Month", data.topMonth, data.topMonthAmount)
-            TimeStatItem("Top Week", data.topWeek, data.topWeekAmount)
-            TimeStatItem("Top Day", data.topDayDate, data.topDayAmount)
+            Text(
+                "MOST ACTIVE",
+                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                color = Color.White
+            )
+            Text(
+                "by transaction count",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White.copy(alpha = 0.6f)
+            )
+            Spacer(modifier = Modifier.height(40.dp))
+            TimeStatItemByCount("Month", data.topMonthByCount, data.topMonthCount)
+            Spacer(modifier = Modifier.height(24.dp))
+            TimeStatItemByCount("Week", data.topWeekByCount, data.topWeekCount)
+            Spacer(modifier = Modifier.height(24.dp))
+            TimeStatItemByCount("Day", data.topDayByCount, data.topDayCount)
         }
     }
 }
 
 @Composable
-fun TimeStatItem(label: String, value: String, amount: String) {
+fun TimeStatItemByCount(label: String, value: String, count: Int) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label.uppercase(), style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.6f))
-        Text(value, style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold), color = Color.White)
-        Text(amount, style = MaterialTheme.typography.titleMedium, color = Color(0xFF64FFDA))
+        Text(value, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = Color.White)
+        Text("$count transactions", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF64FFDA))
     }
 }
 
@@ -474,40 +486,36 @@ fun TimeStatItem(label: String, value: String, amount: String) {
 fun RollercoasterSlide(data: RecapData) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         PremiumLineBackground(LinePattern.WAVES, color = Color.White.copy(alpha = 0.05f))
-        Canvas(modifier = Modifier.fillMaxWidth().height(200.dp)) {
-            val path = androidx.compose.ui.graphics.Path()
-            path.moveTo(0f, size.height)
-            path.cubicTo(
-                size.width * 0.2f, size.height * 0.8f,
-                size.width * 0.4f, size.height * 0.9f,
-                size.width * 0.5f, size.height * 0.2f // The Peak
-            )
-            path.cubicTo(
-                size.width * 0.6f, size.height * 0.1f,
-                size.width * 0.8f, size.height * 0.8f,
-                size.width, size.height * 0.5f
-            )
-            drawPath(path, color = Color(0xFFFF4081), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 8.dp.toPx()))
-        }
-        
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-             Text(
-                text = "ROLLERCOASTER MONTH",
-                style = MaterialTheme.typography.labelLarge,
-                color = Color.White
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(24.dp)
+        ) {
             Text(
-                text = data.rollercoasterMonth,
-                style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Black),
-                color = Color.White
+                "BIG SPENDER",
+                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                color = Color(0xFFFF4081)
             )
             Text(
-                text = "With ${data.rollercoasterAmount} spent!",
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White.copy(alpha = 0.7f)
+                "by amount spent",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White.copy(alpha = 0.6f)
             )
+            Spacer(modifier = Modifier.height(40.dp))
+            TimeStatItemByAmount("Month", data.topMonthByAmount, data.topMonthAmount)
+            Spacer(modifier = Modifier.height(24.dp))
+            TimeStatItemByAmount("Week", data.topWeekByAmount, data.topWeekAmount)
+            Spacer(modifier = Modifier.height(24.dp))
+            TimeStatItemByAmount("Day", data.topDayByAmount, data.topDayAmount)
         }
+    }
+}
+
+@Composable
+fun TimeStatItemByAmount(label: String, value: String, amount: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label.uppercase(), style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.6f))
+        Text(value, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = Color.White)
+        Text(amount, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFFFFD54F))
     }
 }
 
