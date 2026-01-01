@@ -15,12 +15,14 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.util.DateUtils
+import com.sinxn.mymoney.core.util.MoneyFormatter
 import kotlinx.coroutines.flow.SharingStarted
 
 data class HomeUiState(
     val activeWallets: List<WalletWithBalance> = emptyList(),
     val archivedWallets: List<WalletWithBalance> = emptyList(),
-    val isTotalValid: Boolean = true
+    val isTotalValid: Boolean = true,
+    val balanceBreakdown: String? = null
 )
 
 @HiltViewModel
@@ -71,10 +73,25 @@ class HomeViewModel @Inject constructor(
         val currencies = walletsInTotal.map { it.wallet.currency }.distinct()
         val isTotalValid = currencies.size == 1 && currencies.first() == globalCurrency || (walletsInTotal.isEmpty())
 
+        val balanceBreakdown = if (!isTotalValid && walletsInTotal.isNotEmpty()) {
+            walletsInTotal
+                .groupBy { it.wallet.currency }
+                .map { (currency, group) ->
+                    val sum = group.sumOf { it.currentBalance }
+                    val groupDecimals = group.firstOrNull()?.decimals ?: 2
+                    MoneyFormatter.format(
+                        amount = sum,
+                        currencyCode = currency,
+                        decimals = groupDecimals
+                    )
+                }.joinToString(", ")
+        } else null
+
         HomeUiState(
             activeWallets = listOf(totalWallet) + list.filter { !it.wallet.isArchived },
             archivedWallets = list.filter { it.wallet.isArchived },
-            isTotalValid = isTotalValid
+            isTotalValid = isTotalValid,
+            balanceBreakdown = balanceBreakdown
         )
     }
         .stateIn(

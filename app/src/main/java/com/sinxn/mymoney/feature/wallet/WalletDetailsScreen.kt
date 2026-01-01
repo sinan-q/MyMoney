@@ -42,6 +42,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.entity.TransactionEntity
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.util.MoneyFormatter
+import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.generateColor
 
@@ -416,10 +417,20 @@ fun WalletHeader(
             )
 
             if (!wallet.isTotalValid) {
+                if (!wallet.balanceBreakdown.isNullOrEmpty()) {
+                    Text(
+                        text = wallet.balanceBreakdown,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
                 Text(
                     text = "Conversion not supported yet",
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.7f)
+                    color = Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(top = 4.dp)
                 )
             }
             
@@ -495,7 +506,7 @@ fun TransactionList(
         }
 
         customGrouped.forEach { (header, groupItems) ->
-            val headerKey = com.sinxn.mymoney.core.util.DateUtils.formatMonthHeader(header.date)
+            val headerKey = DateUtils.formatMonthHeader(header.date)
             val isCollapsed = collapsedGroups.contains(headerKey)
 
             stickyHeader(key = headerKey) {
@@ -572,7 +583,7 @@ fun TransactionHeader(
     isCollapsed: Boolean,
     onToggle: () -> Unit
 ) {
-    val formattedDate = com.sinxn.mymoney.core.util.DateUtils.formatMonthHeader(header.date)
+    val formattedDate = DateUtils.formatMonthHeader(header.date)
     val formattedTotal = MoneyFormatter.format(
         amount = header.totalAmount,
         currencyCode = currencyCode,
@@ -658,6 +669,15 @@ fun TransactionHeader(
                      }
                 }
             } else {
+                if (!header.balanceBreakdown.isNullOrEmpty()) {
+                     Text(
+                        text = header.balanceBreakdown,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.End
+                    )
+                }
                 Text(
                     text = "Mixed currencies",
                     style = MaterialTheme.typography.labelSmall,

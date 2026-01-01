@@ -43,6 +43,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
+import com.sinxn.mymoney.core.util.MoneyFormatter
+import com.sinxn.mymoney.core.util.Constants
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -106,8 +108,8 @@ fun HomeScreen(
             }
         }
     ) { padding ->
-        val totalWallet = uiState.activeWallets.find { it.wallet.id == com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID }
-        val otherWallets = uiState.activeWallets.filter { it.wallet.id != com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID }
+        val totalWallet = uiState.activeWallets.find { it.wallet.id == Constants.TOTAL_WALLET_ID }
+        val otherWallets = uiState.activeWallets.filter { it.wallet.id != Constants.TOTAL_WALLET_ID }
 
         LazyColumn(
             modifier = Modifier
@@ -122,6 +124,7 @@ fun HomeScreen(
                     GrandTotalHeader(
                         wallet = it,
                         isTotalValid = uiState.isTotalValid,
+                        balanceBreakdown = uiState.balanceBreakdown,
                         onClick = { onNavigateToWallet(it.wallet.id) }
                     )
                 }
@@ -172,6 +175,7 @@ fun HomeScreen(
 fun GrandTotalHeader(
     wallet: WalletWithBalance,
     isTotalValid: Boolean,
+    balanceBreakdown: String?,
     onClick: () -> Unit
 ) {
     Card(
@@ -202,7 +206,7 @@ fun GrandTotalHeader(
             )
             Spacer(modifier = Modifier.height(8.dp))
             if (isTotalValid) {
-                val formattedBalance = com.sinxn.mymoney.core.util.MoneyFormatter.format(
+                val formattedBalance = MoneyFormatter.format(
                     amount = wallet.currentBalance,
                     currencyCode = wallet.wallet.currency,
                     decimals = wallet.decimals
@@ -220,10 +224,21 @@ fun GrandTotalHeader(
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     fontWeight = FontWeight.Bold
                 )
+                if (!balanceBreakdown.isNullOrEmpty()) {
+                    Text(
+                        text = balanceBreakdown,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(top = 4.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
                 Text(
                     text = "Conversion not supported yet",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.padding(top = 4.dp)
                 )
             }
         }
@@ -302,7 +317,7 @@ fun WalletItem(
                 }
             }
 
-            val formattedBalance = com.sinxn.mymoney.core.util.MoneyFormatter.format(
+            val formattedBalance = MoneyFormatter.format(
                 amount = item.currentBalance,
                 currencyCode = item.wallet.currency,
                 decimals = item.decimals

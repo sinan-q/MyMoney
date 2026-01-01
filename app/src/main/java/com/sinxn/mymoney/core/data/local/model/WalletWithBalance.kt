@@ -8,5 +8,6 @@ data class WalletWithBalance(
     val currentBalance: Long,
     val decimals: Int = 2,
     val currencySymbol: String? = null,
-    val isTotalValid: Boolean = true
+    val isTotalValid: Boolean = true,
+    val balanceBreakdown: String? = null
 )

@@ -10,6 +10,7 @@ import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.util.Constants
 import com.sinxn.mymoney.core.util.DateUtils
+import com.sinxn.mymoney.core.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -76,6 +77,20 @@ class WalletDetailsViewModel @Inject constructor(
             val distinctCurrencies = walletsInTotal.map { it.wallet.currency }.distinct()
             val isTotalValid = distinctCurrencies.size <= 1 && (distinctCurrencies.isEmpty() || distinctCurrencies.first() == globalCurrency)
 
+            val breakdown = if (!isTotalValid && walletsInTotal.isNotEmpty()) {
+                walletsInTotal
+                    .groupBy { it.wallet.currency }
+                    .map { (currency, group) ->
+                        val sum = group.sumOf { it.currentBalance }
+                        val groupDecimals = group.firstOrNull()?.decimals ?: 2
+                        MoneyFormatter.format(
+                            amount = sum,
+                            currencyCode = currency,
+                            decimals = groupDecimals
+                        )
+                    }.joinToString(", ")
+            } else null
+
             WalletWithBalance(
                 wallet = WalletEntity(
                     id = Constants.TOTAL_WALLET_ID,
@@ -94,7 +109,8 @@ class WalletDetailsViewModel @Inject constructor(
                 currentBalance = totalBalance,
                 decimals = currency?.defaultFractionDigits ?: 2,
                 currencySymbol = currency?.symbol ?: globalCurrency,
-                isTotalValid = isTotalValid
+                isTotalValid = isTotalValid,
+                balanceBreakdown = breakdown
             )
         } else {
             allWallets.find { it.wallet.id == walletId }
@@ -157,7 +173,28 @@ class WalletDetailsViewModel @Inject constructor(
                     }
                 }
 
-                result.add(TransactionListItem.Header(monthDate, total, income, expense, isTotalValid))
+                val monthBreakdown = if (!isTotalValid && transactionsInGroup.isNotEmpty()) {
+                    transactionsInGroup
+                        .map { it.first }
+                        .groupBy { it.currencyCode ?: "" }
+                        .map { (currency, group) ->
+                            var groupTotal = 0L
+                            group.forEach { t ->
+                                if (t.transaction.countInTotal && t.transaction.confirmed) {
+                                    if (t.transaction.direction == 1) groupTotal += t.transaction.money
+                                    else groupTotal -= t.transaction.money
+                                }
+                            }
+                            val groupDecimals = group.firstOrNull()?.decimals ?: 2
+                            MoneyFormatter.format(
+                                amount = groupTotal,
+                                currencyCode = currency,
+                                decimals = groupDecimals
+                            )
+                        }.joinToString(", ")
+                } else null
+
+                result.add(TransactionListItem.Header(monthDate, total, income, expense, isTotalValid, monthBreakdown))
                 
                 val dayGrouped = transactionsInGroup.groupBy { (_, date) ->
                     val cal = Calendar.getInstance()

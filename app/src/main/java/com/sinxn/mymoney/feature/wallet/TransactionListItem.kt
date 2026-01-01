@@ -9,7 +9,8 @@ sealed class TransactionListItem {
         val totalAmount: Long,
         val income: Long,
         val expense: Long,
-        val isTotalValid: Boolean = true
+        val isTotalValid: Boolean = true,
+        val balanceBreakdown: String? = null
     ) : TransactionListItem()
 
     data class DateHeader(
