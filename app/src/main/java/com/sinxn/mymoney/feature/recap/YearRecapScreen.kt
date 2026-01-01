@@ -106,6 +106,23 @@ enum class RecapSlideType {
     OUTRO
 }
 
+// Dummy Wallet Data for UI
+data class WalletItem(
+    val id: Long,
+    val name: String,
+    val balance: String,
+    val isArchived: Boolean = false
+)
+
+val dummyWallets = listOf(
+    WalletItem(1, "Main Account", "₹2,50,000"),
+    WalletItem(2, "Savings", "₹1,00,000"),
+    WalletItem(3, "Credit Card", "-₹25,000"),
+    WalletItem(4, "Cash", "₹5,000"),
+    WalletItem(5, "Old Bank (Archived)", "₹0", isArchived = true),
+    WalletItem(6, "Closed Card (Archived)", "₹0", isArchived = true)
+)
+
 data class RecapData(
     val year: Int = 2025,
     val totalSpent: String = "₹4,52,000",
@@ -211,8 +228,20 @@ fun YearRecapScreen(
             onSurface = Color.White
         )
     ) {
+        var showWalletSelection by remember { mutableStateOf(true) }
+        var selectedWalletIds by remember { mutableStateOf(setOf<Long>()) }
         var currentSlideIndex by remember { mutableIntStateOf(0) }
         val slides = RecapSlideType.entries.toTypedArray()
+
+        if (showWalletSelection) {
+            // Wallet Selection Screen
+            WalletSelectionScreen(
+                wallets = dummyWallets,
+                selectedIds = selectedWalletIds,
+                onSelectionChanged = { selectedWalletIds = it },
+                onProceed = { showWalletSelection = false }
+            )
+        } else {
 
         Box(
             modifier = Modifier
@@ -311,11 +340,188 @@ fun YearRecapScreen(
                     tint = Color.White.copy(alpha = 0.6f)
                 )
             }
-        }
+            }
+        } // End of else (showWalletSelection)
     }
 }
 
 // ... existing components ...
+
+// --- Wallet Selection Screen ---
+
+@Composable
+fun WalletSelectionScreen(
+    wallets: List<WalletItem>,
+    selectedIds: Set<Long>,
+    onSelectionChanged: (Set<Long>) -> Unit,
+    onProceed: () -> Unit
+) {
+    val activeWallets = wallets.filter { !it.isArchived }
+    val archivedWallets = wallets.filter { it.isArchived }
+
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        // Same background as recap
+        AnimatedBackground(0)
+        PremiumLineBackground(LinePattern.NET)
+        
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp)
+                .padding(top = 48.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Header
+            Text(
+                "SELECT WALLETS",
+                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                color = Color.White
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Choose which wallets to include in your recap",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.6f)
+            )
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // Active Wallets Section
+            Text(
+                "ACTIVE WALLETS",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color(0xFF64FFDA),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            activeWallets.forEach { wallet ->
+                WalletSelectionItem(
+                    wallet = wallet,
+                    isSelected = selectedIds.contains(wallet.id),
+                    onToggle = {
+                        val newSet = if (selectedIds.contains(wallet.id)) {
+                            selectedIds - wallet.id
+                        } else {
+                            selectedIds + wallet.id
+                        }
+                        onSelectionChanged(newSet)
+                    }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+            
+            // Archived Wallets Section
+            if (archivedWallets.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    "ARCHIVED WALLETS",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White.copy(alpha = 0.5f),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                archivedWallets.forEach { wallet ->
+                    WalletSelectionItem(
+                        wallet = wallet,
+                        isSelected = selectedIds.contains(wallet.id),
+                        onToggle = {
+                            val newSet = if (selectedIds.contains(wallet.id)) {
+                                selectedIds - wallet.id
+                            } else {
+                                selectedIds + wallet.id
+                            }
+                            onSelectionChanged(newSet)
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+            
+            Spacer(modifier = Modifier.weight(1f))
+            
+            // Proceed Button
+            androidx.compose.material3.Button(
+                onClick = onProceed,
+                enabled = selectedIds.isNotEmpty(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF64FFDA),
+                    contentColor = Color.Black
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Text(
+                    "Start Recap (${selectedIds.size} selected)",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            }
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+fun WalletSelectionItem(
+    wallet: WalletItem,
+    isSelected: Boolean,
+    onToggle: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                if (isSelected) Color(0xFF64FFDA).copy(alpha = 0.15f)
+                else Color.White.copy(alpha = 0.05f)
+            )
+            .clickable { onToggle() }
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(
+                wallet.name,
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White
+            )
+            Text(
+                wallet.balance,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.6f)
+            )
+        }
+        
+        // Checkbox circle
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .border(
+                    width = 2.dp,
+                    color = if (isSelected) Color(0xFF64FFDA) else Color.White.copy(alpha = 0.3f),
+                    shape = CircleShape
+                )
+                .background(
+                    if (isSelected) Color(0xFF64FFDA) else Color.Transparent,
+                    CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Default.Close, // Using close as checkmark substitute
+                    contentDescription = "Selected",
+                    tint = Color.Black,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+    }
+}
 
 // --- New Slides ---
 
