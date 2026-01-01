@@ -75,6 +75,9 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onTransactionClick = { transactionId ->
                                         navController.navigate("transaction_details/$transactionId")
+                                    },
+                                    onNavigateToRecap = {
+                                        navController.navigate("recap")
                                     }
                                 )
                             }
@@ -86,6 +89,11 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 com.sinxn.mymoney.feature.transaction.TransactionDetailsScreen(
                                     onNavigateBack = { navController.navigateUp() }
+                                )
+                            }
+                            composable("recap") {
+                                com.sinxn.mymoney.feature.recap.YearRecapScreen(
+                                    onClose = { navController.popBackStack() }
                                 )
                             }
                         }

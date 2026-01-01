@@ -38,6 +38,10 @@ import androidx.compose.ui.zIndex
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.rounded.CardGiftcard
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.entity.TransactionEntity
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
@@ -45,12 +49,14 @@ import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.generateColor
+import com.sinxn.mymoney.feature.recap.YearRecapScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WalletDetailsScreen(
     onNavigateUp: () -> Unit,
     onTransactionClick: (String) -> Unit,
+    onNavigateToRecap: () -> Unit,
     viewModel: WalletDetailsViewModel = hiltViewModel()
 ) {
     val wallet by viewModel.wallet.collectAsState(initial = null)
@@ -97,6 +103,13 @@ fun WalletDetailsScreen(
                 },
                 actions = {
                     if (wallet?.wallet?.id != com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID) {
+                        IconButton(onClick = onNavigateToRecap) {
+                            Icon(
+                                imageVector = Icons.Default.CardGiftcard,
+                                contentDescription = "Year Recap",
+                                tint = if (showTopBarTitle) MaterialTheme.colorScheme.primary else Color.White
+                            )
+                        }
                         IconButton(onClick = { showSettings = true }) {
                             Icon(
                                 imageVector = Icons.Default.Settings,
@@ -126,7 +139,8 @@ fun WalletDetailsScreen(
                     formatterConfig = formatterConfig,
                     dateFormat = settings.dateFormat,
                     listState = listState,
-                    onTransactionClick = onTransactionClick
+                    onTransactionClick = onTransactionClick,
+                    onRecapClick = onNavigateToRecap
                 )
             }
 
@@ -457,7 +471,8 @@ fun TransactionList(
     formatterConfig: MoneyFormatter.Config,
     dateFormat: Int,
     listState: androidx.compose.foundation.lazy.LazyListState,
-    onTransactionClick: (String) -> Unit
+    onTransactionClick: (String) -> Unit,
+    onRecapClick: () -> Unit
 ) {
     // State to track collapsed keys (using formatted date string as key)
     var collapsedGroups by remember { mutableStateOf(setOf<String>()) }
@@ -468,6 +483,11 @@ fun TransactionList(
     ) {
         item {
             WalletHeader(wallet, formatterConfig)
+        }
+        
+        // Year Recap Banner
+        item {
+            RecapBanner(onClick = onRecapClick)
         }
         
         if (items.isEmpty()) {
@@ -717,7 +737,7 @@ fun DateHeaderItem(
         
         // Date Text
         Text(
-            text = com.sinxn.mymoney.core.util.DateUtils.formatDate(item.date, dateFormat),
+            text = DateUtils.formatDate(item.date, dateFormat),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.primary, // Highlight color
             fontWeight = FontWeight.Bold,
@@ -845,8 +865,8 @@ fun TransactionItem(
                     )
                     
                     if (showDate) {
-                        val dateObj = com.sinxn.mymoney.core.util.DateUtils.parseDate(transaction.date)
-                        val formattedDate = com.sinxn.mymoney.core.util.DateUtils.formatDate(dateObj, dateFormat)
+                        val dateObj = DateUtils.parseDate(transaction.date)
+                        val formattedDate = DateUtils.formatDate(dateObj, dateFormat)
                         
                         Text(
                             text = formattedDate,
@@ -860,3 +880,66 @@ fun TransactionItem(
     }
 }
 
+@Preview(showBackground = true)
+@Composable
+fun PreviewRecap() {
+    RecapBanner {  }
+}
+
+@Composable
+fun RecapBanner(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(Color(0xFF1A237E), Color(0xFF0D47A1)) // Deep Blue premium gradient
+                )
+            )
+            .clickable(onClick = onClick)
+    ) {
+         Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(0.1f)
+        ) {
+             drawCircle(color = Color.White, radius = size.minDimension, center = Offset(x = size.width, y = 0f))
+        }
+
+        Row(
+            modifier = Modifier
+                .padding(20.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(Color.White.copy(alpha = 0.2f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                 Icon(
+                     imageVector = Icons.Rounded.CardGiftcard,
+                     contentDescription = "Recap",
+                     tint = Color.White
+                 )
+            }
+            
+            Column(modifier = Modifier.padding(start = 16.dp)) {
+                Text(
+                    text = "Your 2025 Recap",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "See your spending highlights!",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
+            }
+        }
+    }
+}
