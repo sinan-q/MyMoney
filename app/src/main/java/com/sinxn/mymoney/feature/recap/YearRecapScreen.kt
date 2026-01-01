@@ -41,11 +41,13 @@ import androidx.compose.material.icons.automirrored.rounded.DirectionsBike
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.rounded.DirectionsBike
 import androidx.compose.material.icons.rounded.DirectionsBus
+import androidx.compose.material.icons.rounded.LocalGasStation
 import androidx.compose.material.icons.rounded.LocalTaxi
 import androidx.compose.material.icons.rounded.ShoppingBag
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Subway
 import androidx.compose.material.icons.rounded.Train
+import androidx.compose.material.icons.rounded.LocalGasStation
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -96,39 +98,56 @@ enum class RecapSlideType {
     TOP_SPENT_TIMES,
     ROLLERCOASTER,
     LONGEST_STREAK,
-    TOP_CATEGORY,
     BUSIEST_DAY,
-    TOP_CONNECTION,
     OUTRO
 }
 
 data class RecapData(
     val year: Int = 2025,
     val totalSpent: String = "₹4,52,000",
-    val topCategoryName: String = "Indian Oil",
-    val topCategoryAmount: String = "₹2,250",
-    val topCategoryCount: Int = 9,
+    val totalTransactionCount: Int = 542,
     val busiestDay: String = "Thursday",
     val busiestDayCount: Int = 45,
-    val topConnectionName: String = "Muhammed Jaseel P",
-    val topConnectionCount: Int = 20,
+    val busiestDayAmount: String = "₹12,400",
     val weekendPercentage: Int = 65,
+    val weekendAmount: String = "₹12,500",
     val coffeeMetricLowCount: Int = 142,
     val coffeeMetricHighCount: Int = 12,
+    val coffeeMetricAmount: String = "₹4,200",
     val foodiePercentage: Int = 40,
+    val foodieAmount: String = "₹1,85,000",
     val longestStreakDays: Int = 15,
-    val rollercoasterMonth: String = "December",
-    val rollercoasterAmount: String = "₹85,000",
+    val longestStreakAmount: String = "₹15,000",
     val topCategories: List<Pair<String, String>> = listOf("Food" to "₹1.2L", "Travel" to "₹80k", "Gadgets" to "₹50k"),
-    val topMonth: String = "October",
-    val topWeek: String = "Nov 12-19",
-    val topDayDate: String = "Oct 25",
-    // New Params
-    val travelTopSubcategory: String = "Metro",
-    val travelTopSubcategoryCount: Int = 140,
-    val travelStats: Map<String, Int> = mapOf("Metro" to 140, "Uber" to 12, "Bus" to 45, "Train" to 8),
+    // Top by COUNT (for TopSpentTimesSlide)
+    val topMonthByCount: String = "October",
+    val topMonthCount: Int = 142,
+    val topWeekByCount: String = "Nov 12-19",
+    val topWeekCount: Int = 38,
+    val topDayByCount: String = "Oct 25",
+    val topDayCount: Int = 12,
+    // Top by AMOUNT (for RollercoasterSlide)
+    val topMonthByAmount: String = "December",
+    val topMonthAmount: String = "₹85,000",
+    val topWeekByAmount: String = "Dec 20-26",
+    val topWeekAmount: String = "₹28,000",
+    val topDayByAmount: String = "Dec 25",
+    val topDayAmount: String = "₹12,500",
+    // Travel Params - using data class for richer info
+    val uberCount: Int = 43,
+    val uberAmount: String = "₹8,500",
+    val busCount: Int = 16,
+    val busAmount: String = "₹320",
+    val trainCount: Int = 8,
+    val trainAmount: String = "₹1,200",
+    val metroRechargeCount: Int = 40,
+    val metroAmount: String = "₹6,000",
+    val fuelCount: Int = 24,
+    val fuelAmount: String = "₹12,500",
+    val travelTotalAmount: String = "₹28,520",
     val movieHours: Int = 36,
     val movieCount: Int = 14,
+    val movieAmount: String = "₹6,500",
     val lifestyleAmount: String = "₹45,000"
 )
 
@@ -239,7 +258,7 @@ fun YearRecapScreen(
                 ) { slide ->
                     when (slide) {
                         RecapSlideType.INTRO -> IntroSlide(data.year)
-                        RecapSlideType.TOTAL_SPENT -> TotalSpentSlide(data.totalSpent)
+                        RecapSlideType.TOTAL_SPENT -> TotalSpentSlide(data)
                         RecapSlideType.WEEKEND_WARRIOR -> WeekendWarriorSlide(data)
                         RecapSlideType.COFFEE_METRIC -> CoffeeMetricSlide(data)
                         RecapSlideType.FOODIE_FACTOR -> FoodieFactorSlide(data)
@@ -250,9 +269,7 @@ fun YearRecapScreen(
                         RecapSlideType.TOP_SPENT_TIMES -> TopSpentTimesSlide(data)
                         RecapSlideType.ROLLERCOASTER -> RollercoasterSlide(data)
                         RecapSlideType.LONGEST_STREAK -> LongestStreakSlide(data)
-                        RecapSlideType.TOP_CATEGORY -> TopCategorySlide(data)
                         RecapSlideType.BUSIEST_DAY -> BusiestDaySlide(data)
-                        RecapSlideType.TOP_CONNECTION -> TopConnectionSlide(data)
                         RecapSlideType.OUTRO -> OutroSlide()
                     }
                 }
@@ -279,61 +296,12 @@ fun YearRecapScreen(
 
 // --- New Slides ---
 
-@Composable
-fun WeekendWarriorSlide(data: RecapData) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
-            Text(
-                text = if(data.weekendPercentage > 50) "THE WEEKEND" else "THE WEEKDAY",
-                style = MaterialTheme.typography.labelMedium,
-                letterSpacing = 2.sp,
-                color = Color.White.copy(alpha = 0.6f)
-            )
-            Text(
-                text = if(data.weekendPercentage > 50) "WARRIOR" else "WORKER",
-                style = MaterialTheme.typography.displayLarge.copy(
-                    fontFamily = FontFamily.Serif,
-                    fontWeight = FontWeight.Black
-                ),
-                color = Color(0xFFFF9800)
-            )
-            Spacer(modifier = Modifier.height(48.dp))
-            
-            // Tug of War Visualization
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Text("Mon-Fri", color = Color.White, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-                // Bar
-                Box(
-                    modifier = Modifier
-                        .weight(3f)
-                        .height(24.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(alpha = 0.2f))
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .fillMaxWidth(data.weekendPercentage / 100f) // Simplified representation
-                            .align(Alignment.CenterEnd)
-                            .background(Color(0xFFFF9800))
-                    )
-                }
-                Text("Sat-Sun", color = Color.White, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "${data.weekendPercentage}% of your spending happened on weekends.",
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center,
-                color = Color.White
-            )
-        }
-    }
-}
+
 
 @Composable
 fun CoffeeMetricSlide(data: RecapData) {
      Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        PremiumLineBackground(LinePattern.CURVES)
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
             Text(
                 text = "THE COFFEE METRIC",
@@ -373,6 +341,12 @@ fun CoffeeMetricSlide(data: RecapData) {
             }
             Spacer(modifier = Modifier.height(32.dp))
             Text(
+                text = "${data.coffeeMetricLowCount} small purchases under ₹50",
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
                 text = "You love the little things!",
                 style = MaterialTheme.typography.headlineSmall,
                 color = Color.White.copy(alpha = 0.8f)
@@ -384,6 +358,7 @@ fun CoffeeMetricSlide(data: RecapData) {
 @Composable
 fun FoodieFactorSlide(data: RecapData) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+         PremiumLineBackground(LinePattern.RINGS, color = Color.White.copy(alpha = 0.05f))
          Box(
             modifier = Modifier
                 .size(300.dp)
@@ -418,6 +393,12 @@ fun FoodieFactorSlide(data: RecapData) {
                  modifier = Modifier.padding(horizontal = 32.dp),
                  textAlign = TextAlign.Center
              )
+             Spacer(modifier = Modifier.height(16.dp))
+             Text(
+                 text = "That's ${data.foodieAmount} in deliciousness.",
+                 style = MaterialTheme.typography.titleMedium,
+                 color = Color(0xFFFF5722)
+             )
          }
     }
 }
@@ -425,6 +406,7 @@ fun FoodieFactorSlide(data: RecapData) {
 @Composable
 fun TopCategoriesSlide(data: RecapData) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopStart) {
+        PremiumLineBackground(LinePattern.NET)
         Column(modifier = Modifier.padding(24.dp).padding(top = 64.dp)) {
             Text("THE BIG THREE", style = MaterialTheme.typography.displayMedium.copy(fontFamily = FontFamily.Serif), color = Color.White)
             Spacer(modifier = Modifier.height(32.dp))
@@ -466,29 +448,32 @@ fun TopCategoriesSlide(data: RecapData) {
 @Composable
 fun TopSpentTimesSlide(data: RecapData) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        PremiumLineBackground(LinePattern.CROSSHATCH)
         Column(
             horizontalAlignment = Alignment.CenterHorizontally, 
             verticalArrangement = Arrangement.spacedBy(32.dp),
             modifier = Modifier.padding(24.dp)
         ) {
-            TimeStatItem("Top Month", data.topMonth)
-            TimeStatItem("Top Week", data.topWeek)
-            TimeStatItem("Top Day", data.topDayDate)
+            TimeStatItem("Top Month", data.topMonth, data.topMonthAmount)
+            TimeStatItem("Top Week", data.topWeek, data.topWeekAmount)
+            TimeStatItem("Top Day", data.topDayDate, data.topDayAmount)
         }
     }
 }
 
 @Composable
-fun TimeStatItem(label: String, value: String) {
+fun TimeStatItem(label: String, value: String, amount: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label.uppercase(), style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.6f))
         Text(value, style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold), color = Color.White)
+        Text(amount, style = MaterialTheme.typography.titleMedium, color = Color(0xFF64FFDA))
     }
 }
 
 @Composable
 fun RollercoasterSlide(data: RecapData) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        PremiumLineBackground(LinePattern.WAVES, color = Color.White.copy(alpha = 0.05f))
         Canvas(modifier = Modifier.fillMaxWidth().height(200.dp)) {
             val path = androidx.compose.ui.graphics.Path()
             path.moveTo(0f, size.height)
@@ -529,6 +514,7 @@ fun RollercoasterSlide(data: RecapData) {
 @Composable
 fun LongestStreakSlide(data: RecapData) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+         PremiumLineBackground(LinePattern.RINGS)
          Column(horizontalAlignment = Alignment.CenterHorizontally) {
              Text(
                  text = "${data.longestStreakDays} DAYS",
@@ -539,6 +525,12 @@ fun LongestStreakSlide(data: RecapData) {
                  text = "SPENDING STREAK",
                  style = MaterialTheme.typography.headlineSmall,
                  color = Color.White
+             )
+             Spacer(modifier = Modifier.height(16.dp))
+             Text(
+                 text = "Spending a total of ${data.longestStreakAmount}",
+                 style = MaterialTheme.typography.titleMedium,
+                 color = Color.White.copy(alpha = 0.8f)
              )
         }
     }
@@ -665,9 +657,88 @@ fun IntroSlide(year: Int) {
     }
 }
 
+// --- Background Graphics ---
+
+enum class LinePattern {
+    WAVES, NET, CURVES, RINGS, CROSSHATCH
+}
+
 @Composable
-fun TotalSpentSlide(amount: String) {
+fun PremiumLineBackground(pattern: LinePattern, color: Color = Color.White.copy(alpha = 0.1f)) {
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val width = size.width
+        val height = size.height
+        
+        when(pattern) {
+            LinePattern.WAVES -> {
+                // Horizontal Sine Waves
+                val wavePath = androidx.compose.ui.graphics.Path()
+                for (i in 0..5) {
+                    val yOffset = height * (0.3f + i * 0.1f)
+                    wavePath.reset()
+                    wavePath.moveTo(0f, yOffset)
+                    
+                    var x = 0f
+                    while (x <= width) {
+                        wavePath.cubicTo(
+                            x + width * 0.1f, yOffset - 50f * (if(i%2==0) 1 else -1),
+                            x + width * 0.2f, yOffset + 50f * (if(i%2==0) 1 else -1),
+                            x + width * 0.3f, yOffset
+                        )
+                        x += width * 0.3f
+                    }
+                    drawPath(wavePath, color = color, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()))
+                }
+            }
+            LinePattern.NET -> {
+                // Diagonal interconnecting lines
+                val step = 60.dp.toPx()
+                for (x in -width.toInt()..width.toInt() step step.toInt()) {
+                    drawLine(color, start = Offset(x.toFloat(), 0f), end = Offset(x + height, height), strokeWidth = 1.dp.toPx())
+                }
+                for (x in 0..width.toInt()*2 step step.toInt()) {
+                    drawLine(color, start = Offset(x.toFloat(), 0f), end = Offset(x - height, height), strokeWidth = 1.dp.toPx())
+                }
+            }
+            LinePattern.CURVES -> {
+                 // Vertical flowing curves
+                 val path = androidx.compose.ui.graphics.Path()
+                 for(i in 0..3) {
+                     path.reset()
+                     path.moveTo(width * (0.2f + i * 0.2f), 0f)
+                     path.cubicTo(
+                         width * (0.1f + i * 0.2f), height * 0.3f,
+                         width * (0.3f + i * 0.2f), height * 0.7f,
+                         width * (0.2f + i * 0.2f), height
+                     )
+                     drawPath(path, color = color, style = androidx.compose.ui.graphics.drawscope.Stroke(width = (2+i).dp.toPx()))
+                 }
+            }
+            LinePattern.RINGS -> {
+                // Concentric circles center
+                for (i in 1..5) {
+                    drawCircle(color = color, radius = width * (0.15f * i), center = center, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()))
+                }
+            }
+            LinePattern.CROSSHATCH -> {
+                val step = 40.dp.toPx()
+                 for (y in 0..height.toInt() step step.toInt()) {
+                    drawLine(color, start = Offset(0f, y.toFloat()), end = Offset(width, y.toFloat()), strokeWidth = 1.dp.toPx())
+                }
+                 for (x in 0..width.toInt() step step.toInt()) {
+                    drawLine(color, start = Offset(x.toFloat(), 0f), end = Offset(x.toFloat(), height), strokeWidth = 1.dp.toPx())
+                }
+            }
+        }
+    }
+}
+
+// --- Specific Category Slides ---
+
+@Composable
+fun TotalSpentSlide(data: RecapData) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        PremiumLineBackground(LinePattern.NET)
         Column(modifier = Modifier.padding(24.dp)) {
             Text(
                 text = "This year, you spent a grand total of...",
@@ -676,7 +747,7 @@ fun TotalSpentSlide(amount: String) {
             )
             Spacer(modifier = Modifier.height(32.dp))
             Text(
-                text = amount,
+                text = data.totalSpent,
                 style = MaterialTheme.typography.displayLarge.copy(
                     fontFamily = FontFamily.Serif,
                     fontWeight = FontWeight.ExtraBold
@@ -690,82 +761,77 @@ fun TotalSpentSlide(amount: String) {
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.6f)
             )
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "${data.totalTransactionCount} Transactions",
+                style = MaterialTheme.typography.titleLarge,
+                color = Color(0xFF64FFDA)
+            )
         }
     }
 }
 
 @Composable
-fun TopCategorySlide(data: RecapData) {
+fun WeekendWarriorSlide(data: RecapData) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        // Radar/Circle background effect matches the Jupiter screenshot
-        Canvas(modifier = Modifier.size(400.dp)) {
-            drawCircle(color = Color.White.copy(alpha = 0.05f), radius = size.minDimension / 2)
-            drawCircle(color = Color.White.copy(alpha = 0.05f), radius = size.minDimension / 2.8f)
-            drawCircle(color = Color.White.copy(alpha = 0.05f), radius = size.minDimension / 4.5f)
-        }
-
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(24.dp)
-        ) {
+        PremiumLineBackground(LinePattern.CROSSHATCH, color = Color.White.copy(alpha = 0.05f))
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
+            // ... existing content
             Text(
-                text = "You spent the most on",
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.White.copy(alpha = 0.7f)
+                text = if(data.weekendPercentage > 50) "THE WEEKEND" else "THE WEEKDAY",
+                style = MaterialTheme.typography.labelMedium,
+                letterSpacing = 2.sp,
+                color = Color.White.copy(alpha = 0.6f)
             )
-            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = data.topCategoryName,
-                style = MaterialTheme.typography.displayMedium.copy(
-                    fontFamily = FontFamily.Serif,
-                    fontWeight = FontWeight.Bold
-                ),
-                color = Color.White,
-                textAlign = TextAlign.Center
-            )
-            
-            Spacer(modifier = Modifier.height(48.dp))
-            
-            // Icon Placeholder
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .background(Color.White.copy(alpha = 0.1f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                 Icon(
-                     imageVector = Icons.Rounded.ShoppingBag,
-                     contentDescription = "Category",
-                     modifier = Modifier.size(40.dp),
-                     tint = Color.White
-                 )
-            }
-
-            Spacer(modifier = Modifier.height(48.dp))
-
-            Text(
-                text = data.topCategoryCount.toString(),
+                text = if(data.weekendPercentage > 50) "WARRIOR" else "WORKER",
                 style = MaterialTheme.typography.displayLarge.copy(
-                    fontSize = 120.sp,
-                    fontFamily = FontFamily.Serif
+                    fontFamily = FontFamily.Serif,
+                    fontWeight = FontWeight.Black
                 ),
+                color = Color(0xFFFF9800)
+            )
+            Spacer(modifier = Modifier.height(48.dp))
+            
+            // Tug of War Visualization
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Text("Mon-Fri", color = Color.White, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                // Bar
+                Box(
+                    modifier = Modifier
+                        .weight(3f)
+                        .height(24.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White.copy(alpha = 0.2f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(data.weekendPercentage / 100f)
+                            .align(Alignment.CenterEnd)
+                            .background(Color(0xFFFF9800))
+                    )
+                }
+                Text("Sat-Sun", color = Color.White, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "${data.weekendPercentage}% of your spending happened on weekends.",
+                style = MaterialTheme.typography.titleLarge,
+                textAlign = TextAlign.Center,
                 color = Color.White
             )
-            Text(
-                text = "TRANSACTIONS",
-                style = MaterialTheme.typography.labelLarge,
-                letterSpacing = 4.sp,
-                color = Color.White.copy(alpha = 0.9f)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+             Spacer(modifier = Modifier.height(8.dp))
              Text(
-                text = "worth ${data.topCategoryAmount}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.6f)
+                text = "Totaling ${data.weekendAmount}",
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.White.copy(alpha = 0.7f)
             )
         }
     }
 }
+
+
 
 @Composable
 fun BusiestDaySlide(data: RecapData) {
@@ -774,6 +840,7 @@ fun BusiestDaySlide(data: RecapData) {
     val heights = listOf(0.4f, 0.6f, 0.3f, 1.0f, 0.8f, 0.9f, 0.5f) // Thursday is max
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        PremiumLineBackground(LinePattern.CROSSHATCH)
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(24.dp)
@@ -825,83 +892,40 @@ fun BusiestDaySlide(data: RecapData) {
                 }
             }
              Spacer(modifier = Modifier.height(32.dp))
-             Text(
-                text = "${data.busiestDayCount} Transactions",
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White
-            )
+             Row(
+                 modifier = Modifier.fillMaxWidth(),
+                 horizontalArrangement = Arrangement.SpaceEvenly
+             ) {
+                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                     Text(
+                         text = "${data.busiestDayCount}",
+                         style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+                         color = Color(0xFF64FFDA) // Teal for count
+                     )
+                     Text(
+                         text = "Transactions",
+                         style = MaterialTheme.typography.labelMedium,
+                         color = Color.White.copy(alpha = 0.7f)
+                     )
+                 }
+                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                     Text(
+                         text = data.busiestDayAmount,
+                         style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+                         color = Color(0xFFFFD54F) // Amber/Gold for amount
+                     )
+                     Text(
+                         text = "Spent",
+                         style = MaterialTheme.typography.labelMedium,
+                         color = Color.White.copy(alpha = 0.7f)
+                     )
+                 }
+             }
         }
     }
 }
 
-@Composable
-fun TopConnectionSlide(data: RecapData) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-         // Waves background
-         Canvas(modifier = Modifier.fillMaxWidth().height(300.dp)) {
-             val waveColor = Color(0xFF69F0AE).copy(alpha = 0.2f)
-             // Simple line drawing to mimic waves
-             val width = size.width
-             val height = size.height
-             
-             // Draw some sine waves
-             for(i in 0..5) {
-                 // Simplified conceptual lines
-                 drawLine(
-                     color = waveColor,
-                     start = Offset(0f, height/2 + i * 20),
-                     end = Offset(width, height/2 + i * 20 - 50),
-                     strokeWidth = 2.dp.toPx()
-                 )
-             }
-         }
-         
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(24.dp)
-        ) {
-            Text(
-                text = "Your #1 for payments this year was",
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.White.copy(alpha = 0.7f)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = data.topConnectionName,
-                style = MaterialTheme.typography.displayMedium.copy(
-                    fontFamily = FontFamily.Serif,
-                    fontWeight = FontWeight.Bold
-                ),
-                color = Color.White,
-                textAlign = TextAlign.Start,
-                lineHeight = 48.sp
-            )
-            
-            Spacer(modifier = Modifier.height(120.dp))
-            
-            Text(
-                text = data.topConnectionCount.toString(),
-                style = MaterialTheme.typography.displayLarge.copy(
-                    fontSize = 120.sp,
-                    fontFamily = FontFamily.Serif
-                ),
-                color = Color.White
-            )
-             Text(
-                text = "TRANSACTIONS",
-                style = MaterialTheme.typography.labelLarge,
-                letterSpacing = 4.sp,
-                color = Color.White.copy(alpha = 0.9f)
-            )
-             Spacer(modifier = Modifier.height(8.dp))
-             Text(
-                text = "between you two",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.6f)
-            )
-        }
-    }
-}
+
 
 @Composable
 fun OutroSlide() {
@@ -931,62 +955,95 @@ fun OutroSlide() {
 @Composable
 fun TravelStatsSlide(data: RecapData) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
-            Text("URBAN EXPLORER", style = MaterialTheme.typography.displaySmall.copy(fontFamily = FontFamily.Serif), color = Color.White)
-            Spacer(modifier = Modifier.height(32.dp))
-            
-            // Race Track
-            data.travelStats.entries.sortedByDescending { it.value }.take(4).forEachIndexed { index, (mode, count) ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Icon based on mode
-                    val icon = when(mode) {
-                        "Metro" -> Icons.Rounded.Subway // Using standard icons, mapping required
-                        "Uber" -> Icons.Rounded.LocalTaxi
-                        "Bus" -> Icons.Rounded.DirectionsBus
-                        "Train" -> Icons.Rounded.Train
-                        else -> Icons.AutoMirrored.Rounded.DirectionsBike
-                    }
-                    
-                    Icon(icon, contentDescription = mode, tint = Color.White, modifier = Modifier.size(32.dp))
-                    Spacer(modifier = Modifier.width(16.dp))
-                    
-                    // Bar
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(16.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color.White.copy(alpha = 0.2f))
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .fillMaxWidth(count / data.travelTopSubcategoryCount.toFloat())
-                                .background(if (index == 0) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.5f))
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text("$count", color = Color.White, fontWeight = FontWeight.Bold)
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(32.dp))
+        PremiumLineBackground(LinePattern.WAVES)
+        Column(
+            horizontalAlignment = Alignment.Start,
+            modifier = Modifier.padding(24.dp)
+        ) {
             Text(
-                text = "You took the ${data.travelTopSubcategory} most often!",
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center,
-                color = Color.White
+                "URBAN EXPLORER",
+                style = MaterialTheme.typography.displaySmall.copy(fontFamily = FontFamily.Serif),
+                color = Color.White,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
             )
+            Spacer(modifier = Modifier.height(40.dp))
+
+            // Uber
+            TravelStatRow(
+                icon = Icons.Rounded.LocalTaxi,
+                label = "${data.uberCount} Uber travels",
+                amount = data.uberAmount
+            )
+            // Bus
+            TravelStatRow(
+                icon = Icons.Rounded.DirectionsBus,
+                label = "${data.busCount} Bus rides",
+                amount = data.busAmount
+            )
+            // Train
+            TravelStatRow(
+                icon = Icons.Rounded.Train,
+                label = "${data.trainCount} Train journeys",
+                amount = data.trainAmount
+            )
+            // Metro
+            TravelStatRow(
+                icon = Icons.Rounded.Subway,
+                label = "${data.metroRechargeCount} Metro recharges",
+                amount = data.metroAmount
+            )
+            // Fuel/Oil
+            TravelStatRow(
+                icon = Icons.Rounded.LocalGasStation,
+                label = "${data.fuelCount} Fuel fill-ups",
+                amount = data.fuelAmount
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+            androidx.compose.material3.HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    "Total Travel Spend",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
+                Text(
+                    data.travelTotalAmount,
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = Color(0xFF00E5FF)
+                )
+            }
         }
+    }
+}
+
+@Composable
+fun TravelStatRow(icon: ImageVector, label: String, amount: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(label, style = MaterialTheme.typography.bodyLarge, color = Color.White)
+        }
+        Text(amount, style = MaterialTheme.typography.titleMedium, color = Color(0xFF64FFDA), fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
 fun MovieStatsSlide(data: RecapData) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        PremiumLineBackground(LinePattern.CURVES)
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             // Ticket Stub Visual
             Box(
@@ -1014,6 +1071,12 @@ fun MovieStatsSlide(data: RecapData) {
             
             Spacer(modifier = Modifier.height(40.dp))
             Text(
+                text = "Spending ${data.movieAmount}",
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White
+            )
+             Spacer(modifier = Modifier.height(8.dp))
+            Text(
                 text = "That's a lot of popcorn!",
                 style = MaterialTheme.typography.headlineSmall,
                 color = Color.White
@@ -1025,6 +1088,7 @@ fun MovieStatsSlide(data: RecapData) {
 @Composable
 fun LifestyleStatsSlide(data: RecapData) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        PremiumLineBackground(LinePattern.NET)
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
              Text("TREAT YOURSELF", style = MaterialTheme.typography.displayMedium.copy(fontFamily = FontFamily.Serif), color = Color(0xFFE040FB))
              Spacer(modifier = Modifier.height(48.dp))
