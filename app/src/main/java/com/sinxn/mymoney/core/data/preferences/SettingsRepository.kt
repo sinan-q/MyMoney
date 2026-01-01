@@ -24,7 +24,8 @@ data class FormattingSettings(
     val dateFormat: Int = 2,
     val firstDayOfWeek: Int = java.util.Calendar.getInstance().firstDayOfWeek,
     val firstDayOfMonth: Int = 1,
-    val includeFutureTransactions: Boolean = false
+    val includeFutureTransactions: Boolean = false,
+    val excludeArchivedFromTotal: Boolean = false
 )
 
 @Singleton
@@ -44,6 +45,7 @@ class SettingsRepository @Inject constructor(
         val FIRST_DAY_OF_WEEK = intPreferencesKey("first_day_of_week")
         val FIRST_DAY_OF_MONTH = intPreferencesKey("first_day_of_month")
         val INCLUDE_FUTURE_TRANSACTIONS = booleanPreferencesKey("include_future_transactions")
+        val EXCLUDE_ARCHIVED_FROM_TOTAL = booleanPreferencesKey("exclude_archived_from_total")
     }
 
     val currentWalletId: Flow<String> = dataStore.data
@@ -61,7 +63,8 @@ class SettingsRepository @Inject constructor(
                 dateFormat = preferences[DATE_FORMAT] ?: 2,
                 firstDayOfWeek = preferences[FIRST_DAY_OF_WEEK] ?: java.util.Calendar.getInstance().firstDayOfWeek,
                 firstDayOfMonth = preferences[FIRST_DAY_OF_MONTH] ?: 1,
-                includeFutureTransactions = preferences[INCLUDE_FUTURE_TRANSACTIONS] ?: false
+                includeFutureTransactions = preferences[INCLUDE_FUTURE_TRANSACTIONS] ?: false,
+                excludeArchivedFromTotal = preferences[EXCLUDE_ARCHIVED_FROM_TOTAL] ?: false
             )
         }
 
@@ -116,6 +119,12 @@ class SettingsRepository @Inject constructor(
     suspend fun setIncludeFutureTransactions(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[INCLUDE_FUTURE_TRANSACTIONS] = enabled
+        }
+    }
+
+    suspend fun setExcludeArchivedFromTotal(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[EXCLUDE_ARCHIVED_FROM_TOTAL] = enabled
         }
     }
 }

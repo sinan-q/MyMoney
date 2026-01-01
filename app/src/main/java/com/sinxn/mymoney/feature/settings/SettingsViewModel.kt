@@ -58,4 +58,10 @@ class SettingsViewModel @Inject constructor(
             settingsRepository.setIncludeFutureTransactions(enabled)
         }
     }
+
+    fun updateExcludeArchivedFromTotal(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setExcludeArchivedFromTotal(enabled)
+        }
+    }
 }

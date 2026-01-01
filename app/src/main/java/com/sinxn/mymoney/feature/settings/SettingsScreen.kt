@@ -101,6 +101,11 @@ fun SettingsScreen(
                 checked = settings.includeFutureTransactions,
                 onCheckedChange = viewModel::updateIncludeFutureTransactions
             )
+            SettingsSwitchItem(
+                title = "Exclude Archived from Total",
+                checked = settings.excludeArchivedFromTotal,
+                onCheckedChange = viewModel::updateExcludeArchivedFromTotal
+            )
             
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
             

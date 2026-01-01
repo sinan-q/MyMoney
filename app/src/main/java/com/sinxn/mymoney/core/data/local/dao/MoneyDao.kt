@@ -200,23 +200,28 @@ interface MoneyDao {
     suspend fun insertTransaction(transaction: TransactionEntity)
 
     @Query("""
-        SELECT COALESCE(SUM(
-            CASE 
-                WHEN t.direction = 1 THEN t.money 
-                WHEN t.direction = 0 THEN -t.money 
-                ELSE 0 
-            END
-        ), 0)
-        FROM transactions t
-        INNER JOIN wallets w ON t.walletId = w.id
-        WHERE t.isDeleted = 0 
-          AND t.confirmed = 1 
-          AND t.countInTotal = 1
-          AND w.countInTotal = 1
-          AND w.isDeleted = 0
-          AND t.date <= :maxDate
+        SELECT SUM(wallet_balance) FROM (
+            SELECT 
+                w.startMoney + COALESCE(SUM(
+                    CASE 
+                        WHEN t.direction = 1 THEN t.money 
+                        WHEN t.direction = 0 THEN -t.money 
+                        ELSE 0 
+                    END
+                ), 0) as wallet_balance
+            FROM wallets w
+            LEFT JOIN transactions t ON w.id = t.walletId 
+                AND t.isDeleted = 0 
+                AND t.confirmed = 1 
+                AND t.countInTotal = 1
+                AND t.date <= :maxDate
+            WHERE w.isDeleted = 0 
+              AND w.countInTotal = 1
+              AND (:excludeArchived = 1 AND w.isArchived = 0 OR :excludeArchived = 0)
+            GROUP BY w.id
+        )
     """)
-    fun getTotalBalance(maxDate: String): Flow<Long>
+    fun getTotalBalance(maxDate: String, excludeArchived: Boolean): Flow<Long?>
     
     @Query("SELECT * FROM wallets WHERE id = :id")
     suspend fun getWalletById(id: String): WalletEntity?

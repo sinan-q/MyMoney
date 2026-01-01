@@ -55,31 +55,38 @@ class WalletDetailsViewModel @Inject constructor(
     
     // ... rest of the code
 
-    val wallet: Flow<WalletWithBalance?> = if (walletId == Constants.TOTAL_WALLET_ID) {
-        moneyDao.getTotalBalance(DateUtils.getSQLDateTimeString(java.util.Date())).map { balance ->
-            WalletWithBalance(
-                wallet = WalletEntity(
-                    id = Constants.TOTAL_WALLET_ID,
-                    name = "Total",
-                    icon = "sigma",
-                    currency = "USD", // Better default?
-                    startMoney = 0,
-                    isArchived = false,
-                    note = null,
-                    countInTotal = false,
-                    index = -1,
-                    isDeleted = false,
-                    lastEdit = 0,
-                    tag = null
-                ),
-                currentBalance = balance,
-                decimals = 2,
-                currencySymbol = "$" // Default
-            )
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val wallet: StateFlow<WalletWithBalance?> = settingsRepository.formattingSettings
+        .flatMapLatest { settings ->
+            if (walletId == Constants.TOTAL_WALLET_ID) {
+                moneyDao.getTotalBalance(
+                    DateUtils.getSQLDateTimeString(java.util.Date()),
+                    settings.excludeArchivedFromTotal
+                ).map { balance ->
+                    WalletWithBalance(
+                        wallet = WalletEntity(
+                            id = Constants.TOTAL_WALLET_ID,
+                            name = "Total",
+                            icon = "sigma",
+                            currency = "USD", // Better default?
+                            startMoney = 0,
+                            isArchived = false,
+                            note = null,
+                            countInTotal = false,
+                            index = -1,
+                            isDeleted = false,
+                            lastEdit = 0,
+                            tag = null
+                        ),
+                        currentBalance = balance ?: 0L,
+                        decimals = 2,
+                        currencySymbol = "$" // Default
+                    )
+                }
+            } else {
+                moneyDao.getWalletWithBalance(walletId, DateUtils.getSQLDateTimeString(java.util.Date()))
+            }
         }
-    } else {
-        moneyDao.getWalletWithBalance(walletId, DateUtils.getSQLDateTimeString(java.util.Date()))
-    }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
