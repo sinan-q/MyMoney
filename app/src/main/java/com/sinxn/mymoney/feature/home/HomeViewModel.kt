@@ -41,28 +41,35 @@ class HomeViewModel @Inject constructor(
         }
         val totalBalance = walletsInTotal.sumOf { it.currentBalance }
         
+        val globalCurrency = settings.globalCurrency
+        val currency = try {
+            java.util.Currency.getInstance(globalCurrency)
+        } catch (e: Exception) {
+            null
+        }
+
         val totalWallet = WalletWithBalance(
             wallet = WalletEntity(
                 id = Constants.TOTAL_WALLET_ID,
                 name = "Total",
-                icon = "sigma", // Icon name?
-                currency = list.firstOrNull()?.wallet?.currency ?: "USD", // Use first wallet's currency or default
+                icon = "sigma", 
+                currency = globalCurrency, 
                 startMoney = 0,
                 isArchived = false,
                 note = null,
-                countInTotal = false, // Doesn't matter for this fake wallet
+                countInTotal = false, 
                 index = -1,
                 isDeleted = false,
                 lastEdit = 0,
                 tag = null
             ),
             currentBalance = totalBalance,
-            decimals = 2,
-            currencySymbol = list.firstOrNull()?.currencySymbol ?: "$"
+            decimals = currency?.defaultFractionDigits ?: 2,
+            currencySymbol = currency?.symbol ?: globalCurrency
         )
 
         val currencies = walletsInTotal.map { it.wallet.currency }.distinct()
-        val isTotalValid = currencies.size <= 1
+        val isTotalValid = currencies.size == 1 && currencies.first() == globalCurrency || (walletsInTotal.isEmpty())
 
         HomeUiState(
             activeWallets = listOf(totalWallet) + list.filter { !it.wallet.isArchived },

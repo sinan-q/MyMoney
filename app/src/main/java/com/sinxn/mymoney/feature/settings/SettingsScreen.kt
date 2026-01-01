@@ -23,6 +23,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 
@@ -107,6 +114,12 @@ fun SettingsScreen(
                 onCheckedChange = viewModel::updateExcludeArchivedFromTotal
             )
             
+            SettingsItem(
+                title = "Global Balance Currency",
+                value = settings.globalCurrency,
+                onValueChange = viewModel::updateGlobalCurrency
+            )
+            
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
             
             // Date Format could be a dropdown, keeping plain for now or adding later
@@ -133,5 +146,46 @@ fun SettingsSwitchItem(
             checked = checked,
             onCheckedChange = onCheckedChange
         )
+    }
+}
+
+@Composable
+fun SettingsItem(
+    title: String,
+    value: String,
+    onValueChange: (String) -> Unit
+) {
+    var isEditing by remember { mutableStateOf(false) }
+    var textValue by remember(value) { mutableStateOf(value) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(text = title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        
+        if (isEditing) {
+            androidx.compose.material3.TextField(
+                value = textValue,
+                onValueChange = { textValue = it.uppercase() },
+                modifier = Modifier.width(100.dp),
+                singleLine = true,
+                trailingIcon = {
+                    IconButton(onClick = { 
+                        onValueChange(textValue)
+                        isEditing = false 
+                    }) {
+                        Icon(Icons.Default.Check, contentDescription = "Save")
+                    }
+                }
+            )
+        } else {
+            TextButton(onClick = { isEditing = true }) {
+                Text(text = value)
+            }
+        }
     }
 }

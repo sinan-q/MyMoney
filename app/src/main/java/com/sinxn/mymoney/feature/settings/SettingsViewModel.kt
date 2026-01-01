@@ -64,4 +64,10 @@ class SettingsViewModel @Inject constructor(
             settingsRepository.setExcludeArchivedFromTotal(enabled)
         }
     }
+
+    fun updateGlobalCurrency(currency: String) {
+        viewModelScope.launch {
+            settingsRepository.setGlobalCurrency(currency)
+        }
+    }
 }

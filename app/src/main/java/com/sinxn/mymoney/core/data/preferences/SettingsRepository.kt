@@ -25,7 +25,8 @@ data class FormattingSettings(
     val firstDayOfWeek: Int = java.util.Calendar.getInstance().firstDayOfWeek,
     val firstDayOfMonth: Int = 1,
     val includeFutureTransactions: Boolean = false,
-    val excludeArchivedFromTotal: Boolean = false
+    val excludeArchivedFromTotal: Boolean = false,
+    val globalCurrency: String = "USD"
 )
 
 @Singleton
@@ -46,6 +47,7 @@ class SettingsRepository @Inject constructor(
         val FIRST_DAY_OF_MONTH = intPreferencesKey("first_day_of_month")
         val INCLUDE_FUTURE_TRANSACTIONS = booleanPreferencesKey("include_future_transactions")
         val EXCLUDE_ARCHIVED_FROM_TOTAL = booleanPreferencesKey("exclude_archived_from_total")
+        val GLOBAL_CURRENCY = stringPreferencesKey("global_currency")
     }
 
     val currentWalletId: Flow<String> = dataStore.data
@@ -64,7 +66,8 @@ class SettingsRepository @Inject constructor(
                 firstDayOfWeek = preferences[FIRST_DAY_OF_WEEK] ?: java.util.Calendar.getInstance().firstDayOfWeek,
                 firstDayOfMonth = preferences[FIRST_DAY_OF_MONTH] ?: 1,
                 includeFutureTransactions = preferences[INCLUDE_FUTURE_TRANSACTIONS] ?: false,
-                excludeArchivedFromTotal = preferences[EXCLUDE_ARCHIVED_FROM_TOTAL] ?: false
+                excludeArchivedFromTotal = preferences[EXCLUDE_ARCHIVED_FROM_TOTAL] ?: false,
+                globalCurrency = preferences[GLOBAL_CURRENCY] ?: "USD"
             )
         }
 
@@ -125,6 +128,12 @@ class SettingsRepository @Inject constructor(
     suspend fun setExcludeArchivedFromTotal(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[EXCLUDE_ARCHIVED_FROM_TOTAL] = enabled
+        }
+    }
+
+    suspend fun setGlobalCurrency(currency: String) {
+        dataStore.edit { preferences ->
+            preferences[GLOBAL_CURRENCY] = currency
         }
     }
 }
