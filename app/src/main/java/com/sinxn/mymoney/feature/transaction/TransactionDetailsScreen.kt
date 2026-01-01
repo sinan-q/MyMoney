@@ -84,6 +84,7 @@ import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CategorySelectionDialog
 import com.sinxn.mymoney.core.ui.components.SelectionDialog
 import com.sinxn.mymoney.core.util.MoneyFormatter
+import kotlin.math.pow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -150,7 +151,7 @@ fun TransactionContent(
     settings: com.sinxn.mymoney.core.data.preferences.FormattingSettings,
     viewModel: TransactionDetailsViewModel
 ) {
-    val transaction = uiState.transaction ?: return
+    if (uiState.transaction == null && !uiState.isNewTransaction) return
     val scrollState = rememberScrollState()
 
     Column(
@@ -160,8 +161,29 @@ fun TransactionContent(
             .background(MaterialTheme.colorScheme.surface)
     ) {
         // Hero Header
+        val rawAmount = if (uiState.isEditMode) {
+             val multiplier = 10.0.pow(uiState.currencyDecimals.toDouble())
+             (uiState.editAmount.replace(",", ".").toDoubleOrNull()?.let { it * multiplier } ?: 0.0).toLong()
+        } else {
+             uiState.transaction?.transaction?.money ?: 0L
+        }
+        
+        val displayDirection = if (uiState.isEditMode) uiState.editDirection else uiState.transaction?.transaction?.direction ?: 0
+        val displayCategoryName = if (uiState.isEditMode) {
+            uiState.availableCategories.find { it.id == uiState.editCategoryId }?.name ?: "No Category"
+        } else {
+            uiState.transaction?.categoryName ?: "No Category"
+        }
+        val displayCategoryIcon = if (uiState.isEditMode) {
+            uiState.availableCategories.find { it.id == uiState.editCategoryId }?.icon
+        } else {
+            uiState.transaction?.categoryIcon
+        }
+
         TransactionHeroHeader(
-            transaction = transaction, 
+            amount = if (displayDirection == 1) rawAmount else -rawAmount,
+            categoryIcon = displayCategoryIcon,
+            categoryName = displayCategoryName,
             currencySymbol = uiState.currencySymbol, 
             currencyDecimals = uiState.currencyDecimals, 
             settings = settings,
@@ -204,13 +226,14 @@ fun TransactionContent(
 
 @Composable
 fun TransactionHeroHeader(
-    transaction: TransactionWithCategory,
+    amount: Long,
+    categoryIcon: String?,
+    categoryName: String,
     currencySymbol: String,
     currencyDecimals: Int,
     settings: com.sinxn.mymoney.core.data.preferences.FormattingSettings,
     categoryColor: Color
 ) {
-    val isIncome = transaction.transaction.direction == 1
     val secondaryColor = remember(categoryColor) { 
         Color(android.graphics.Color.HSVToColor(FloatArray(3).apply {
             android.graphics.Color.colorToHSV(categoryColor.toArgb(), this)
@@ -257,8 +280,8 @@ fun TransactionHeroHeader(
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     CategoryIcon(
-                        iconString = transaction.categoryIcon,
-                        categoryName = transaction.categoryName ?: "?",
+                        iconString = categoryIcon,
+                        categoryName = categoryName,
                         modifier = Modifier.size(56.dp)
                     )
                 }
@@ -267,7 +290,7 @@ fun TransactionHeroHeader(
             Spacer(modifier = Modifier.height(16.dp))
 
             val formattedMoney = MoneyFormatter.format(
-                amount = if (isIncome) transaction.transaction.money else -transaction.transaction.money,
+                amount = amount,
                 currencyCode = currencySymbol,
                 decimals = currencyDecimals,
                 config = MoneyFormatter.Config(
@@ -292,7 +315,7 @@ fun TransactionHeroHeader(
             )
             
             Text(
-                text = transaction.categoryName ?: "No Category",
+                text = categoryName,
                 style = MaterialTheme.typography.titleLarge,
                 color = Color.White.copy(alpha = 0.9f),
                 fontWeight = FontWeight.Bold

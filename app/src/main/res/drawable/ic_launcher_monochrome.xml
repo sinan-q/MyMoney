@@ -1,0 +1,39 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 
+        Simplified silhouette for themed icons.
+        Maintains the 35% scale to match the foreground icon.
+    -->
+    <group
+        android:pivotX="57.5"
+        android:pivotY="57.5"
+        android:scaleX="0.35"
+        android:scaleY="0.35"
+        android:translateX="-3.5"
+        android:translateY="-3.5">
+        <!-- Main Wallet Body -->
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M94.959,35.371H17.263c-5.287,0 -9.612,4.325 -9.612,9.612v60.406c0,5.287 4.325,9.612 9.612,9.612h77.696c5.287,0 9.612,-4.325 9.612,-9.612V44.983C104.571,39.696 100.245,35.371 94.959,35.371z" />
+        
+        <!-- Opening flap part (slightly cut out for detail) -->
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M102.84,64.073H79.231c-3.851,0 -6.974,3.122 -6.974,6.974v10.554c0,3.852 3.122,6.974 6.974,6.974h23.609c2.55,0 4.617,-2.067 4.617,-4.617V68.69C107.457,66.14 105.39,64.073 102.84,64.073z"
+            android:strokeWidth="1.5"
+            android:strokeColor="#FF000000" />
+            
+        <!-- Button detail -->
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M83.564,75.936m-3,0a3,3 0,1 1,6,0a3,3 0,1 1,-6,0" />
+
+        <!-- Simplified cards silhouette -->
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M88.161,13.934c-0.644,-1.791 -2.619,-2.721 -4.41,-2.076l-58.254,20.96h20.956c2.482,-3.756 6.738,-6.237 11.577,-6.237s9.094,2.481 11.577,6.237h15.079" />
+    </group>
+</vector>

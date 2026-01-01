@@ -1,6 +1,7 @@
 package com.sinxn.mymoney
 
 import android.os.Bundle
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,6 +21,7 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         setContent {
             MyMoneyTheme {
@@ -71,7 +73,12 @@ class MainActivity : ComponentActivity() {
                                     }
                                 )
                             }
-                            composable("transaction_details/{transactionId}") {
+                            composable(
+                                "transaction_details/{transactionId}",
+                                deepLinks = listOf(
+                                    androidx.navigation.navDeepLink { uriPattern = "mymoney://transaction/{transactionId}" }
+                                )
+                            ) {
                                 com.sinxn.mymoney.feature.transaction.TransactionDetailsScreen(
                                     onNavigateBack = { navController.navigateUp() }
                                 )

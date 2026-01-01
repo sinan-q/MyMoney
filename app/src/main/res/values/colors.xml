@@ -7,4 +7,7 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <string name="shortcut_add_short">Add</string>
+    <string name="shortcut_add_long">Add Transaction</string>
 </resources>
