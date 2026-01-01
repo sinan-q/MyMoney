@@ -15,26 +15,69 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.drawWithContent
+import org.json.JSONObject
+import kotlin.math.abs
+
+import androidx.compose.foundation.layout.padding
+
+import androidx.compose.ui.text.PlatformTextStyle
+
+import androidx.compose.ui.text.style.LineHeightStyle
+
 @Composable
 fun CategoryIcon(
     iconString: String?,
     categoryName: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    textColor: Color = Color.White
 ) {
     val iconData = remember(iconString, categoryName) {
         parseIconData(iconString, categoryName)
     }
     
+    val defaultStyle = MaterialTheme.typography.titleMedium
+    var textSize by remember { mutableStateOf(16.sp) }
+    
+    val textStyle = remember(defaultStyle, textSize) {
+        defaultStyle.copy(
+            fontSize = textSize,
+            platformStyle = PlatformTextStyle(includeFontPadding = false),
+            lineHeight = textSize,
+            lineHeightStyle = LineHeightStyle(
+                alignment = LineHeightStyle.Alignment.Center,
+                trim = LineHeightStyle.Trim.Both
+            )
+        )
+    }
+
     Box(
         modifier = modifier
-            .background(iconData.color, CircleShape),
+            .background(iconData.color, CircleShape)
+            .padding(2.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = iconData.text,
-            style = MaterialTheme.typography.titleMedium,
-            color = Color.White,
-            fontWeight = FontWeight.Bold
+            style = textStyle,
+            color = textColor,
+            fontWeight = FontWeight.Black,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            softWrap = false,
+            onTextLayout = { textLayoutResult ->
+                if (textLayoutResult.didOverflowWidth || textLayoutResult.didOverflowHeight) {
+                    val newSize = textSize * 0.9f
+                    if (newSize.value > 6f) {
+                        textSize = newSize
+                    }
+                }
+            }
         )
     }
 }
@@ -51,7 +94,7 @@ fun parseIconData(iconString: String?, categoryName: String): IconData {
 
     try {
         if (iconString.trim().startsWith("{")) {
-            val json = org.json.JSONObject(iconString)
+            val json = JSONObject(iconString)
             val type = json.optString("type")
             
             if (type == "color") {
@@ -76,6 +119,6 @@ fun parseIconData(iconString: String?, categoryName: String): IconData {
 
 fun generateColor(name: String): Color {
     val hash = name.hashCode()
-    val hue = kotlin.math.abs(hash % 360).toFloat()
+    val hue = abs(hash % 360).toFloat()
     return Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, 0.6f, 0.8f)))
 }

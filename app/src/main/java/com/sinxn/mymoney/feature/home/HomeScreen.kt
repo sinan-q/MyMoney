@@ -62,9 +62,11 @@ fun HomeScreen(
             CenterAlignedTopAppBar(
                 title = { 
                     Text(
-                        "My Money",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
+                        "MY MONEY",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                        letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified
                     )
                 },
                 actions = {

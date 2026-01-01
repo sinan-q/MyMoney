@@ -62,6 +62,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -97,20 +98,6 @@ fun TransactionDetailsScreen(
     val settings by viewModel.formattingSettings.collectAsState()
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(if (uiState.isEditMode) "Edit Transaction" else "Details") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    titleContentColor = Color.White
-                )
-            )
-        },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { if (uiState.isEditMode) viewModel.saveChanges() else viewModel.toggleEditMode() },
@@ -141,7 +128,8 @@ fun TransactionDetailsScreen(
                     uiState = uiState,
                     settings = settings,
                     viewModel = viewModel,
-                    contentPadding = padding
+                    contentPadding = padding,
+                    onNavigateBack = onNavigateBack
                 )
             }
         }
@@ -153,7 +141,8 @@ fun TransactionContent(
     uiState: TransactionDetailsUiState,
     settings: com.sinxn.mymoney.core.data.preferences.FormattingSettings,
     viewModel: TransactionDetailsViewModel,
-    contentPadding: androidx.compose.foundation.layout.PaddingValues = androidx.compose.foundation.layout.PaddingValues()
+    contentPadding: androidx.compose.foundation.layout.PaddingValues = androidx.compose.foundation.layout.PaddingValues(),
+    onNavigateBack: () -> Unit
 ) {
     if (uiState.transaction == null && !uiState.isNewTransaction) return
     val scrollState = rememberScrollState()
@@ -191,7 +180,9 @@ fun TransactionContent(
             currencyCode = uiState.currencyCode, 
             currencyDecimals = uiState.currencyDecimals, 
             settings = settings,
-            categoryColor = uiState.categoryColor
+            categoryColor = uiState.categoryColor,
+            isEditMode = uiState.isEditMode,
+            onBackClick = onNavigateBack
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -237,7 +228,9 @@ fun TransactionHeroHeader(
     currencyCode: String,
     currencyDecimals: Int,
     settings: com.sinxn.mymoney.core.data.preferences.FormattingSettings,
-    categoryColor: Color
+    categoryColor: Color,
+    isEditMode: Boolean,
+    onBackClick: () -> Unit
 ) {
     val secondaryColor = remember(categoryColor) { 
         Color(android.graphics.Color.HSVToColor(FloatArray(3).apply {
@@ -250,51 +243,68 @@ fun TransactionHeroHeader(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(240.dp)
+            .height(220.dp)
             .background(
                 brush = Brush.linearGradient(
                     colors = listOf(categoryColor, secondaryColor)
                 )
             )
     ) {
-        // Subtle decorative background circles for "Premium" look
+        // Subtle decorative background circles
         Canvas(
             modifier = Modifier
-                .size(200.dp)
+                .size(160.dp)
                 .align(Alignment.BottomEnd)
-                .offset(x = 60.dp, y = 60.dp)
+                .offset(x = 40.dp, y = 40.dp)
         ) {
             drawCircle(
-                color = Color.White.copy(alpha = 0.15f),
+                color = Color.White.copy(alpha = 0.1f),
                 radius = size.minDimension
             )
         }
 
-        Column(
+        // Navigation elements
+        Box(
             modifier = Modifier
-                .padding(32.dp)
-                .fillMaxSize()
-                .statusBarsPadding(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(horizontal = 8.dp, vertical = 8.dp)
         ) {
-            // Category Icon with Glassmorphism
+            // Frosted Glass Back Button
             Surface(
+                onClick = onBackClick,
                 shape = CircleShape,
                 color = Color.White.copy(alpha = 0.2f),
-                modifier = Modifier.size(72.dp)
+                modifier = Modifier.size(48.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    CategoryIcon(
-                        iconString = categoryIcon,
-                        categoryName = categoryName,
-                        modifier = Modifier.size(56.dp)
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // Centralized title
+            Text(
+                text = if (isEditMode) "EDIT TRANSACTION" else "TRANSACTION DETAILS",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White.copy(alpha = 0.7f),
+                modifier = Modifier.align(Alignment.Center)
+            )
+        }
 
+        // Main Content (Amount and Category Badge)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             val formattedMoney = MoneyFormatter.format(
                 amount = amount,
                 currencyCode = currencyCode,
@@ -319,13 +329,27 @@ fun TransactionHeroHeader(
                 color = Color.White,
                 fontWeight = FontWeight.Black
             )
-            
-            Text(
-                text = categoryName,
-                style = MaterialTheme.typography.titleLarge,
-                color = Color.White.copy(alpha = 0.9f),
-                fontWeight = FontWeight.Bold
-            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                CategoryIcon(
+                    iconString = categoryIcon,
+                    categoryName = categoryName,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = categoryName,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
