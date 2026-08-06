@@ -233,7 +233,7 @@ private fun DebtViewContent(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = MoneyFormatter.format(amount = remaining, currencyCode = currencyCode, decimals = 2, config = formatterConfig),
+                        text = MoneyFormatter.format(amount = remaining, currencyCode = debtDetails.walletCurrency, decimals = debtDetails.walletDecimals, config = formatterConfig),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Black
                     )
@@ -253,7 +253,7 @@ private fun DebtViewContent(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Total: ${MoneyFormatter.format(amount = totalMoney, currencyCode = currencyCode, decimals = 2, config = formatterConfig)}",
+                            text = "Total: ${MoneyFormatter.format(amount = totalMoney, currencyCode = debtDetails.walletCurrency, decimals = debtDetails.walletDecimals, config = formatterConfig)}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -474,13 +474,15 @@ private fun DebtFormContent(
 
         // Amount Input
         item {
+            val selectedWallet = uiState.availableWallets.find { it.id == uiState.editWalletId }
+            val formCurrency = selectedWallet?.currency ?: uiState.currencyCode
             OutlinedTextField(
                 value = uiState.editAmount,
                 onValueChange = onAmountChange,
                 label = { Text("Total Amount") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                prefix = { Text(uiState.currencyCode + " ") }
+                prefix = { Text(formCurrency + " ") }
             )
         }
 
@@ -660,7 +662,7 @@ private fun DebtPaymentBottomSheet(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Remaining: ${MoneyFormatter.format(amount = remaining, currencyCode = currencyCode, decimals = 2, config = formatterConfig)}",
+                text = "Remaining: ${MoneyFormatter.format(amount = remaining, currencyCode = debtDetails.walletCurrency, decimals = debtDetails.walletDecimals, config = formatterConfig)}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -673,7 +675,7 @@ private fun DebtPaymentBottomSheet(
                 label = { Text("Payment Amount") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                prefix = { Text(currencyCode + " ") }
+                prefix = { Text(debtDetails.walletCurrency + " ") }
             )
 
             Spacer(modifier = Modifier.height(12.dp))

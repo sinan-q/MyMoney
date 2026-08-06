@@ -66,7 +66,7 @@ fun WalletDetailsScreen(
     onTransactionClick: (String) -> Unit,
     onNavigateToRecap: () -> Unit,
     onAddTransaction: () -> Unit,
-    onNavigateToDebts: () -> Unit = {},
+    onNavigateToDebts: (String?) -> Unit = {},
     viewModel: WalletDetailsViewModel = hiltViewModel()
 ) {
     val wallet by viewModel.wallet.collectAsState(initial = null)
@@ -189,7 +189,7 @@ fun WalletDetailsScreen(
                                         pagerState.animateScrollToPage(0)
                                     }
                                     if (item.id == "debts") {
-                                        onNavigateToDebts()
+                                        onNavigateToDebts(wallet?.wallet?.id)
                                     }
                                 }
                             )

@@ -65,9 +65,18 @@ class DebtRepository @Inject constructor(
     /**
      * Observe list of debts enriched with people.
      */
-    fun getDebts(type: Int? = null, includeArchived: Boolean = false): Flow<List<DebtWithDetails>> {
+    fun getDebts(
+        type: Int? = null, 
+        includeArchived: Boolean = false, 
+        walletId: String? = null
+    ): Flow<List<DebtWithDetails>> {
         val maxDate = DateUtils.getSQLDateTimeString(Date())
-        return moneyDao.getDebtsWithDetails(type, includeArchived, maxDate).flatMapLatest { debtList ->
+        return moneyDao.getDebtsWithDetails(
+            type = type, 
+            includeArchived = includeArchived, 
+            walletId = walletId, 
+            maxDate = maxDate
+        ).flatMapLatest { debtList ->
             if (debtList.isEmpty()) {
                 flowOf(emptyList())
             } else {

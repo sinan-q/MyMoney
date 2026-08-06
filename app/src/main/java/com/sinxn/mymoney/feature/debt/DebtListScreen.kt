@@ -216,13 +216,18 @@ private fun DebtListContent(
                 }
             }
 
+            val summaryCurrency = if (uiState.debts.isNotEmpty()) uiState.debts.first().walletCurrency else uiState.currencyCode
+            val summaryDecimals = if (uiState.debts.isNotEmpty()) uiState.debts.first().walletDecimals else 2
+
             // Summary Header Card
             DebtSummaryCard(
                 selectedTab = uiState.selectedTab,
                 totalRemainingMoney = uiState.totalRemainingMoney,
                 itemCount = uiState.debts.size,
                 formatterConfig = formatterConfig,
-                currencyCode = uiState.currencyCode
+                currencyCode = summaryCurrency,
+                currencyDecimals = summaryDecimals,
+                filterWalletId = uiState.filterWalletId
             )
 
             // Debts List
@@ -274,7 +279,9 @@ private fun DebtSummaryCard(
     totalRemainingMoney: Long,
     itemCount: Int,
     formatterConfig: MoneyFormatter.Config,
-    currencyCode: String
+    currencyCode: String,
+    currencyDecimals: Int = 2,
+    filterWalletId: String? = null
 ) {
     val gradientColors = if (selectedTab == 0) {
         listOf(
@@ -302,18 +309,32 @@ private fun DebtSummaryCard(
                 .padding(20.dp)
         ) {
             Column {
-                Text(
-                    text = if (selectedTab == 0) "Total Unpaid Debts" else "Total Pending Credits",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (selectedTab == 0) "Total Unpaid Debts" else "Total Pending Credits",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    if (!filterWalletId.isNullOrBlank() && filterWalletId != "total") {
+                        BadgeChip(
+                            icon = Icons.Default.Wallet,
+                            text = "Current Wallet",
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = MoneyFormatter.format(
                         amount = totalRemainingMoney,
                         currencyCode = currencyCode,
-                        decimals = 2,
+                        decimals = currencyDecimals,
                         config = formatterConfig
                     ),
                     style = MaterialTheme.typography.headlineLarge,
@@ -502,7 +523,7 @@ private fun DebtCardItem(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = MoneyFormatter.format(amount = remaining, currencyCode = currencyCode, decimals = 2, config = formatterConfig),
+                        text = MoneyFormatter.format(amount = remaining, currencyCode = debtWithDetails.walletCurrency, decimals = debtWithDetails.walletDecimals, config = formatterConfig),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.ExtraBold,
                         color = if (isFullyPaid) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
@@ -511,7 +532,7 @@ private fun DebtCardItem(
 
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "Total: ${MoneyFormatter.format(amount = totalMoney, currencyCode = currencyCode, decimals = 2, config = formatterConfig)}",
+                        text = "Total: ${MoneyFormatter.format(amount = totalMoney, currencyCode = debtWithDetails.walletCurrency, decimals = debtWithDetails.walletDecimals, config = formatterConfig)}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -670,7 +691,7 @@ private fun QuickPaymentSheet(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Remaining: ${MoneyFormatter.format(amount = remaining, currencyCode = currencyCode, decimals = 2, config = formatterConfig)}",
+                text = "Remaining: ${MoneyFormatter.format(amount = remaining, currencyCode = debtWithDetails.walletCurrency, decimals = debtWithDetails.walletDecimals, config = formatterConfig)}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -683,7 +704,7 @@ private fun QuickPaymentSheet(
                 label = { Text("Payment Amount") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                prefix = { Text(currencyCode + " ") }
+                prefix = { Text(debtWithDetails.walletCurrency + " ") }
             )
 
             Spacer(modifier = Modifier.height(12.dp))

@@ -59,7 +59,7 @@ fun HomeScreen(
     onNavigateToWallet: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
     onAddTransaction: () -> Unit,
-    onNavigateToDebts: () -> Unit = {},
+    onNavigateToDebts: (String?) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -206,7 +206,7 @@ fun HomeScreen(
                                     pagerState.animateScrollToPage(0)
                                 }
                                 if (item.id == "debts") {
-                                    onNavigateToDebts()
+                                    onNavigateToDebts(null)
                                 }
                             }
                         )

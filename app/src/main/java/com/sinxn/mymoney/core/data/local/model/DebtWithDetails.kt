@@ -11,6 +11,7 @@ data class DebtWithDetails(
     val walletName: String = "",
     val walletIcon: String? = null,
     val walletCurrency: String = "USD",
+    val walletDecimals: Int = 2,
     val walletArchived: Boolean = false,
     val placeName: String? = null,
     val placeIcon: String? = null,

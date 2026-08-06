@@ -360,7 +360,8 @@ interface MoneyDao {
     @androidx.room.Transaction
     @Query("""
         SELECT d.*, 
-               w.name as walletName, w.icon as walletIcon, w.currency as walletCurrency, w.isArchived as walletArchived,
+               w.name as walletName, w.icon as walletIcon, w.currency as walletCurrency,
+               COALESCE(curr.decimals, 2) as walletDecimals, w.isArchived as walletArchived,
                p.name as placeName, p.icon as placeIcon,
                COALESCE((
                    SELECT SUM(((t.direction * 2) - 1) * t.money)
@@ -374,22 +375,29 @@ interface MoneyDao {
                ), 0) as progress
         FROM debts d
         INNER JOIN wallets w ON d.walletId = w.id
+        LEFT JOIN currencies curr ON w.currency = curr.iso
         LEFT JOIN places p ON d.placeId = p.id
         WHERE d.isDeleted = 0 
           AND (:type IS NULL OR d.type = :type)
           AND (:includeArchived = 1 OR d.isArchived = 0)
+          AND (
+            (:walletId IS NULL OR :walletId = 'total' OR :walletId = '') AND w.countInTotal = 1
+            OR (:walletId IS NOT NULL AND :walletId != 'total' AND :walletId != '' AND d.walletId = :walletId)
+          )
         ORDER BY d.isArchived ASC, d.date DESC
     """)
     fun getDebtsWithDetails(
         type: Int?, 
         includeArchived: Boolean, 
+        walletId: String? = null,
         maxDate: String
     ): Flow<List<DebtWithDetails>>
 
     @androidx.room.Transaction
     @Query("""
         SELECT d.*, 
-               w.name as walletName, w.icon as walletIcon, w.currency as walletCurrency, w.isArchived as walletArchived,
+               w.name as walletName, w.icon as walletIcon, w.currency as walletCurrency,
+               COALESCE(curr.decimals, 2) as walletDecimals, w.isArchived as walletArchived,
                p.name as placeName, p.icon as placeIcon,
                COALESCE((
                    SELECT SUM(((t.direction * 2) - 1) * t.money)
@@ -403,6 +411,7 @@ interface MoneyDao {
                ), 0) as progress
         FROM debts d
         INNER JOIN wallets w ON d.walletId = w.id
+        LEFT JOIN currencies curr ON w.currency = curr.iso
         LEFT JOIN places p ON d.placeId = p.id
         WHERE d.id = :debtId AND d.isDeleted = 0
     """)

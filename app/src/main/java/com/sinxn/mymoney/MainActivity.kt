@@ -52,19 +52,31 @@ class MainActivity : ComponentActivity() {
                                     onAddTransaction = {
                                         navController.navigate("transaction_details/new")
                                     },
-                                    onNavigateToDebts = {
-                                        navController.navigate("debts")
+                                    onNavigateToDebts = { walletId ->
+                                        val route = if (!walletId.isNullOrBlank()) "debts?walletId=$walletId" else "debts"
+                                        navController.navigate(route)
                                     }
                                 )
                             }
-                            composable("debts") {
+                            composable(
+                                "debts?walletId={walletId}",
+                                arguments = listOf(
+                                    androidx.navigation.navArgument("walletId") {
+                                        type = androidx.navigation.NavType.StringType
+                                        nullable = true
+                                        defaultValue = null
+                                    }
+                                )
+                            ) { backStackEntry ->
+                                val walletId = backStackEntry.arguments?.getString("walletId")
                                 com.sinxn.mymoney.feature.debt.DebtListScreen(
                                     onNavigateUp = { navController.navigateUp() },
                                     onDebtClick = { debtId ->
                                         navController.navigate("debt_details/$debtId")
                                     },
                                     onAddDebt = { type ->
-                                        navController.navigate("debt_details/new?type=$type")
+                                        val addRoute = if (!walletId.isNullOrBlank()) "debt_details/new?type=$type&walletId=$walletId" else "debt_details/new?type=$type"
+                                        navController.navigate(addRoute)
                                     },
                                     onNavigateMenuItem = { itemId ->
                                         if (itemId != "debts") {
@@ -74,12 +86,17 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             composable(
-                                "debt_details/{debtId}?type={type}",
+                                "debt_details/{debtId}?type={type}&walletId={walletId}",
                                 arguments = listOf(
                                     androidx.navigation.navArgument("debtId") { type = androidx.navigation.NavType.StringType },
                                     androidx.navigation.navArgument("type") {
                                         type = androidx.navigation.NavType.IntType
                                         defaultValue = 0
+                                    },
+                                    androidx.navigation.navArgument("walletId") {
+                                        type = androidx.navigation.NavType.StringType
+                                        nullable = true
+                                        defaultValue = null
                                     }
                                 )
                             ) {
@@ -124,8 +141,9 @@ class MainActivity : ComponentActivity() {
                                     onAddTransaction = {
                                         navController.navigate("transaction_details/new")
                                     },
-                                    onNavigateToDebts = {
-                                        navController.navigate("debts")
+                                    onNavigateToDebts = { walletId ->
+                                        val route = if (!walletId.isNullOrBlank()) "debts?walletId=$walletId" else "debts"
+                                        navController.navigate(route)
                                     }
                                 )
                             }

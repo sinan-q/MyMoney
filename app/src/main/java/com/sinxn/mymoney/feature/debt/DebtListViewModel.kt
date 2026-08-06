@@ -1,5 +1,6 @@
 package com.sinxn.mymoney.feature.debt
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.model.DebtWithDetails
@@ -19,6 +20,7 @@ import javax.inject.Inject
 data class DebtListUiState(
     val selectedTab: Int = 0, // 0: DEBT, 1: CREDIT
     val includeArchived: Boolean = false,
+    val filterWalletId: String? = null,
     val debts: List<DebtWithDetails> = emptyList(),
     val totalRemainingMoney: Long = 0L,
     val isLoading: Boolean = true,
@@ -31,28 +33,34 @@ data class DebtListUiState(
 @HiltViewModel
 class DebtListViewModel @Inject constructor(
     private val debtRepository: DebtRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    val walletId: String? = savedStateHandle.get<String>("walletId")
 
     private val _selectedTab = MutableStateFlow(0)
     private val _includeArchived = MutableStateFlow(false)
+    private val _walletIdFlow = MutableStateFlow(walletId)
 
-    private val debtsFlow = combine(_selectedTab, _includeArchived) { tab, archived ->
-        Pair(tab, archived)
-    }.flatMapLatest { (tab, archived) ->
-        debtRepository.getDebts(type = tab, includeArchived = archived)
+    private val debtsFlow = combine(_selectedTab, _includeArchived, _walletIdFlow) { tab, archived, wId ->
+        Triple(tab, archived, wId)
+    }.flatMapLatest { (tab, archived, wId) ->
+        debtRepository.getDebts(type = tab, includeArchived = archived, walletId = wId)
     }
 
     val uiState: StateFlow<DebtListUiState> = combine(
         _selectedTab,
         _includeArchived,
+        _walletIdFlow,
         debtsFlow,
         settingsRepository.formattingSettings
-    ) { tab, archived, debtsList, formatting ->
+    ) { tab, archived, wId, debtsList, formatting ->
         val total = debtsList.sumOf { it.remainingMoney }
         DebtListUiState(
             selectedTab = tab,
             includeArchived = archived,
+            filterWalletId = wId,
             debts = debtsList,
             totalRemainingMoney = total,
             isLoading = false,
