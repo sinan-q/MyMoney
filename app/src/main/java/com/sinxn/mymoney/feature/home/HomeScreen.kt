@@ -48,6 +48,7 @@ import com.sinxn.mymoney.core.util.Constants
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.runtime.rememberCoroutineScope
 import com.sinxn.mymoney.core.ui.components.NavigationMenuPage
 import kotlinx.coroutines.launch
@@ -60,17 +61,27 @@ fun HomeScreen(
     onNavigateToSettings: () -> Unit,
     onAddTransaction: () -> Unit,
     onNavigateToDebts: (String?) -> Unit = {},
+    onAddDebt: (type: Int) -> Unit = {},
+    onDebtClick: (String) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
 
+    var activeSection by remember { mutableStateOf("transactions") }
+    val debtListViewModel: com.sinxn.mymoney.feature.debt.DebtListViewModel = hiltViewModel()
+    val debtUiState by debtListViewModel.uiState.collectAsState()
+
     val pagerState = rememberPagerState(pageCount = { 2 })
     val coroutineScope = rememberCoroutineScope()
 
-    BackHandler(enabled = pagerState.currentPage == 1) {
-        coroutineScope.launch {
-            pagerState.animateScrollToPage(0)
+    BackHandler(enabled = pagerState.currentPage == 1 || activeSection != "transactions") {
+        if (pagerState.currentPage == 1) {
+            coroutineScope.launch {
+                pagerState.animateScrollToPage(0)
+            }
+        } else {
+            activeSection = "transactions"
         }
     }
 
@@ -87,27 +98,37 @@ fun HomeScreen(
                     )
                 },
                 actions = {
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Menu")
-                    }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Import Backup") },
-                            onClick = {
-                                showMenu = false
-                                onNavigateToBackup()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Settings") },
-                            onClick = {
-                                showMenu = false
-                                onNavigateToSettings()
-                            }
-                        )
+                    if (activeSection == "debts") {
+                        IconButton(onClick = { debtListViewModel.setIncludeArchived(!debtUiState.includeArchived) }) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.Archive,
+                                contentDescription = "Toggle Archived",
+                                tint = if (debtUiState.includeArchived) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Menu")
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Import Backup") },
+                                onClick = {
+                                    showMenu = false
+                                    onNavigateToBackup()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Settings") },
+                                onClick = {
+                                    showMenu = false
+                                    onNavigateToSettings()
+                                }
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -117,13 +138,23 @@ fun HomeScreen(
             )
         },
         floatingActionButton = {
-            androidx.compose.material3.FloatingActionButton(
-                onClick = onAddTransaction,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Transaction")
+            if (activeSection == "debts") {
+                androidx.compose.material3.ExtendedFloatingActionButton(
+                    onClick = { onAddDebt(debtUiState.selectedTab) },
+                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                    text = { Text(if (debtUiState.selectedTab == 0) "Add Debt" else "Add Credit") },
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            } else {
+                androidx.compose.material3.FloatingActionButton(
+                    onClick = onAddTransaction,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Transaction")
+                }
             }
         }
     ) { padding ->
@@ -135,17 +166,19 @@ fun HomeScreen(
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            // Grand Total Header (Intact at top)
+            // Constant Grand Total Header at top
             totalWallet?.let {
                 GrandTotalHeader(
                     wallet = it,
                     isTotalValid = uiState.isTotalValid,
                     balanceBreakdown = uiState.balanceBreakdown,
+                    activeSection = activeSection,
+                    debtUiState = debtUiState,
                     onClick = { onNavigateToWallet(it.wallet.id) }
                 )
             }
 
-            // HorizontalPager only for the list content below header
+            // HorizontalPager for content
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier
@@ -154,46 +187,54 @@ fun HomeScreen(
             ) { page ->
                 when (page) {
                     0 -> {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(bottom = 80.dp), // More bottom padding for FAB
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            // Section Label
-                            if (otherWallets.isNotEmpty()) {
-                                item {
-                                    Text(
-                                        text = "Your Wallets",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        color = MaterialTheme.colorScheme.outline,
-                                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                                    )
+                        if (activeSection == "debts") {
+                            com.sinxn.mymoney.feature.debt.DebtListBodyContent(
+                                uiState = debtUiState,
+                                showSummaryCard = false,
+                                onTabSelected = debtListViewModel::setSelectedTab,
+                                onDebtClick = onDebtClick,
+                                onToggleArchived = debtListViewModel::toggleArchived,
+                                onDeleteDebt = debtListViewModel::deleteDebt
+                            )
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(bottom = 80.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                if (otherWallets.isNotEmpty()) {
+                                    item {
+                                        Text(
+                                            text = "Your Wallets",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            color = MaterialTheme.colorScheme.outline,
+                                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                                        )
+                                    }
                                 }
-                            }
 
-                            // Active Wallets
-                            items(otherWallets) { walletWithBalance ->
-                                WalletItem(
-                                    item = walletWithBalance,
-                                    onClick = { onNavigateToWallet(walletWithBalance.wallet.id) }
-                                )
-                            }
-
-                            // Archived Wallets
-                            if (uiState.archivedWallets.isNotEmpty()) {
-                                item {
-                                    Text(
-                                        text = "Archived",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        color = MaterialTheme.colorScheme.outline,
-                                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                                    )
-                                }
-                                items(uiState.archivedWallets) { walletWithBalance ->
+                                items(otherWallets) { walletWithBalance ->
                                     WalletItem(
                                         item = walletWithBalance,
                                         onClick = { onNavigateToWallet(walletWithBalance.wallet.id) }
                                     )
+                                }
+
+                                if (uiState.archivedWallets.isNotEmpty()) {
+                                    item {
+                                        Text(
+                                            text = "Archived",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            color = MaterialTheme.colorScheme.outline,
+                                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                                        )
+                                    }
+                                    items(uiState.archivedWallets) { walletWithBalance ->
+                                        WalletItem(
+                                            item = walletWithBalance,
+                                            onClick = { onNavigateToWallet(walletWithBalance.wallet.id) }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -201,7 +242,7 @@ fun HomeScreen(
                     1 -> {
                         com.sinxn.mymoney.core.ui.components.NavigationMenuContent(
                             wallets = uiState.activeWallets,
-                            selectedItemId = "transactions",
+                            selectedItemId = activeSection,
                             onWalletSelect = { wallet ->
                                 coroutineScope.launch {
                                     pagerState.animateScrollToPage(0)
@@ -224,7 +265,8 @@ fun HomeScreen(
                                     pagerState.animateScrollToPage(0)
                                 }
                                 when (item.id) {
-                                    "debts" -> onNavigateToDebts(null)
+                                    "debts" -> activeSection = "debts"
+                                    "transactions" -> activeSection = "transactions"
                                     "settings" -> onNavigateToSettings()
                                     else -> {}
                                 }
@@ -242,20 +284,26 @@ fun GrandTotalHeader(
     wallet: WalletWithBalance,
     isTotalValid: Boolean,
     balanceBreakdown: String?,
+    activeSection: String = "transactions",
+    debtUiState: com.sinxn.mymoney.feature.debt.DebtListUiState? = null,
     onClick: () -> Unit
 ) {
     Card(
         onClick = onClick,
-        enabled = isTotalValid,
+        enabled = activeSection != "debts" && isTotalValid,
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(32.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isTotalValid) 
+            containerColor = if (activeSection == "debts") {
+                if (debtUiState?.selectedTab == 0) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f)
+                else MaterialTheme.colorScheme.primaryContainer
+            } else if (isTotalValid) {
                 MaterialTheme.colorScheme.primaryContainer 
-            else 
+            } else {
                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            }
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -266,12 +314,30 @@ fun GrandTotalHeader(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Global Balance",
+                text = if (activeSection == "debts") {
+                    if (debtUiState?.selectedTab == 0) "Total Unpaid Debts" else "Total Pending Credits"
+                } else {
+                    "Global Balance"
+                },
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = if (isTotalValid) 0.7f else 0.4f)
             )
             Spacer(modifier = Modifier.height(8.dp))
-            if (isTotalValid) {
+            if (activeSection == "debts" && debtUiState != null) {
+                val summaryCurrency = if (debtUiState.debts.isNotEmpty()) debtUiState.debts.first().walletCurrency else debtUiState.currencyCode
+                val summaryDecimals = if (debtUiState.debts.isNotEmpty()) debtUiState.debts.first().walletDecimals else 2
+                val formattedBalance = MoneyFormatter.format(
+                    amount = debtUiState.totalRemainingMoney,
+                    currencyCode = summaryCurrency,
+                    decimals = summaryDecimals
+                )
+                Text(
+                    text = formattedBalance,
+                    style = MaterialTheme.typography.displayMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.Black
+                )
+            } else if (isTotalValid) {
                 val formattedBalance = MoneyFormatter.format(
                     amount = wallet.currentBalance,
                     currencyCode = wallet.wallet.currency,

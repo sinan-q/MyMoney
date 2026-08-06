@@ -74,6 +74,10 @@ class DebtListViewModel @Inject constructor(
         initialValue = DebtListUiState()
     )
 
+    fun setWalletId(wId: String?) {
+        _walletIdFlow.value = wId
+    }
+
     fun setSelectedTab(tab: Int) {
         _selectedTab.value = tab
     }

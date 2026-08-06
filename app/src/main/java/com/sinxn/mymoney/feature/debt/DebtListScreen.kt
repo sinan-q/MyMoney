@@ -113,14 +113,12 @@ fun DebtListScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DebtListContent(
+fun DebtListBodyContent(
     uiState: DebtListUiState,
-    onNavigateUp: () -> Unit,
-    onOpenDrawer: () -> Unit,
+    modifier: Modifier = Modifier,
+    showSummaryCard: Boolean = true,
     onTabSelected: (Int) -> Unit,
-    onToggleIncludeArchived: () -> Unit,
     onDebtClick: (String) -> Unit,
-    onAddDebt: () -> Unit,
     onToggleArchived: (String, Boolean) -> Unit,
     onDeleteDebt: (String) -> Unit
 ) {
@@ -135,6 +133,116 @@ private fun DebtListContent(
         )
     }
 
+    Column(
+        modifier = modifier.fillMaxSize()
+    ) {
+        // Segmented Tab Switcher (Debts vs Credits)
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            SegmentedButton(
+                selected = uiState.selectedTab == 0,
+                onClick = { onTabSelected(0) },
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.ArrowDownward,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            ) {
+                Text("I Owe (Debts)")
+            }
+            SegmentedButton(
+                selected = uiState.selectedTab == 1,
+                onClick = { onTabSelected(1) },
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.ArrowUpward,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            ) {
+                Text("Owed to Me (Credits)")
+            }
+        }
+
+        val summaryCurrency = if (uiState.debts.isNotEmpty()) uiState.debts.first().walletCurrency else uiState.currencyCode
+        val summaryDecimals = if (uiState.debts.isNotEmpty()) uiState.debts.first().walletDecimals else 2
+
+        if (showSummaryCard) {
+            // Summary Header Card
+            DebtSummaryCard(
+                selectedTab = uiState.selectedTab,
+                totalRemainingMoney = uiState.totalRemainingMoney,
+                itemCount = uiState.debts.size,
+                formatterConfig = formatterConfig,
+                currencyCode = summaryCurrency,
+                currencyDecimals = summaryDecimals,
+                filterWalletId = uiState.filterWalletId
+            )
+        }
+
+        // Debts List
+        if (uiState.isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else if (uiState.debts.isEmpty()) {
+            EmptyDebtState(selectedTab = uiState.selectedTab)
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(uiState.debts, key = { it.debt.id }) { debtItem ->
+                    DebtCardItem(
+                        debtWithDetails = debtItem,
+                        formatterConfig = formatterConfig,
+                        currencyCode = uiState.currencyCode,
+                        onClick = { onDebtClick(debtItem.debt.id) },
+                        onQuickPayment = { quickPaymentDebt = debtItem },
+                        onToggleArchive = { onToggleArchived(debtItem.debt.id, debtItem.debt.isArchived) },
+                        onDelete = { onDeleteDebt(debtItem.debt.id) }
+                    )
+                }
+            }
+        }
+    }
+
+    // Quick Payment Dialog
+    quickPaymentDebt?.let { debt ->
+        QuickPaymentSheet(
+            debtWithDetails = debt,
+            formatterConfig = formatterConfig,
+            currencyCode = uiState.currencyCode,
+            onDismiss = { quickPaymentDebt = null }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DebtListContent(
+    uiState: DebtListUiState,
+    onNavigateUp: () -> Unit,
+    onOpenDrawer: () -> Unit,
+    onTabSelected: (Int) -> Unit,
+    onToggleIncludeArchived: () -> Unit,
+    onDebtClick: (String) -> Unit,
+    onAddDebt: () -> Unit,
+    onToggleArchived: (String, Boolean) -> Unit,
+    onDeleteDebt: (String) -> Unit
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -176,100 +284,13 @@ private fun DebtListContent(
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Segmented Tab Switcher (Debts vs Credits)
-            SingleChoiceSegmentedButtonRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                SegmentedButton(
-                    selected = uiState.selectedTab == 0,
-                    onClick = { onTabSelected(0) },
-                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.ArrowDownward,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                ) {
-                    Text("I Owe (Debts)")
-                }
-                SegmentedButton(
-                    selected = uiState.selectedTab == 1,
-                    onClick = { onTabSelected(1) },
-                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.ArrowUpward,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                ) {
-                    Text("Owed to Me (Credits)")
-                }
-            }
-
-            val summaryCurrency = if (uiState.debts.isNotEmpty()) uiState.debts.first().walletCurrency else uiState.currencyCode
-            val summaryDecimals = if (uiState.debts.isNotEmpty()) uiState.debts.first().walletDecimals else 2
-
-            // Summary Header Card
-            DebtSummaryCard(
-                selectedTab = uiState.selectedTab,
-                totalRemainingMoney = uiState.totalRemainingMoney,
-                itemCount = uiState.debts.size,
-                formatterConfig = formatterConfig,
-                currencyCode = summaryCurrency,
-                currencyDecimals = summaryDecimals,
-                filterWalletId = uiState.filterWalletId
-            )
-
-            // Debts List
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            } else if (uiState.debts.isEmpty()) {
-                EmptyDebtState(selectedTab = uiState.selectedTab)
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(uiState.debts, key = { it.debt.id }) { debtItem ->
-                        DebtCardItem(
-                            debtWithDetails = debtItem,
-                            formatterConfig = formatterConfig,
-                            currencyCode = uiState.currencyCode,
-                            onClick = { onDebtClick(debtItem.debt.id) },
-                            onQuickPayment = { quickPaymentDebt = debtItem },
-                            onToggleArchive = { onToggleArchived(debtItem.debt.id, debtItem.debt.isArchived) },
-                            onDelete = { onDeleteDebt(debtItem.debt.id) }
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    // Quick Payment Dialog
-    quickPaymentDebt?.let { debt ->
-        QuickPaymentSheet(
-            debtWithDetails = debt,
-            formatterConfig = formatterConfig,
-            currencyCode = uiState.currencyCode,
-            onDismiss = { quickPaymentDebt = null }
+        DebtListBodyContent(
+            uiState = uiState,
+            modifier = Modifier.padding(paddingValues),
+            onTabSelected = onTabSelected,
+            onDebtClick = onDebtClick,
+            onToggleArchived = onToggleArchived,
+            onDeleteDebt = onDeleteDebt
         )
     }
 }

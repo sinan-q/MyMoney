@@ -55,6 +55,7 @@ import com.sinxn.mymoney.feature.recap.YearRecapScreen
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import com.sinxn.mymoney.core.ui.components.NavigationMenuPage
 import kotlinx.coroutines.launch
@@ -67,6 +68,8 @@ fun WalletDetailsScreen(
     onNavigateToRecap: () -> Unit,
     onAddTransaction: () -> Unit,
     onNavigateToDebts: (String?) -> Unit = {},
+    onAddDebt: (walletId: String?, type: Int) -> Unit = { _, _ -> },
+    onDebtClick: (String) -> Unit = {},
     viewModel: WalletDetailsViewModel = hiltViewModel()
 ) {
     val wallet by viewModel.wallet.collectAsState(initial = null)
@@ -91,12 +94,24 @@ fun WalletDetailsScreen(
         showPlusMinus = settings.showPlusMinus
     )
 
+    val debtListViewModel: com.sinxn.mymoney.feature.debt.DebtListViewModel = hiltViewModel()
+    val debtUiState by debtListViewModel.uiState.collectAsState()
+    var activeSection by remember { mutableStateOf("transactions") }
+
+    LaunchedEffect(wallet?.wallet?.id) {
+        debtListViewModel.setWalletId(wallet?.wallet?.id)
+    }
+
     val pagerState = rememberPagerState(pageCount = { 2 })
     val coroutineScope = rememberCoroutineScope()
 
-    BackHandler(enabled = pagerState.currentPage == 1) {
-        coroutineScope.launch {
-            pagerState.animateScrollToPage(0)
+    BackHandler(enabled = pagerState.currentPage == 1 || activeSection != "transactions") {
+        if (pagerState.currentPage == 1) {
+            coroutineScope.launch {
+                pagerState.animateScrollToPage(0)
+            }
+        } else {
+            activeSection = "transactions"
         }
     }
 
@@ -121,7 +136,15 @@ fun WalletDetailsScreen(
                     }
                 },
                 actions = {
-                    if (wallet?.wallet?.id != com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID) {
+                    if (activeSection == "debts") {
+                        IconButton(onClick = { debtListViewModel.setIncludeArchived(!debtUiState.includeArchived) }) {
+                            Icon(
+                                imageVector = Icons.Default.Archive,
+                                contentDescription = "Toggle Archived",
+                                tint = if (debtUiState.includeArchived) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else if (wallet?.wallet?.id != com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID) {
                         IconButton(onClick = { showSettings = true }) {
                             Icon(
                                 imageVector = Icons.Default.Settings,
@@ -139,13 +162,23 @@ fun WalletDetailsScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddTransaction,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Transaction")
+            if (activeSection == "debts") {
+                ExtendedFloatingActionButton(
+                    onClick = { onAddDebt(wallet?.wallet?.id, debtUiState.selectedTab) },
+                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                    text = { Text(if (debtUiState.selectedTab == 0) "Add Debt" else "Add Credit") },
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            } else {
+                FloatingActionButton(
+                    onClick = onAddTransaction,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Transaction")
+                }
             }
         }
     ) { paddingValues ->
@@ -157,10 +190,15 @@ fun WalletDetailsScreen(
             if (wallet == null) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
             } else {
-                // Keep WalletHeader intact at top above horizontal pager
-                WalletHeader(wallet = wallet!!, formatterConfig = formatterConfig)
+                // Constant WalletHeader intact at top above horizontal pager
+                WalletHeader(
+                    wallet = wallet!!,
+                    formatterConfig = formatterConfig,
+                    activeSection = activeSection,
+                    debtUiState = debtUiState
+                )
 
-                // Swipe area only for transaction list below header
+                // Swipe area for content below header
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier
@@ -169,28 +207,41 @@ fun WalletDetailsScreen(
                 ) { page ->
                     when (page) {
                         0 -> {
-                            TransactionList(
-                                wallet = wallet!!,
-                                items = transactions,
-                                decimals = wallet!!.decimals,
-                                currencyCode = wallet!!.wallet.currency,
-                                formatterConfig = formatterConfig,
-                                dateFormat = settings.dateFormat,
-                                listState = listState,
-                                onTransactionClick = onTransactionClick,
-                                onRecapClick = onNavigateToRecap
-                            )
+                            if (activeSection == "debts") {
+                                com.sinxn.mymoney.feature.debt.DebtListBodyContent(
+                                    uiState = debtUiState,
+                                    showSummaryCard = false,
+                                    onTabSelected = debtListViewModel::setSelectedTab,
+                                    onDebtClick = onDebtClick,
+                                    onToggleArchived = debtListViewModel::toggleArchived,
+                                    onDeleteDebt = debtListViewModel::deleteDebt
+                                )
+                            } else {
+                                TransactionList(
+                                    wallet = wallet!!,
+                                    items = transactions,
+                                    decimals = wallet!!.decimals,
+                                    currencyCode = wallet!!.wallet.currency,
+                                    formatterConfig = formatterConfig,
+                                    dateFormat = settings.dateFormat,
+                                    listState = listState,
+                                    onTransactionClick = onTransactionClick,
+                                    onRecapClick = onNavigateToRecap
+                                )
+                            }
                         }
                         1 -> {
                             com.sinxn.mymoney.core.ui.components.NavigationMenuContent(
                                 selectedWallet = wallet,
-                                selectedItemId = "transactions",
+                                selectedItemId = activeSection,
                                 onItemClick = { item ->
                                     coroutineScope.launch {
                                         pagerState.animateScrollToPage(0)
                                     }
-                                    if (item.id == "debts") {
-                                        onNavigateToDebts(wallet?.wallet?.id)
+                                    when (item.id) {
+                                        "debts" -> activeSection = "debts"
+                                        "transactions" -> activeSection = "transactions"
+                                        else -> {}
                                     }
                                 }
                             )
@@ -199,7 +250,6 @@ fun WalletDetailsScreen(
                 }
             }
         }
-
         if (showSettings && wallet != null) {
             WalletSettingsBottomSheet(
                 wallet = wallet!!,
@@ -376,7 +426,9 @@ fun WalletSettingsBottomSheet(
 @Composable
 fun WalletHeader(
     wallet: WalletWithBalance,
-    formatterConfig: MoneyFormatter.Config
+    formatterConfig: MoneyFormatter.Config,
+    activeSection: String = "transactions",
+    debtUiState: com.sinxn.mymoney.feature.debt.DebtListUiState? = null
 ) {
     val baseColor = remember(wallet.wallet.name) { generateColor(wallet.wallet.name) }
     val secondaryColor = remember(baseColor) { 
@@ -425,13 +477,21 @@ fun WalletHeader(
             ) {
                 Column {
                     Text(
-                        text = wallet.wallet.name,
+                        text = if (activeSection == "debts") {
+                            if (debtUiState?.selectedTab == 0) "Total Unpaid Debts" else "Total Pending Credits"
+                        } else {
+                            wallet.wallet.name
+                        },
                         style = MaterialTheme.typography.titleMedium,
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Current Balance",
+                        text = if (activeSection == "debts") {
+                            if (debtUiState?.selectedTab == 0) "I Owe" else "Owed to Me"
+                        } else {
+                            "Current Balance"
+                        },
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.White.copy(alpha = 0.7f)
                     )
@@ -445,7 +505,7 @@ fun WalletHeader(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
-                            text = wallet.wallet.currency,
+                            text = if (activeSection == "debts") "DEBT" else wallet.wallet.currency,
                             style = MaterialTheme.typography.labelMedium,
                             color = Color.White,
                             fontWeight = FontWeight.Bold
@@ -456,17 +516,27 @@ fun WalletHeader(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            val formattedBalance = MoneyFormatter.format(
-                amount = wallet.currentBalance,
-                currencyCode = wallet.wallet.currency,
-                decimals = wallet.decimals,
-                config = formatterConfig
-            )
+            val formattedBalance = if (activeSection == "debts" && debtUiState != null) {
+                val summaryCurrency = if (debtUiState.debts.isNotEmpty()) debtUiState.debts.first().walletCurrency else debtUiState.currencyCode
+                val summaryDecimals = if (debtUiState.debts.isNotEmpty()) debtUiState.debts.first().walletDecimals else 2
+                MoneyFormatter.format(
+                    amount = debtUiState.totalRemainingMoney,
+                    currencyCode = summaryCurrency,
+                    decimals = summaryDecimals
+                )
+            } else {
+                MoneyFormatter.format(
+                    amount = wallet.currentBalance,
+                    currencyCode = wallet.wallet.currency,
+                    decimals = wallet.decimals,
+                    config = formatterConfig
+                )
+            }
             
             // Large Bold Balance
             Text(
-                text = if (wallet.isTotalValid) formattedBalance else "Multi-Currency",
-                style = if (wallet.isTotalValid) {
+                text = if (activeSection == "debts" || wallet.isTotalValid) formattedBalance else "Multi-Currency",
+                style = if (activeSection == "debts" || wallet.isTotalValid) {
                     MaterialTheme.typography.displayMedium.copy(
                         shadow = Shadow(
                             color = Color.Black.copy(alpha = 0.1f),
@@ -485,7 +555,7 @@ fun WalletHeader(
                 letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified
             )
 
-            if (!wallet.isTotalValid) {
+            if (activeSection != "debts" && !wallet.isTotalValid) {
                 if (!wallet.balanceBreakdown.isNullOrEmpty()) {
                     Text(
                         text = wallet.balanceBreakdown,
@@ -503,7 +573,7 @@ fun WalletHeader(
                 )
             }
             
-            if (!wallet.wallet.note.isNullOrEmpty()) {
+            if (activeSection != "debts" && !wallet.wallet.note.isNullOrEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = wallet.wallet.note!!,

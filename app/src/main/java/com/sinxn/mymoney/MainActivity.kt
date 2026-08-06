@@ -55,6 +55,12 @@ class MainActivity : ComponentActivity() {
                                     onNavigateToDebts = { walletId ->
                                         val route = if (!walletId.isNullOrBlank()) "debts?walletId=$walletId" else "debts"
                                         navController.navigate(route)
+                                    },
+                                    onAddDebt = { type ->
+                                        navController.navigate("debt_details/new?type=$type")
+                                    },
+                                    onDebtClick = { debtId ->
+                                        navController.navigate("debt_details/$debtId")
                                     }
                                 )
                             }
@@ -144,6 +150,13 @@ class MainActivity : ComponentActivity() {
                                     onNavigateToDebts = { walletId ->
                                         val route = if (!walletId.isNullOrBlank()) "debts?walletId=$walletId" else "debts"
                                         navController.navigate(route)
+                                    },
+                                    onAddDebt = { walletId, type ->
+                                        val route = if (!walletId.isNullOrBlank()) "debt_details/new?type=$type&walletId=$walletId" else "debt_details/new?type=$type"
+                                        navController.navigate(route)
+                                    },
+                                    onDebtClick = { debtId ->
+                                        navController.navigate("debt_details/$debtId")
                                     }
                                 )
                             }
