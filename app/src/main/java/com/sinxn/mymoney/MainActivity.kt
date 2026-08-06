@@ -16,6 +16,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.sinxn.mymoney.feature.home.HomeScreen
 import com.sinxn.mymoney.feature.settings.BackupScreen
+import com.sinxn.mymoney.feature.settings.SqlConsoleScreen
 import com.sinxn.mymoney.ui.theme.MyMoneyTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -58,6 +59,14 @@ class MainActivity : ComponentActivity() {
                             }
                             composable("settings") {
                                 com.sinxn.mymoney.feature.settings.SettingsScreen(
+                                    onNavigateUp = { navController.navigateUp() },
+                                    onNavigateToSqlConsole = {
+                                        navController.navigate("sql_console")
+                                    }
+                                )
+                            }
+                            composable("sql_console") {
+                                SqlConsoleScreen(
                                     onNavigateUp = { navController.navigateUp() }
                                 )
                             }
