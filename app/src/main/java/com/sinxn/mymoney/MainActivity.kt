@@ -87,6 +87,9 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onNavigateToRecap = {
                                         navController.navigate("recap")
+                                    },
+                                    onAddTransaction = {
+                                        navController.navigate("transaction_details/new")
                                     }
                                 )
                             }

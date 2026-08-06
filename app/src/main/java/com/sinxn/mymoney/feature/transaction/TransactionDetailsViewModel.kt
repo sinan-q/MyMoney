@@ -63,9 +63,13 @@ data class TransactionDetailsUiState(
     val currencyCode: String = "USD",
     val currencySymbol: String = "$",
     val currencyDecimals: Int = 2,
-    // Redesign Fields
+    // Redesign & Transfer Fields
     val walletName: String = "",
-    val categoryColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Gray
+    val categoryColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Gray,
+    val isTransfer: Boolean = false,
+    val targetWalletId: String? = null,
+    val targetWalletName: String = "",
+    val transferEntity: com.sinxn.mymoney.core.data.local.entity.TransferEntity? = null
 )
 
 @HiltViewModel
@@ -96,6 +100,60 @@ class TransactionDetailsViewModel @Inject constructor(
     private val _editPeopleIds = MutableStateFlow<Set<String>>(emptySet())
     private val _editConfirmed = MutableStateFlow(true)
     private val _editCountInTotal = MutableStateFlow(true)
+
+    // Transfer State Flows
+    private val _isTransfer = MutableStateFlow(false)
+    private val _targetWalletId = MutableStateFlow<String?>(null)
+    private val _transferEntity = MutableStateFlow<com.sinxn.mymoney.core.data.local.entity.TransferEntity?>(null)
+
+    init {
+        if (!isNewTransaction) {
+            viewModelScope.launch {
+                val tx = moneyDao.getTransactionById(transactionId)
+                val transfer = moneyDao.getTransferByTransactionId(transactionId)
+                if (transfer != null) {
+                    _isTransfer.value = true
+                    _transferEntity.value = transfer
+                    val fromTx = moneyDao.getTransactionById(transfer.transactionFromId)
+                    val toTx = moneyDao.getTransactionById(transfer.transactionToId)
+                    if (fromTx != null && toTx != null) {
+                        _editWalletId.value = fromTx.walletId
+                        _targetWalletId.value = toTx.walletId
+                    }
+                } else if (tx != null && (tx.type == 1 || tx.type == 2 || tx.direction == 2)) {
+                    _isTransfer.value = true
+                    _editDirection.value = 2
+                    val siblingTx = moneyDao.findSiblingTransferTransaction(tx.money, tx.date, tx.id)
+                    if (siblingTx != null) {
+                        val fromTx = if (tx.direction == 0) tx else siblingTx
+                        val toTx = if (tx.direction == 1) tx else siblingTx
+                        _editWalletId.value = fromTx.walletId
+                        _targetWalletId.value = toTx.walletId
+
+                        val autoTransfer = com.sinxn.mymoney.core.data.local.entity.TransferEntity(
+                            id = UUID.randomUUID().toString(),
+                            description = tx.description,
+                            date = tx.date,
+                            transactionFromId = fromTx.id,
+                            transactionToId = toTx.id,
+                            transactionTaxId = null,
+                            note = tx.note,
+                            placeId = tx.placeId,
+                            eventId = tx.eventId,
+                            recurrenceId = null,
+                            confirmed = tx.confirmed,
+                            countInTotal = tx.countInTotal,
+                            isDeleted = false,
+                            lastEdit = System.currentTimeMillis(),
+                            tag = null
+                        )
+                        moneyDao.insertTransfer(autoTransfer)
+                        _transferEntity.value = autoTransfer
+                    }
+                }
+            }
+        }
+    }
 
     private val editPart1 = combine(
         _editAmount,
@@ -146,10 +204,25 @@ class TransactionDetailsViewModel @Inject constructor(
         }
     }
 
+    private data class TransferState(
+        val isTransfer: Boolean,
+        val targetWalletId: String?,
+        val transferEntity: com.sinxn.mymoney.core.data.local.entity.TransferEntity?
+    )
+
+    private val transferState = combine(
+        _isTransfer,
+        _targetWalletId,
+        _transferEntity
+    ) { isTransfer, targetId, entity ->
+        TransferState(isTransfer, targetId, entity)
+    }
+
     val uiState: StateFlow<TransactionDetailsUiState> = combine(
         transactionData,
         fullEditState,
         settingsRepository.currentWalletId,
+        transferState,
         combine(
             moneyDao.getWalletsWithBalance(DateUtils.getSQLDateTimeString(java.util.Date())),
             moneyDao.getCategories(),
@@ -157,11 +230,14 @@ class TransactionDetailsViewModel @Inject constructor(
             moneyDao.getEvents(),
             moneyDao.getPeople()
         ) { w, c, p, e, pp -> ListsWrapper(w, flattenCategories(c), p, e, pp) }
-    ) { data, edit, currentWalletId, lists ->
+    ) { data, edit, currentWalletId, transferInfo, lists ->
         val transaction = data.transaction
         val people = data.people
         val attachments = data.attachments
         val enriched = enrichTransaction(transaction)
+        val isTransfer = transferInfo.isTransfer
+        val targetWalletId = transferInfo.targetWalletId
+        val transferEntity = transferInfo.transferEntity
         
         // For new transactions, prefer the saved current wallet id, fall back to first available active wallet
         if (isNewTransaction && _editWalletId.value.isEmpty() && lists.wallets.isNotEmpty()) {
@@ -172,8 +248,9 @@ class TransactionDetailsViewModel @Inject constructor(
             _editWalletId.value = preferredWallet?.wallet?.id ?: ""
         }
 
-        val activeWalletId = if (edit.isEdit && edit.e2.walletId.isNotEmpty()) edit.e2.walletId else transaction?.transaction?.walletId
+        val activeWalletId = if (_editWalletId.value.isNotEmpty()) _editWalletId.value else transaction?.transaction?.walletId
         val activeWallet = lists.wallets.find { it.wallet.id == activeWalletId }
+        val targetWallet = lists.wallets.find { it.wallet.id == targetWalletId }
         
         // Final combine with edit states
         TransactionDetailsUiState(
@@ -186,8 +263,6 @@ class TransactionDetailsViewModel @Inject constructor(
             event = enriched.event,
             people = people,
             attachments = attachments,
-            // These will be updated via the `stateIn` logic if we use nested combines correctly
-            // Filter archived wallets, but keep the current transaction's wallet even if archived
             availableWallets = lists.wallets
                 .filter { !it.wallet.isArchived || it.wallet.id == transaction?.transaction?.walletId }
                 .map { it.wallet },
@@ -213,13 +288,18 @@ class TransactionDetailsViewModel @Inject constructor(
             editDescription = edit.e1.desc,
             editDate = edit.e1.date,
             editCategoryId = edit.e1.catId,
-            editWalletId = edit.e2.walletId,
+            editWalletId = edit.e2.walletId.ifEmpty { activeWalletId ?: "" },
             editPlaceId = edit.e2.placeId,
             editEventId = edit.e2.eventId,
             editDirection = edit.e2.dir,
             editPeopleIds = edit.e2.people,
             editConfirmed = edit.e3.confirmed,
-            editCountInTotal = edit.e3.countTotal
+            editCountInTotal = edit.e3.countTotal,
+
+            isTransfer = isTransfer,
+            targetWalletId = targetWalletId,
+            targetWalletName = targetWallet?.wallet?.name ?: "",
+            transferEntity = transferEntity
         )
     }.stateIn(
         scope = viewModelScope,
@@ -297,13 +377,20 @@ class TransactionDetailsViewModel @Inject constructor(
             _editDescription.value = current.transaction.description ?: ""
             _editDate.value = current.transaction.date
             _editCategoryId.value = current.transaction.categoryId
-            _editWalletId.value = current.transaction.walletId
             _editPlaceId.value = current.transaction.placeId
             _editEventId.value = current.transaction.eventId
-            _editDirection.value = current.transaction.direction
             _editPeopleIds.value = currentPeople.map { it.id }.toSet()
             _editConfirmed.value = current.transaction.confirmed
             _editCountInTotal.value = current.transaction.countInTotal
+
+            val transfer = _transferEntity.value
+            if (transfer != null || current.transaction.type == 1 || current.transaction.type == 2) {
+                _isTransfer.value = true
+                _editDirection.value = 2
+            } else {
+                _editWalletId.value = current.transaction.walletId
+                _editDirection.value = current.transaction.direction
+            }
         }
         _isEditMode.value = !_isEditMode.value
     }
@@ -426,8 +513,43 @@ class TransactionDetailsViewModel @Inject constructor(
             if (!isNewTransaction) {
                 val current = uiState.value.transaction?.transaction ?: return@launch
                 moneyDao.updateTransaction(current.copy(isDeleted = true, lastEdit = System.currentTimeMillis()))
+                val transfer = _transferEntity.value ?: moneyDao.getTransferByTransactionId(transactionId)
+                if (transfer != null) {
+                    moneyDao.updateTransfer(transfer.copy(isDeleted = true, lastEdit = System.currentTimeMillis()))
+                    val siblingTxId = if (transfer.transactionFromId == transactionId) transfer.transactionToId else transfer.transactionFromId
+                    val siblingTx = moneyDao.getTransactionById(siblingTxId)
+                    if (siblingTx != null) {
+                        moneyDao.updateTransaction(siblingTx.copy(isDeleted = true, lastEdit = System.currentTimeMillis()))
+                    }
+                }
             }
             onComplete()
+        }
+    }
+
+    fun onTransferToggle(isTransfer: Boolean) {
+        _isTransfer.value = isTransfer
+        if (isTransfer) {
+            _editDirection.value = 2 // Transfer Blue
+            if (_targetWalletId.value.isNullOrEmpty()) {
+                val altWallet = uiState.value.availableWallets.firstOrNull { it.id != _editWalletId.value }
+                _targetWalletId.value = altWallet?.id
+            }
+        } else {
+            _editDirection.value = 0 // Expense
+        }
+    }
+
+    fun onTargetWalletIdChange(walletId: String) {
+        _targetWalletId.value = walletId
+    }
+
+    fun swapTransferWallets() {
+        val from = _editWalletId.value
+        val to = _targetWalletId.value
+        if (!to.isNullOrEmpty()) {
+            _editWalletId.value = to
+            _targetWalletId.value = from
         }
     }
 
@@ -444,7 +566,13 @@ class TransactionDetailsViewModel @Inject constructor(
             }
         }
     }
-    fun onWalletIdChange(value: String) { _editWalletId.value = value }
+    fun onWalletIdChange(value: String) { 
+        _editWalletId.value = value 
+        if (_targetWalletId.value == value) {
+            val alt = uiState.value.availableWallets.firstOrNull { it.id != value }
+            _targetWalletId.value = alt?.id
+        }
+    }
     fun onPlaceIdChange(value: String?) { _editPlaceId.value = value }
     fun onEventIdChange(value: String?) { _editEventId.value = value }
     fun onDirectionChange(value: Int) { _editDirection.value = value }
@@ -513,23 +641,33 @@ class TransactionDetailsViewModel @Inject constructor(
                     0L
                 }
 
-                val targetId = if (isNewTransaction) UUID.randomUUID().toString() else transactionId
+                if (_isTransfer.value) {
+                    val walletFromId = _editWalletId.value
+                    val walletToId = _targetWalletId.value ?: _editWalletId.value
+                    val existingTransfer = _transferEntity.value
+                    
+                    val transferId = existingTransfer?.id ?: UUID.randomUUID().toString()
+                    val fromTxId = existingTransfer?.transactionFromId ?: if (isNewTransaction) UUID.randomUUID().toString() else transactionId
+                    val toTxId = existingTransfer?.transactionToId ?: UUID.randomUUID().toString()
 
-                if (isNewTransaction) {
-                    val newTransaction = com.sinxn.mymoney.core.data.local.entity.TransactionEntity(
-                        id = targetId,
+                    val transferCategory = uiState.value.availableCategories.find { 
+                        it.tag == "transfer" || it.name.equals("Transfer", ignoreCase = true) 
+                    }?.id ?: _editCategoryId.value
+
+                    val fromTx = com.sinxn.mymoney.core.data.local.entity.TransactionEntity(
+                        id = fromTxId,
                         money = moneyValue,
                         date = _editDate.value,
-                        categoryId = _editCategoryId.value,
-                        walletId = _editWalletId.value,
+                        categoryId = transferCategory,
+                        walletId = walletFromId,
                         note = _editNote.value.takeIf { it.isNotEmpty() },
                         description = _editDescription.value.takeIf { it.isNotEmpty() },
                         placeId = _editPlaceId.value,
                         eventId = _editEventId.value,
-                        direction = updatedDirection,
+                        direction = 0, // Expense from Source Wallet
                         confirmed = _editConfirmed.value,
                         countInTotal = _editCountInTotal.value,
-                        type = 0, // Standard transaction
+                        type = 1, // Contract.TransactionType.TRANSFER = 1
                         isDeleted = false,
                         debtId = null,
                         savingId = null,
@@ -537,41 +675,128 @@ class TransactionDetailsViewModel @Inject constructor(
                         tag = null,
                         lastEdit = System.currentTimeMillis()
                     )
-                    moneyDao.insertTransaction(newTransaction)
-                } else {
-                    val current = uiState.value.transaction?.transaction ?: return@launch
-                    val updated = current.copy(
+
+                    val toTx = com.sinxn.mymoney.core.data.local.entity.TransactionEntity(
+                        id = toTxId,
                         money = moneyValue,
+                        date = _editDate.value,
+                        categoryId = transferCategory,
+                        walletId = walletToId,
                         note = _editNote.value.takeIf { it.isNotEmpty() },
                         description = _editDescription.value.takeIf { it.isNotEmpty() },
-                        categoryId = _editCategoryId.value,
-                        walletId = _editWalletId.value,
                         placeId = _editPlaceId.value,
                         eventId = _editEventId.value,
-                        direction = updatedDirection,
+                        direction = 1, // Income into Destination Wallet
                         confirmed = _editConfirmed.value,
                         countInTotal = _editCountInTotal.value,
+                        type = 1, // Contract.TransactionType.TRANSFER = 1
+                        isDeleted = false,
+                        debtId = null,
+                        savingId = null,
+                        recurrenceId = null,
+                        tag = null,
                         lastEdit = System.currentTimeMillis()
                     )
-                    moneyDao.updateTransaction(updated)
-                }
-                
-                // Update People
-                moneyDao.deletePeopleForTransaction(targetId)
-                val newPeople = _editPeopleIds.value.map { personId ->
-                    TransactionPeopleEntity(
-                        transactionId = targetId,
-                        personId = personId,
+
+                    val newTransfer = com.sinxn.mymoney.core.data.local.entity.TransferEntity(
+                        id = transferId,
+                        description = _editDescription.value.takeIf { it.isNotEmpty() },
+                        date = _editDate.value,
+                        transactionFromId = fromTxId,
+                        transactionToId = toTxId,
+                        transactionTaxId = null,
+                        note = _editNote.value.takeIf { it.isNotEmpty() },
+                        placeId = _editPlaceId.value,
+                        eventId = _editEventId.value,
+                        recurrenceId = null,
+                        confirmed = _editConfirmed.value,
+                        countInTotal = _editCountInTotal.value,
                         isDeleted = false,
                         lastEdit = System.currentTimeMillis(),
-                        id = UUID.randomUUID().toString()
+                        tag = null
                     )
+
+                    if (isNewTransaction && existingTransfer == null) {
+                        moneyDao.insertTransaction(fromTx)
+                        moneyDao.insertTransaction(toTx)
+                        moneyDao.insertTransfer(newTransfer)
+                    } else {
+                        moneyDao.updateTransaction(fromTx)
+                        moneyDao.updateTransaction(toTx)
+                        moneyDao.updateTransfer(newTransfer)
+                    }
+
+                    // Save People for Transfer
+                    moneyDao.deletePeopleForTransaction(fromTxId)
+                    val newPeople = _editPeopleIds.value.map { personId ->
+                        TransactionPeopleEntity(
+                            transactionId = fromTxId,
+                            personId = personId,
+                            isDeleted = false,
+                            lastEdit = System.currentTimeMillis(),
+                            id = UUID.randomUUID().toString()
+                        )
+                    }
+                    moneyDao.insertTransactionPeople(newPeople)
+                } else {
+                    val targetId = if (isNewTransaction) UUID.randomUUID().toString() else transactionId
+
+                    if (isNewTransaction) {
+                        val newTransaction = com.sinxn.mymoney.core.data.local.entity.TransactionEntity(
+                            id = targetId,
+                            money = moneyValue,
+                            date = _editDate.value,
+                            categoryId = _editCategoryId.value,
+                            walletId = _editWalletId.value,
+                            note = _editNote.value.takeIf { it.isNotEmpty() },
+                            description = _editDescription.value.takeIf { it.isNotEmpty() },
+                            placeId = _editPlaceId.value,
+                            eventId = _editEventId.value,
+                            direction = updatedDirection,
+                            confirmed = _editConfirmed.value,
+                            countInTotal = _editCountInTotal.value,
+                            type = 0,
+                            isDeleted = false,
+                            debtId = null,
+                            savingId = null,
+                            recurrenceId = null,
+                            tag = null,
+                            lastEdit = System.currentTimeMillis()
+                        )
+                        moneyDao.insertTransaction(newTransaction)
+                    } else {
+                        val current = uiState.value.transaction?.transaction ?: return@launch
+                        val updated = current.copy(
+                            money = moneyValue,
+                            note = _editNote.value.takeIf { it.isNotEmpty() },
+                            description = _editDescription.value.takeIf { it.isNotEmpty() },
+                            categoryId = _editCategoryId.value,
+                            walletId = _editWalletId.value,
+                            placeId = _editPlaceId.value,
+                            eventId = _editEventId.value,
+                            direction = updatedDirection,
+                            confirmed = _editConfirmed.value,
+                            countInTotal = _editCountInTotal.value,
+                            lastEdit = System.currentTimeMillis()
+                        )
+                        moneyDao.updateTransaction(updated)
+                    }
+                    
+                    // Update People
+                    moneyDao.deletePeopleForTransaction(targetId)
+                    val newPeople = _editPeopleIds.value.map { personId ->
+                        TransactionPeopleEntity(
+                            transactionId = targetId,
+                            personId = personId,
+                            isDeleted = false,
+                            lastEdit = System.currentTimeMillis(),
+                            id = UUID.randomUUID().toString()
+                        )
+                    }
+                    moneyDao.insertTransactionPeople(newPeople)
                 }
-                moneyDao.insertTransactionPeople(newPeople)
                 
                 _isEditMode.value = false
-                // If it was new, we might want to close the screen or stay? 
-                // For a shortcut, closing or navigating back is usually expected.
             } catch (e: Exception) {
                 // Handle error
             } finally {

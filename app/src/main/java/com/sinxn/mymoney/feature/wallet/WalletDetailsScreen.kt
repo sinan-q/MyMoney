@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Archive
@@ -57,6 +58,7 @@ fun WalletDetailsScreen(
     onNavigateUp: () -> Unit,
     onTransactionClick: (String) -> Unit,
     onNavigateToRecap: () -> Unit,
+    onAddTransaction: () -> Unit,
     viewModel: WalletDetailsViewModel = hiltViewModel()
 ) {
     val wallet by viewModel.wallet.collectAsState(initial = null)
@@ -118,6 +120,16 @@ fun WalletDetailsScreen(
                     titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onAddTransaction,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add Transaction")
+            }
         }
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
@@ -472,7 +484,7 @@ fun TransactionList(
     
     LazyColumn(
         state = listState,
-        contentPadding = PaddingValues(bottom = 16.dp),
+        contentPadding = PaddingValues(bottom = 80.dp),
     ) {
         item {
             WalletHeader(wallet, formatterConfig)
@@ -698,6 +710,13 @@ fun TransactionItem(
     onClick: () -> Unit = {}
 ) {
     val transaction = item.transaction
+    val isTransferItem = transaction.direction == 2 || transaction.type == 1 || transaction.type == 2 || item.categoryName.equals("Transfer", ignoreCase = true)
+    val categoryDisplayName = when {
+        isTransferItem -> "Transfer"
+        !item.categoryName.isNullOrBlank() -> item.categoryName
+        else -> "Uncategorized"
+    }
+    val categoryIconData = if (isTransferItem) "{\"type\":\"color\",\"color\":\"#0284C7\",\"name\":\"⇄\"}" else item.categoryIcon
     
     Row(
         modifier = Modifier
@@ -731,8 +750,8 @@ fun TransactionItem(
             
             // Icon
             CategoryIcon(
-                iconString = item.categoryIcon,
-                categoryName = item.categoryName ?: "?",
+                iconString = categoryIconData,
+                categoryName = categoryDisplayName,
                 modifier = Modifier
                     .size(40.dp)
                     .zIndex(1f) // Ensure icon is on top of line
@@ -759,14 +778,12 @@ fun TransactionItem(
                 // Middle: Category & Description
                 Column(modifier = Modifier.weight(1f)) {
                     // Category Name
-                    item.categoryName?.let { categoryName ->
-                         Text(
-                            text = categoryName,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    Text(
+                        text = categoryDisplayName,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
                     
                     // Description
                     val descriptionText = if (!transaction.description.isNullOrEmpty()) {
@@ -785,9 +802,14 @@ fun TransactionItem(
                 // Right Side: Amount & Date
                 Column(horizontalAlignment = Alignment.End) {
                     val isIncome = transaction.direction == 1
-                    val amountColor = if (isIncome) Color(0xFF4CAF50) else Color(0xFFE53935)
+                    val isTransfer = transaction.direction == 2 || transaction.type == 1 || transaction.type == 2 || item.categoryName.equals("Transfer", ignoreCase = true)
+                    val amountColor = when {
+                        isTransfer -> Color(0xFF0284C7)
+                        isIncome -> Color(0xFF4CAF50)
+                        else -> Color(0xFFE53935)
+                    }
         
-                    val amount = if (isIncome) transaction.money else -transaction.money
+                    val amount = if (isIncome || isTransfer) transaction.money else -transaction.money
                     val formattedMoney = MoneyFormatter.format(
                         amount = amount, // Send signed amount
                         currencyCode = currencyCode,

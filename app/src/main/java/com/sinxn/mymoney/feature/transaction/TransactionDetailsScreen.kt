@@ -53,6 +53,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -289,15 +290,19 @@ fun ViewTransactionContent(
     val transaction = uiState.transaction?.transaction ?: return
     val scrollState = rememberScrollState()
 
-    val (categoryName, parentCategoryName) = resolveCategoryHierarchy(
-        transaction.categoryId,
-        uiState.availableCategories
-    )
-    val categoryIcon = uiState.transaction?.categoryIcon
+    val isTransfer = uiState.isTransfer || transaction.direction == 2 || transaction.type == 1 || transaction.type == 2
+    val (categoryName, parentCategoryName) = if (isTransfer) {
+        "Transfer" to null
+    } else {
+        resolveCategoryHierarchy(
+            transaction.categoryId,
+            uiState.availableCategories
+        )
+    }
+    val categoryIcon = if (isTransfer) "{\"type\":\"color\",\"color\":\"#0284C7\",\"name\":\"⇄\"}" else uiState.transaction?.categoryIcon
 
-    val directionColor = when (transaction.direction) {
+    val directionColor = if (isTransfer) Color(0xFF0284C7) else when (transaction.direction) {
         1 -> Color(0xFF10B981) // Income Mint
-        2 -> Color(0xFF0284C7) // Transfer Blue
         else -> Color(0xFFE11D48) // Expense Rose
     }
 
@@ -444,14 +449,34 @@ fun ViewTransactionContent(
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column {
-                // Wallet Row
-                ViewDetailRow(
-                    icon = {
-                        Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = directionColor, modifier = Modifier.size(22.dp))
-                    },
-                    label = "Wallet",
-                    value = uiState.walletName.ifEmpty { "Default Wallet" }
-                )
+                // Wallet Row(s)
+                if (uiState.isTransfer || transaction.direction == 2) {
+                    ViewDetailRow(
+                        icon = {
+                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = directionColor, modifier = Modifier.size(22.dp))
+                        },
+                        label = "From Wallet",
+                        value = uiState.walletName.ifEmpty { "Source Wallet" }
+                    )
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                    ViewDetailRow(
+                        icon = {
+                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = directionColor, modifier = Modifier.size(22.dp))
+                        },
+                        label = "To Wallet",
+                        value = uiState.targetWalletName.ifEmpty { "Target Wallet" }
+                    )
+                } else {
+                    ViewDetailRow(
+                        icon = {
+                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = directionColor, modifier = Modifier.size(22.dp))
+                        },
+                        label = "Wallet",
+                        value = uiState.walletName.ifEmpty { "Default Wallet" }
+                    )
+                }
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
 
@@ -716,6 +741,7 @@ fun UltraCleanTransactionContent(
 
     var showCategoryPicker by remember { mutableStateOf(false) }
     var showWalletPicker by remember { mutableStateOf(false) }
+    var showTargetWalletPicker by remember { mutableStateOf(false) }
     var showPlacePicker by remember { mutableStateOf(false) }
     var showEventPicker by remember { mutableStateOf(false) }
     var showPeoplePicker by remember { mutableStateOf(false) }
@@ -723,9 +749,9 @@ fun UltraCleanTransactionContent(
     var isNumpadVisible by remember { mutableStateOf(true) }
 
     // Minimal Direction Accent
-    val accentColor = when (uiState.editDirection) {
-        1 -> Color(0xFF10B981) // Income Mint
-        2 -> Color(0xFF0284C7) // Transfer Blue
+    val accentColor = when {
+        uiState.isTransfer || uiState.editDirection == 2 -> Color(0xFF0284C7) // Transfer Blue
+        uiState.editDirection == 1 -> Color(0xFF10B981) // Income Mint
         else -> Color(0xFFE11D48) // Expense Rose
     }
 
@@ -737,14 +763,14 @@ fun UltraCleanTransactionContent(
 
     val evaluatedAmountStr = viewModel.getImmediateResult(uiState.editAmount)
     val amountValue = evaluatedAmountStr.toDoubleOrNull()
-    val isCategorySelected = !uiState.editCategoryId.isNullOrBlank()
-    val isWalletSelected = uiState.editWalletId.isNotBlank()
+    val isCategorySelected = !uiState.editCategoryId.isNullOrBlank() || uiState.isTransfer
+    val isWalletSelected = uiState.editWalletId.isNotBlank() && (!uiState.isTransfer || !uiState.targetWalletId.isNullOrBlank())
     val isAmountNonNegative = amountValue != null && amountValue >= 0.0
 
     val isSaveEnabled = !uiState.isSaving && isCategorySelected && isWalletSelected && isAmountNonNegative
 
     val actionBtnText = if (uiState.isNewTransaction) {
-        val dirName = if (uiState.editDirection == 1) "Income" else if (uiState.editDirection == 2) "Transfer" else "Expense"
+        val dirName = if (uiState.isTransfer || uiState.editDirection == 2) "Transfer" else if (uiState.editDirection == 1) "Income" else "Expense"
         "Add $dirName"
     } else {
         "Save Changes"
@@ -760,6 +786,15 @@ fun UltraCleanTransactionContent(
                 .verticalScroll(scrollState)
                 .padding(bottom = 16.dp)
         ) {
+            // Mode Switcher (Transaction vs Transfer) - Only shown for new entries
+            if (uiState.isNewTransaction) {
+                TransactionTransferSegmentedControl(
+                    isTransfer = uiState.isTransfer,
+                    onModeChange = viewModel::onTransferToggle
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+
             // 1. Centered Large Amount Display (Click to open Numpad)
             Column(
                 modifier = Modifier
@@ -879,6 +914,99 @@ fun UltraCleanTransactionContent(
 
             Spacer(modifier = Modifier.height(10.dp))
 
+            // 2.5 Transfer Wallets Section (Separate Cards with Swap Button in the Middle)
+            if (uiState.isTransfer) {
+                val activeFromWallet = uiState.availableWallets.find { it.id == uiState.editWalletId }
+                val activeToWallet = uiState.availableWallets.find { it.id == uiState.targetWalletId }
+
+                // From Wallet Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    CleanListRow(
+                        icon = {
+                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
+                        },
+                        label = "From Wallet",
+                        value = activeFromWallet?.name ?: uiState.walletName.ifEmpty { "Select Source Wallet" },
+                        onClick = {
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                            isNumpadVisible = false
+                            showWalletPicker = true
+                        }
+                    )
+                }
+
+                // Centered Swap Button in the Middle
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 40.dp)
+                    )
+                    Surface(
+                        onClick = { viewModel.swapTransferWallets() },
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 3.dp,
+                        shadowElevation = 2.dp,
+                        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.3f)),
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.SwapVert,
+                                contentDescription = "Swap Wallets",
+                                tint = accentColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+
+                // To Wallet Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    CleanListRow(
+                        icon = {
+                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
+                        },
+                        label = "To Wallet",
+                        value = activeToWallet?.name ?: uiState.targetWalletName.ifEmpty { "Select Target Wallet" },
+                        onClick = {
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                            isNumpadVisible = false
+                            showTargetWalletPicker = true
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+
             // 3. Single Unified Options Card (Category to Count in Total)
             Card(
                 modifier = Modifier
@@ -891,49 +1019,50 @@ fun UltraCleanTransactionContent(
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column {
-                    // Category Row
-                    val activeCategory = uiState.availableCategories.find { it.id == uiState.editCategoryId }
-                    CleanListRow(
-                        icon = {
-                            if (activeCategory != null) {
-                                CategoryIcon(
-                                    iconString = activeCategory.icon,
-                                    categoryName = activeCategory.name,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            } else {
-                                Icon(Icons.Default.Category, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
+                    // Category Row (Hidden for transfers)
+                    if (!uiState.isTransfer) {
+                        val activeCategory = uiState.availableCategories.find { it.id == uiState.editCategoryId }
+                        CleanListRow(
+                            icon = {
+                                if (activeCategory != null) {
+                                    CategoryIcon(
+                                        iconString = activeCategory.icon,
+                                        categoryName = activeCategory.name,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                } else {
+                                    Icon(Icons.Default.Category, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
+                                }
+                            },
+                            label = "Category",
+                            value = activeCategory?.name?.replace("  ↳ ", "") ?: "Select Category",
+                            onClick = {
+                                focusManager.clearFocus()
+                                keyboardController?.hide()
+                                isNumpadVisible = false
+                                showCategoryPicker = true
                             }
-                        },
-                        label = "Category",
-                        value = activeCategory?.name?.replace("  ↳ ", "") ?: "Select Category",
-                        onClick = {
-                            focusManager.clearFocus()
-                            keyboardController?.hide()
-                            isNumpadVisible = false
-                            showCategoryPicker = true
-                        }
-                    )
+                        )
 
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
 
-                    // Wallet Row
-                    val activeWallet = uiState.availableWallets.find { it.id == uiState.editWalletId }
-                    CleanListRow(
-                        icon = {
-                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
-                        },
-                        label = "Wallet",
-                        value = activeWallet?.name ?: "Select Wallet",
-                        onClick = {
-                            focusManager.clearFocus()
-                            keyboardController?.hide()
-                            isNumpadVisible = false
-                            showWalletPicker = true
-                        }
-                    )
+                        val activeWallet = uiState.availableWallets.find { it.id == uiState.editWalletId }
+                        CleanListRow(
+                            icon = {
+                                Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
+                            },
+                            label = "Wallet",
+                            value = activeWallet?.name ?: "Select Wallet",
+                            onClick = {
+                                focusManager.clearFocus()
+                                keyboardController?.hide()
+                                isNumpadVisible = false
+                                showWalletPicker = true
+                            }
+                        )
 
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                    }
 
                     // Date Row
                     val parsedDate = DateUtils.parseDate(uiState.editDate)
@@ -1160,7 +1289,7 @@ fun UltraCleanTransactionContent(
 
     if (showWalletPicker) {
         WalletSelectionDialog(
-            title = "Select Wallet",
+            title = "Select From Wallet",
             wallets = uiState.availableWallets,
             selectedWalletId = uiState.editWalletId,
             onWalletSelected = { wallet ->
@@ -1168,6 +1297,19 @@ fun UltraCleanTransactionContent(
                 showWalletPicker = false
             },
             onDismissRequest = { showWalletPicker = false }
+        )
+    }
+
+    if (showTargetWalletPicker) {
+        WalletSelectionDialog(
+            title = "Select To Wallet",
+            wallets = uiState.availableWallets.filter { it.id != uiState.editWalletId },
+            selectedWalletId = uiState.targetWalletId ?: "",
+            onWalletSelected = { wallet ->
+                viewModel.onTargetWalletIdChange(wallet.id)
+                showTargetWalletPicker = false
+            },
+            onDismissRequest = { showTargetWalletPicker = false }
         )
     }
 
@@ -1277,5 +1419,73 @@ private fun CleanListRow(
             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
             modifier = Modifier.size(20.dp)
         )
+    }
+}
+
+@Composable
+fun TransactionTransferSegmentedControl(
+    isTransfer: Boolean,
+    onModeChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        Surface(
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(12.dp))
+                .clickable { onModeChange(false) },
+            color = if (!isTransfer) MaterialTheme.colorScheme.surface else Color.Transparent,
+            tonalElevation = if (!isTransfer) 2.dp else 0.dp
+        ) {
+            Box(
+                modifier = Modifier.padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Transaction",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (!isTransfer) FontWeight.Bold else FontWeight.Medium,
+                    color = if (!isTransfer) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(4.dp))
+
+        Surface(
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(12.dp))
+                .clickable { onModeChange(true) },
+            color = if (isTransfer) MaterialTheme.colorScheme.surface else Color.Transparent,
+            tonalElevation = if (isTransfer) 2.dp else 0.dp
+        ) {
+            Box(
+                modifier = Modifier.padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "⇄ ",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isTransfer) Color(0xFF0284C7) else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "Transfer",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (isTransfer) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isTransfer) Color(0xFF0284C7) else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
     }
 }

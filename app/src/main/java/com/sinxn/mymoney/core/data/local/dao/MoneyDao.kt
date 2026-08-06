@@ -46,6 +46,21 @@ interface MoneyDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTransfers(transfers: List<com.sinxn.mymoney.core.data.local.entity.TransferEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTransfer(transfer: com.sinxn.mymoney.core.data.local.entity.TransferEntity)
+
+    @Update
+    suspend fun updateTransfer(transfer: com.sinxn.mymoney.core.data.local.entity.TransferEntity)
+
+    @Query("SELECT * FROM transfers WHERE (transactionFromId = :transactionId OR transactionToId = :transactionId) AND isDeleted = 0 LIMIT 1")
+    suspend fun getTransferByTransactionId(transactionId: String): com.sinxn.mymoney.core.data.local.entity.TransferEntity?
+
+    @Query("SELECT * FROM transactions WHERE type = 2 AND money = :money AND date = :date AND id != :transactionId AND isDeleted = 0 LIMIT 1")
+    suspend fun findSiblingTransferTransaction(money: Long, date: String, transactionId: String): TransactionEntity?
+
+    @Query("SELECT * FROM transfers WHERE id = :id AND isDeleted = 0")
+    suspend fun getTransferById(id: String): com.sinxn.mymoney.core.data.local.entity.TransferEntity?
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertRecurrentTransfers(transfers: List<com.sinxn.mymoney.core.data.local.entity.RecurrentTransferEntity>)
 
