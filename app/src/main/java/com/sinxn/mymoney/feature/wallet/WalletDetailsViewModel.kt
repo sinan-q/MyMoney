@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.util.Calendar
 import javax.inject.Inject
 
 @HiltViewModel
@@ -196,28 +195,8 @@ class WalletDetailsViewModel @Inject constructor(
 
                 result.add(TransactionListItem.Header(monthDate, total, income, expense, isTotalValid, monthBreakdown))
                 
-                val dayGrouped = transactionsInGroup.groupBy { (_, date) ->
-                    val cal = Calendar.getInstance()
-                    cal.time = date
-                    cal.set(Calendar.HOUR_OF_DAY, 0)
-                    cal.set(Calendar.MINUTE, 0)
-                    cal.set(Calendar.SECOND, 0)
-                    cal.set(Calendar.MILLISECOND, 0)
-                    cal.time
-                }
-                
-                dayGrouped.forEach { (dayDate, transactionsInDay) ->
-                     var dailyTotal = 0L
-                     transactionsInDay.forEach { (t, _) ->
-                         val amount = if(t.transaction.direction == 1) t.transaction.money else -t.transaction.money
-                         dailyTotal += amount
-                     }
-
-                    result.add(TransactionListItem.DateHeader(dayDate, dailyTotal, isTotalValid))
-                    
-                    transactionsInDay.forEach { (t, _) ->
-                         result.add(TransactionListItem.Transaction(t))
-                    }
+                transactionsInGroup.forEach { (t, _) ->
+                    result.add(TransactionListItem.Transaction(t))
                 }
             }
             result

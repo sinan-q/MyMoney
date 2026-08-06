@@ -13,12 +13,6 @@ sealed class TransactionListItem {
         val balanceBreakdown: String? = null
     ) : TransactionListItem()
 
-    data class DateHeader(
-        val date: Date,
-        val totalAmount: Long,
-        val isTotalValid: Boolean = true
-    ) : TransactionListItem()
-
     data class Transaction(
         val transaction: com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
     ) : TransactionListItem()

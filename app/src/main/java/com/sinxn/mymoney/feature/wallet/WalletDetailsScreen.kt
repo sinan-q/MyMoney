@@ -103,13 +103,6 @@ fun WalletDetailsScreen(
                 },
                 actions = {
                     if (wallet?.wallet?.id != com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID) {
-                        IconButton(onClick = onNavigateToRecap) {
-                            Icon(
-                                imageVector = Icons.Default.CardGiftcard,
-                                contentDescription = "Year Recap",
-                                tint = if (showTopBarTitle) MaterialTheme.colorScheme.primary else Color.White
-                            )
-                        }
                         IconButton(onClick = { showSettings = true }) {
                             Icon(
                                 imageVector = Icons.Default.Settings,
@@ -485,11 +478,7 @@ fun TransactionList(
             WalletHeader(wallet, formatterConfig)
         }
         
-        // Year Recap Banner
-        item {
-            RecapBanner(onClick = onRecapClick)
-        }
-        
+
         if (items.isEmpty()) {
             item {
                 Box(
@@ -512,16 +501,12 @@ fun TransactionList(
                     currentHeader = item
                     customGrouped.add(item to mutableListOf())
                 }
-                is TransactionListItem.DateHeader -> {
-                     currentHeader?.let {
-                         customGrouped.lastOrNull()?.second?.add(item)
-                    }
-                }
                 is TransactionListItem.Transaction -> {
                     currentHeader?.let {
                          customGrouped.lastOrNull()?.second?.add(item)
                     }
                 }
+                else -> {}
             }
         }
 
@@ -549,28 +534,20 @@ fun TransactionList(
             if (!isCollapsed) {
                 itemsIndexed(
                     items = groupItems,
-                    // Use ID for transactions, Use date hash for DateHeader
                     key = { _, item ->
                         when(item) {
                             is TransactionListItem.Transaction -> item.transaction.transaction.id
-                            is TransactionListItem.DateHeader -> "DH_${item.date.time}"
                             else -> "Unknown"
                         }
                     }
                 ) { index, item ->
 
-                     // Determine if this is the last item visually in this group
-                     // Only Transactions can be the "Last Item" that stops the line.
-                     // DateHeader always has content below it (Transactions).
                      val isLastItem = index == groupItems.lastIndex
 
                      Box(
                          modifier = Modifier.animateItem()
                      ) {
                          when (item) {
-                             is TransactionListItem.DateHeader -> {
-                                 DateHeaderItem(item, dateFormat)
-                             }
                              is TransactionListItem.Transaction -> {
                                  val trans = item.transaction
                                  TransactionItem(
@@ -581,7 +558,7 @@ fun TransactionList(
                                      formatterConfig = formatterConfig,
                                      dateFormat = dateFormat,
                                      isLastItem = isLastItem,
-                                     showDate = false, // Date is now in header
+                                     showDate = true,
                                      onClick = { onTransactionClick(trans.transaction.id) }
                                  )
                              }
@@ -707,45 +684,6 @@ fun TransactionHeader(
         }
     }
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-}
-
-@Composable
-fun DateHeaderItem(
-    item: TransactionListItem.DateHeader,
-    dateFormat: Int
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-    ) {
-        // Timeline Column
-        Box(
-            modifier = Modifier
-                .width(56.dp)
-                .fillMaxHeight(),
-            contentAlignment = Alignment.Center
-        ) {
-            // Continuous Vertical Line
-            Box(
-                modifier = Modifier
-                    .width(2.dp)
-                    .fillMaxHeight()
-                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-            )
-        }
-        
-        // Date Text
-        Text(
-            text = DateUtils.formatDate(item.date, dateFormat),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary, // Highlight color
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier
-                .padding(vertical = 12.dp)
-                .padding(end = 16.dp)
-        )
-    }
 }
 
 @Composable
