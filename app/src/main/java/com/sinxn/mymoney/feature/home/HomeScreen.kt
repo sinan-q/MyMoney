@@ -200,13 +200,33 @@ fun HomeScreen(
                     }
                     1 -> {
                         com.sinxn.mymoney.core.ui.components.NavigationMenuContent(
-                            showHeaderCard = false,
+                            wallets = uiState.activeWallets,
+                            selectedItemId = "transactions",
+                            onWalletSelect = { wallet ->
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(0)
+                                }
+                                onNavigateToWallet(wallet.wallet.id)
+                            },
+                            onAddWallet = {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(0)
+                                }
+                                onAddTransaction()
+                            },
+                            onManageWallets = {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(0)
+                                }
+                            },
                             onItemClick = { item ->
                                 coroutineScope.launch {
                                     pagerState.animateScrollToPage(0)
                                 }
-                                if (item.id == "debts") {
-                                    onNavigateToDebts(null)
+                                when (item.id) {
+                                    "debts" -> onNavigateToDebts(null)
+                                    "settings" -> onNavigateToSettings()
+                                    else -> {}
                                 }
                             }
                         )

@@ -183,7 +183,8 @@ fun WalletDetailsScreen(
                         }
                         1 -> {
                             com.sinxn.mymoney.core.ui.components.NavigationMenuContent(
-                                showHeaderCard = false,
+                                selectedWallet = wallet,
+                                selectedItemId = "transactions",
                                 onItemClick = { item ->
                                     coroutineScope.launch {
                                         pagerState.animateScrollToPage(0)

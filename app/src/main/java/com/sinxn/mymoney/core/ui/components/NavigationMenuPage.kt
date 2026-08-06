@@ -1,5 +1,6 @@
 package com.sinxn.mymoney.core.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,20 +21,30 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Category
-import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Equalizer
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.SyncAlt
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -43,77 +54,166 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
+import com.sinxn.mymoney.core.util.MoneyFormatter
 
 data class NavigationMenuItem(
     val id: String,
     val title: String,
     val icon: ImageVector,
-    val categoryGroup: String
+    val group: Int // 1: Main modules, 2: Utilities, 3: App/Settings
 )
 
 val navigationMenuItems = listOf(
-    NavigationMenuItem("categories", "Categories", Icons.Default.Category, "Management"),
-    NavigationMenuItem("overview", "Overview", Icons.Default.Assessment, "Management"),
-    NavigationMenuItem("debts", "Debts", Icons.Default.AccountBalanceWallet, "Management"),
-    NavigationMenuItem("budgets", "Budgets", Icons.Default.PieChart, "Management"),
-    NavigationMenuItem("savings", "Savings", Icons.Default.Savings, "Management"),
-    
-    NavigationMenuItem("events", "Events", Icons.Default.Event, "Organization"),
-    NavigationMenuItem("recurrences", "Recurrences", Icons.Default.Repeat, "Organization"),
-    NavigationMenuItem("models", "Models", Icons.Default.Bookmark, "Organization"),
-    NavigationMenuItem("places", "Places", Icons.Default.Place, "Organization"),
-    NavigationMenuItem("people", "People", Icons.Default.People, "Organization"),
-    
-    NavigationMenuItem("settings", "Settings", Icons.Default.Settings, "Preferences")
+    // Group 1: Main modules (Matching legacy MainActivity drawer order)
+    NavigationMenuItem("transactions", "Transactions", Icons.Default.ShoppingCart, 1),
+    NavigationMenuItem("categories", "Categories", Icons.Default.GridView, 1),
+    NavigationMenuItem("overview", "Overview", Icons.Default.Equalizer, 1),
+    NavigationMenuItem("debts", "Debts", Icons.Default.AccountBalanceWallet, 1),
+    NavigationMenuItem("budgets", "Budgets", Icons.Default.PieChart, 1),
+    NavigationMenuItem("savings", "Savings", Icons.Default.Savings, 1),
+    NavigationMenuItem("events", "Events", Icons.Default.Flag, 1),
+    NavigationMenuItem("recurrences", "Recurrences", Icons.Default.Restore, 1),
+    NavigationMenuItem("models", "Models", Icons.Default.Bookmark, 1),
+    NavigationMenuItem("places", "Places", Icons.Default.Place, 1),
+    NavigationMenuItem("people", "People", Icons.Default.People, 1),
+
+    // Group 2: Utilities
+    NavigationMenuItem("calculator", "Calculator", Icons.Default.Calculate, 2),
+    NavigationMenuItem("converter", "Converter", Icons.Default.SyncAlt, 2),
+    NavigationMenuItem("search_atm", "Search atm", Icons.Default.CreditCard, 2),
+    NavigationMenuItem("search_bank", "Search bank", Icons.Default.AccountBalance, 2),
+
+    // Group 3: Settings & Info
+    NavigationMenuItem("settings", "Settings", Icons.Default.Settings, 3),
+    NavigationMenuItem("support_developer", "Support developer", Icons.Default.FavoriteBorder, 3),
+    NavigationMenuItem("about", "About", Icons.Default.Info, 3)
 )
 
 @Composable
 fun NavigationMenuContent(
     modifier: Modifier = Modifier,
-    showHeaderCard: Boolean = false,
+    wallets: List<WalletWithBalance> = emptyList(),
+    selectedWallet: WalletWithBalance? = null,
+    selectedItemId: String? = null,
+    onWalletSelect: (WalletWithBalance) -> Unit = {},
+    onAddWallet: () -> Unit = {},
+    onManageWallets: () -> Unit = {},
     onItemClick: (NavigationMenuItem) -> Unit = {}
 ) {
+    var isHeaderExpanded by remember { mutableStateOf(false) }
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        contentPadding = PaddingValues(bottom = 24.dp)
     ) {
-        if (showHeaderCard) {
-            item {
-                NavigationHeaderCard()
-                Spacer(modifier = Modifier.height(8.dp))
-            }
+        item {
+            AccountHeader(
+                wallets = wallets,
+                selectedWallet = selectedWallet ?: wallets.firstOrNull(),
+                isExpanded = isHeaderExpanded,
+                onToggleExpand = { isHeaderExpanded = !isHeaderExpanded },
+                onWalletSelect = { wallet ->
+                    isHeaderExpanded = false
+                    onWalletSelect(wallet)
+                },
+                onAddWallet = {
+                    isHeaderExpanded = false
+                    onAddWallet()
+                },
+                onManageWallets = {
+                    isHeaderExpanded = false
+                    onManageWallets()
+                }
+            )
         }
 
-        val groupedItems = navigationMenuItems.groupBy { it.categoryGroup }
-        
-        groupedItems.forEach { (group, items) ->
-            item {
-                Text(
-                    text = group.uppercase(),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp)
+        if (isHeaderExpanded) {
+            items(wallets) { wallet ->
+                WalletProfileRow(
+                    wallet = wallet,
+                    isSelected = selectedWallet?.wallet?.id == wallet.wallet.id,
+                    onClick = {
+                        isHeaderExpanded = false
+                        onWalletSelect(wallet)
+                    }
                 )
             }
-            
-            items(items) { item ->
-                NavigationItemRow(
+            item {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                ActionProfileRow(
+                    title = "New wallet",
+                    icon = Icons.Default.Add,
+                    onClick = {
+                        isHeaderExpanded = false
+                        onAddWallet()
+                    }
+                )
+                ActionProfileRow(
+                    title = "Manage wallets",
+                    icon = Icons.Default.Settings,
+                    onClick = {
+                        isHeaderExpanded = false
+                        onManageWallets()
+                    }
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            }
+        } else {
+            // Group 1 Items
+            val group1 = navigationMenuItems.filter { it.group == 1 }
+            items(group1) { item ->
+                NavigationDrawerItemRow(
                     item = item,
+                    isSelected = selectedItemId == item.id,
                     onClick = { onItemClick(item) }
                 )
             }
-        }
-        
-        item {
-            Spacer(modifier = Modifier.height(80.dp)) // Extra padding at bottom for FAB
+
+            item {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+            }
+
+            // Group 2 Items
+            val group2 = navigationMenuItems.filter { it.group == 2 }
+            items(group2) { item ->
+                NavigationDrawerItemRow(
+                    item = item,
+                    isSelected = selectedItemId == item.id,
+                    onClick = { onItemClick(item) }
+                )
+            }
+
+            item {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+            }
+
+            // Group 3 Items
+            val group3 = navigationMenuItems.filter { it.group == 3 }
+            items(group3) { item ->
+                NavigationDrawerItemRow(
+                    item = item,
+                    isSelected = selectedItemId == item.id,
+                    onClick = { onItemClick(item) }
+                )
+            }
         }
     }
 }
@@ -121,7 +221,13 @@ fun NavigationMenuContent(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NavigationMenuPage(
+    wallets: List<WalletWithBalance> = emptyList(),
+    selectedWallet: WalletWithBalance? = null,
+    selectedItemId: String? = null,
     onReturnToMain: () -> Unit = {},
+    onWalletSelect: (WalletWithBalance) -> Unit = {},
+    onAddWallet: () -> Unit = {},
+    onManageWallets: () -> Unit = {},
     onItemClick: (NavigationMenuItem) -> Unit = {}
 ) {
     Scaffold(
@@ -151,87 +257,102 @@ fun NavigationMenuPage(
     ) { paddingValues ->
         NavigationMenuContent(
             modifier = Modifier.padding(paddingValues),
-            showHeaderCard = true,
+            wallets = wallets,
+            selectedWallet = selectedWallet,
+            selectedItemId = selectedItemId,
+            onWalletSelect = onWalletSelect,
+            onAddWallet = onAddWallet,
+            onManageWallets = onManageWallets,
             onItemClick = onItemClick
         )
     }
 }
 
 @Composable
-private fun NavigationHeaderCard() {
-    Card(
+private fun AccountHeader(
+    wallets: List<WalletWithBalance>,
+    selectedWallet: WalletWithBalance?,
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit,
+    onWalletSelect: (WalletWithBalance) -> Unit,
+    onAddWallet: () -> Unit,
+    onManageWallets: () -> Unit
+) {
+    val activeProfileName = selectedWallet?.wallet?.name ?: if (wallets.isEmpty()) "No wallet found" else "Total"
+    val formattedBalance = selectedWallet?.let {
+        MoneyFormatter.format(
+            amount = it.currentBalance,
+            currencyCode = it.wallet.currency,
+            decimals = it.decimals
+        )
+    } ?: if (wallets.isEmpty()) "Add one wallet" else ""
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            .background(MaterialTheme.colorScheme.primaryContainer)
+            .padding(16.dp)
     ) {
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f)
-                        )
-                    )
-                )
-                .padding(20.dp)
+                .clickable { onToggleExpand() },
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(48.dp)
             ) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "M",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Black,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
-                }
-                
-                Column {
+                Box(contentAlignment = Alignment.Center) {
                     Text(
-                        text = "MY MONEY",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Text(
-                        text = "Menu & Modules",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        text = activeProfileName.take(1).uppercase(),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = activeProfileName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (formattedBalance.isNotEmpty()) {
+                    Text(
+                        text = formattedBalance,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                    )
+                }
+            }
+
+            Icon(
+                imageVector = if (isExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                contentDescription = "Switch wallet profile",
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
         }
     }
 }
 
 @Composable
-private fun NavigationItemRow(
-    item: NavigationMenuItem,
+private fun WalletProfileRow(
+    wallet: WalletWithBalance,
+    isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    Card(
+    Surface(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else Color.Transparent,
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
@@ -239,31 +360,116 @@ private fun NavigationItemRow(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
+            Surface(
+                shape = CircleShape,
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.size(36.dp)
             ) {
-                Icon(
-                    imageVector = item.icon,
-                    contentDescription = item.title,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
-                )
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = wallet.wallet.name.take(1).uppercase(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
             Text(
-                text = item.title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
+                text = wallet.wallet.name,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
+            )
+
+            val formattedBalance = MoneyFormatter.format(
+                amount = wallet.currentBalance,
+                currencyCode = wallet.wallet.currency,
+                decimals = wallet.decimals
+            )
+
+            Text(
+                text = formattedBalance,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+@Composable
+private fun ActionProfileRow(
+    title: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = title,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
+private fun NavigationDrawerItemRow(
+    item: NavigationMenuItem,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(8.dp),
+        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else Color.Transparent,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = item.icon,
+                contentDescription = item.title,
+                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp)
+            )
+
+            Spacer(modifier = Modifier.width(32.dp))
+
+            Text(
+                text = item.title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
             )
         }
     }

@@ -78,6 +78,7 @@ fun DebtListScreen(
     ) { page ->
         if (page == 1) {
             NavigationMenuPage(
+                selectedItemId = "debts",
                 onReturnToMain = {
                     coroutineScope.launch {
                         pagerState.animateScrollToPage(0)
