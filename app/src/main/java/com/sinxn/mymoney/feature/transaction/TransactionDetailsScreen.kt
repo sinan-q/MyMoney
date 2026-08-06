@@ -1,8 +1,20 @@
 package com.sinxn.mymoney.feature.transaction
 
-import androidx.compose.animation.AnimatedContent
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,26 +27,39 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,29 +69,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberTimePickerState
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -75,23 +83,31 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
+import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CategorySelectionDialog
+import com.sinxn.mymoney.core.ui.components.NumpadView
 import com.sinxn.mymoney.core.ui.components.SelectionDialog
+import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
-import kotlin.math.pow
-
-import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 private fun resolveCategoryHierarchy(
-    categoryId: String?, 
+    categoryId: String?,
     allCategories: List<CategoryEntity>
 ): Pair<String, String?> {
     val category = allCategories.find { it.id == categoryId }
@@ -117,596 +133,1040 @@ fun TransactionDetailsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val settings by viewModel.formattingSettings.collectAsState()
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
+
+    val isEditing = uiState.isEditMode || uiState.isNewTransaction
+
+    val handleBack: () -> Unit = {
+        if (!uiState.isNewTransaction && uiState.isEditMode) {
+            viewModel.toggleEditMode()
+        } else {
+            onNavigateBack()
+        }
+    }
+
+    BackHandler(enabled = !uiState.isNewTransaction && uiState.isEditMode) {
+        viewModel.toggleEditMode()
+    }
 
     Scaffold(
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { if (uiState.isEditMode) viewModel.saveChanges() else viewModel.toggleEditMode() },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = RoundedCornerShape(16.dp),
-                icon = {
-                    Crossfade(targetState = uiState.isEditMode, label = "fabIcon") { isEdit ->
-                        Icon(
-                            imageVector = if (isEdit) Icons.Default.Check else Icons.Default.Edit,
-                            contentDescription = if (isEdit) "Save" else "Edit"
-                        )
-                    }
-                },
-                text = {
-                    AnimatedContent(targetState = uiState.isEditMode, label = "fabText") { isEdit ->
-                        Text(if (isEdit) "Save" else "Edit")
-                    }
-                }
+        topBar = {
+            MinimalTopBar(
+                isNewTransaction = uiState.isNewTransaction,
+                isEditMode = uiState.isEditMode,
+                onBackClick = handleBack,
+                onDeleteClick = { showDeleteConfirmation = true }
             )
+        },
+        floatingActionButton = {
+            if (!isEditing) {
+                ExtendedFloatingActionButton(
+                    onClick = { viewModel.toggleEditMode() },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = RoundedCornerShape(18.dp),
+                    icon = { Icon(Icons.Default.Edit, contentDescription = "Edit") },
+                    text = { Text("Edit Transaction", fontWeight = FontWeight.Bold) }
+                )
+            }
         }
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(MaterialTheme.colorScheme.background)
+        ) {
             if (uiState.isLoading) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else {
-                TransactionContent(
-                    uiState = uiState,
-                    settings = settings,
-                    viewModel = viewModel,
-                    contentPadding = padding,
-                    onNavigateBack = onNavigateBack
-                )
+                Crossfade(targetState = isEditing, label = "TransactionScreenMode") { editing ->
+                    if (editing) {
+                        UltraCleanTransactionContent(
+                            uiState = uiState,
+                            settings = settings,
+                            viewModel = viewModel,
+                            onNavigateBack = handleBack
+                        )
+                    } else {
+                        ViewTransactionContent(
+                            uiState = uiState,
+                            settings = settings,
+                            onEditClick = { viewModel.toggleEditMode() }
+                        )
+                    }
+                }
             }
+        }
+
+        if (showDeleteConfirmation) {
+            AlertDialog(
+                onDismissRequest = { showDeleteConfirmation = false },
+                title = { Text("Delete Transaction") },
+                text = { Text("Are you sure you want to delete this transaction?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showDeleteConfirmation = false
+                            viewModel.deleteTransaction { onNavigateBack() }
+                        },
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Delete")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteConfirmation = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 }
 
 @Composable
-fun TransactionContent(
+fun MinimalTopBar(
+    isNewTransaction: Boolean,
+    isEditMode: Boolean,
+    onBackClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onBackClick) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back"
+            )
+        }
+
+        Text(
+            text = when {
+                isNewTransaction -> "New Transaction"
+                isEditMode -> "Edit Transaction"
+                else -> "Transaction Details"
+            },
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (!isNewTransaction && !isEditMode) {
+                IconButton(onClick = onDeleteClick) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            } else {
+                Spacer(modifier = Modifier.width(48.dp))
+            }
+        }
+    }
+}
+
+// ==========================================
+// VIEW MODE CONTENT (Read-Only Summary Page)
+// ==========================================
+
+@Composable
+fun ViewTransactionContent(
     uiState: TransactionDetailsUiState,
     settings: com.sinxn.mymoney.core.data.preferences.FormattingSettings,
-    viewModel: TransactionDetailsViewModel,
-    contentPadding: androidx.compose.foundation.layout.PaddingValues = androidx.compose.foundation.layout.PaddingValues(),
-    onNavigateBack: () -> Unit
+    onEditClick: () -> Unit
 ) {
-    if (uiState.transaction == null && !uiState.isNewTransaction) return
+    val transaction = uiState.transaction?.transaction ?: return
     val scrollState = rememberScrollState()
+
+    val (categoryName, parentCategoryName) = resolveCategoryHierarchy(
+        transaction.categoryId,
+        uiState.availableCategories
+    )
+    val categoryIcon = uiState.transaction?.categoryIcon
+
+    val directionColor = when (transaction.direction) {
+        1 -> Color(0xFF10B981) // Income Mint
+        2 -> Color(0xFF0284C7) // Transfer Blue
+        else -> Color(0xFFE11D48) // Expense Rose
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
-            .background(MaterialTheme.colorScheme.surface)
+            .padding(bottom = 100.dp)
     ) {
-        // Hero Header
-        val rawAmount = if (uiState.isEditMode) {
-             val multiplier = 10.0.pow(uiState.currencyDecimals.toDouble())
-             (uiState.editAmount.replace(",", ".").toDoubleOrNull()?.let { it * multiplier } ?: 0.0).toLong()
-        } else {
-             uiState.transaction?.transaction?.money ?: 0L
-        }
-        
-        val displayDirection = if (uiState.isEditMode) uiState.editDirection else uiState.transaction?.transaction?.direction ?: 0
-        val (displayCategoryName, displayParentName) = if (uiState.isEditMode) {
-            resolveCategoryHierarchy(uiState.editCategoryId, uiState.availableCategories)
-        } else {
-            // authentic lookup from full list even in view mode to get hierarchy
-            resolveCategoryHierarchy(uiState.transaction?.transaction?.categoryId, uiState.availableCategories)
-        }
-
-        val displayCategoryIcon = if (uiState.isEditMode) {
-            uiState.availableCategories.find { it.id == uiState.editCategoryId }?.icon
-        } else {
-            uiState.transaction?.categoryIcon
-        }
-
-        TransactionHeroHeader(
-            amount = if (displayDirection == 1) rawAmount else -rawAmount,
-            categoryIcon = displayCategoryIcon,
-            categoryName = displayCategoryName,
-            parentCategoryName = displayParentName,
-            currencyCode = uiState.currencyCode, 
-            currencyDecimals = uiState.currencyDecimals, 
-            settings = settings,
-            categoryColor = uiState.categoryColor,
-            isEditMode = uiState.isEditMode,
-            onBackClick = onNavigateBack
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Details List wrapped in a premium card
-        Card(
-            modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .fillMaxWidth(),
-            shape = RoundedCornerShape(32.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-            ),
-            border = BorderStroke(
-                1.dp, 
-                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                if (uiState.isEditMode) {
-                    EditForm(uiState, viewModel)
-                } else {
-                    ViewDetails(uiState, settings)
-                }
-            }
-        }
-        
-        // Respect the bottom padding from Scaffold (FAB/Nav bar)
-        Spacer(modifier = Modifier.height(contentPadding.calculateBottomPadding() + 80.dp))
-    }
-}
-
-@Composable
-fun TransactionHeroHeader(
-    amount: Long,
-    categoryIcon: String?,
-    categoryName: String,
-    parentCategoryName: String? = null,
-    currencyCode: String,
-    currencyDecimals: Int,
-    settings: com.sinxn.mymoney.core.data.preferences.FormattingSettings,
-    categoryColor: Color,
-    isEditMode: Boolean,
-    onBackClick: () -> Unit
-) {
-    val secondaryColor = remember(categoryColor) { 
-        Color(android.graphics.Color.HSVToColor(FloatArray(3).apply {
-            android.graphics.Color.colorToHSV(categoryColor.toArgb(), this)
-            this[2] *= 0.7f // Darken
-            this[0] = (this[0] + 30) % 360 // Shift hue
-        }))
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(220.dp)
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(categoryColor, secondaryColor)
-                )
-            )
-    ) {
-        // Subtle decorative background circles
-        Canvas(
-            modifier = Modifier
-                .size(160.dp)
-                .align(Alignment.BottomEnd)
-                .offset(x = 40.dp, y = 40.dp)
-        ) {
-            drawCircle(
-                color = Color.White.copy(alpha = 0.1f),
-                radius = size.minDimension
-            )
-        }
-
-        // Navigation elements
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(horizontal = 8.dp, vertical = 8.dp)
-        ) {
-            // Frosted Glass Back Button
-            Surface(
-                onClick = onBackClick,
-                shape = CircleShape,
-                color = Color.White.copy(alpha = 0.2f),
-                modifier = Modifier.size(48.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-
-            // Centralized title
-            Text(
-                text = if (isEditMode) "EDIT TRANSACTION" else "TRANSACTION DETAILS",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.ExtraBold,
-                color = Color.White.copy(alpha = 0.7f),
-                modifier = Modifier.align(Alignment.Center)
-            )
-        }
-
-        // Main Content (Amount and Category Badge)
+        // 1. Centered Hero Amount Display (Matching Edit Screen Style)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 24.dp),
+                .padding(vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            val formattedMoney = MoneyFormatter.format(
-                amount = amount,
-                currencyCode = currencyCode,
-                decimals = currencyDecimals,
+            // Clean Large Amount Text
+            val formattedAmountValue = MoneyFormatter.format(
+                amount = transaction.money,
+                currencyCode = "",
+                decimals = uiState.currencyDecimals,
                 config = MoneyFormatter.Config(
-                    showCurrency = settings.showCurrency,
+                    showCurrency = false,
                     groupDigits = settings.groupDigits,
                     roundDecimals = settings.roundDecimals,
-                    showPlusMinus = settings.showPlusMinus
+                    showPlusMinus = false
                 )
-            )
-            
-            Text(
-                text = formattedMoney,
-                style = MaterialTheme.typography.displayMedium.copy(
-                    shadow = Shadow(
-                        color = Color.Black.copy(alpha = 0.15f),
-                        offset = Offset(2f, 4f),
-                        blurRadius = 8f
-                    )
-                ),
-                color = Color.White,
-                fontWeight = FontWeight.Black
             )
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                horizontalArrangement = Arrangement.Center
             ) {
-                CategoryIcon(
-                    iconString = categoryIcon,
-                    categoryName = categoryName,
-                    modifier = Modifier.size(20.dp)
+                Text(
+                    text = uiState.currencySymbol,
+                    fontSize = 38.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = directionColor
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                
-                if (parentCategoryName != null) {
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = formattedAmountValue,
+                    fontSize = 58.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    letterSpacing = (-1.5).sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Category Icon & Name Chip (Below Amount)
+            Surface(
+                shape = CircleShape,
+                color = directionColor.copy(alpha = 0.12f),
+                border = BorderStroke(1.dp, directionColor.copy(alpha = 0.25f))
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                ) {
+                    CategoryIcon(
+                        iconString = categoryIcon,
+                        categoryName = categoryName,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    if (parentCategoryName != null) {
+                        Text(
+                            text = "$parentCategoryName • ",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = directionColor.copy(alpha = 0.8f)
+                        )
+                    }
                     Text(
-                        text = "$parentCategoryName • ",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color.White.copy(alpha = 0.8f),
-                        fontWeight = FontWeight.Normal
+                        text = categoryName,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = directionColor
                     )
                 }
-                
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 2. Description Card (Separate Card if description exists)
+        if (!transaction.description.isNullOrEmpty()) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
                 Text(
-                    text = categoryName,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
+                    text = transaction.description,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    lineHeight = 24.sp,
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp)
                 )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        // 3. Primary Details Card (Wallet, Date & Time)
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Column {
+                // Wallet Row
+                ViewDetailRow(
+                    icon = {
+                        Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = directionColor, modifier = Modifier.size(22.dp))
+                    },
+                    label = "Wallet",
+                    value = uiState.walletName.ifEmpty { "Default Wallet" }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                // Date & Time Row
+                val parsedDate = DateUtils.parseDate(transaction.date)
+                val formattedDate = DateUtils.formatDate(parsedDate, settings.dateFormat)
+                val formattedTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(parsedDate)
+
+                ViewDetailRow(
+                    icon = {
+                        Icon(Icons.Default.CalendarToday, contentDescription = null, tint = directionColor, modifier = Modifier.size(20.dp))
+                    },
+                    label = if (settings.hideTime) "Date" else "Date & Time",
+                    value = if (settings.hideTime) formattedDate else "$formattedDate at $formattedTime"
+                )
+
+                if (uiState.people.isNotEmpty()) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                    ViewDetailRow(
+                        icon = { Icon(Icons.Default.People, contentDescription = null, tint = directionColor, modifier = Modifier.size(20.dp)) },
+                        label = "People",
+                        value = uiState.people.joinToString { it.name }
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // 3. Secondary Details Card (Matching Edit Screen Card 2)
+        val hasSecondaryContent = uiState.place != null ||
+                uiState.event != null ||
+                !transaction.note.isNullOrEmpty() ||
+                uiState.attachments.isNotEmpty() ||
+                !settings.hideStatusAndImpact
+
+        if (hasSecondaryContent) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Column {
+                    var hasPreviousRow = false
+
+                    uiState.place?.let { place ->
+                        ViewDetailRow(
+                            icon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = directionColor, modifier = Modifier.size(20.dp)) },
+                            label = "Place",
+                            value = place.name
+                        )
+                        hasPreviousRow = true
+                    }
+
+                    uiState.event?.let { event ->
+                        if (hasPreviousRow) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                        }
+                        ViewDetailRow(
+                            icon = { Icon(Icons.Default.Event, contentDescription = null, tint = directionColor, modifier = Modifier.size(20.dp)) },
+                            label = "Event",
+                            value = event.name
+                        )
+                        hasPreviousRow = true
+                    }
+
+                    if (!transaction.note.isNullOrEmpty()) {
+                        if (hasPreviousRow) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                        }
+                        ViewStackedDetailBlock(
+                            icon = Icons.Default.Notes,
+                            iconTint = directionColor,
+                            label = "Note",
+                            value = transaction.note
+                        )
+                        hasPreviousRow = true
+                    }
+
+                    if (uiState.attachments.isNotEmpty()) {
+                        if (hasPreviousRow) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                        }
+                        ViewDetailRow(
+                            icon = { Icon(Icons.Default.AttachFile, contentDescription = null, tint = directionColor, modifier = Modifier.size(20.dp)) },
+                            label = "Attachments",
+                            value = "${uiState.attachments.size} files"
+                        )
+                        hasPreviousRow = true
+                    }
+
+                    if (!settings.hideStatusAndImpact) {
+                        if (hasPreviousRow) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                        }
+
+                        // Status Row with Badge
+                        ViewDetailRow(
+                            icon = { Icon(Icons.Default.Info, contentDescription = null, tint = directionColor, modifier = Modifier.size(20.dp)) },
+                            label = "Status",
+                            value = if (transaction.confirmed) "Confirmed" else "Pending",
+                            trailingBadge = {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = if (transaction.confirmed) Color(0xFF10B981).copy(alpha = 0.15f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                                    border = BorderStroke(1.dp, if (transaction.confirmed) Color(0xFF10B981).copy(alpha = 0.3f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                                ) {
+                                    Text(
+                                        text = if (transaction.confirmed) "Confirmed" else "Pending",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (transaction.confirmed) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+                        )
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                        // Impact Row with Badge
+                        ViewDetailRow(
+                            icon = { Icon(Icons.Default.Tune, contentDescription = null, tint = directionColor, modifier = Modifier.size(20.dp)) },
+                            label = "Impact",
+                            value = if (transaction.countInTotal) "Included in Total" else "Excluded from Total",
+                            trailingBadge = {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = directionColor.copy(alpha = 0.12f),
+                                    border = BorderStroke(1.dp, directionColor.copy(alpha = 0.25f))
+                                ) {
+                                    Text(
+                                        text = if (transaction.countInTotal) "Included in Total" else "Excluded from Total",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = directionColor,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+                        )
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-fun ViewDetails(
-    uiState: TransactionDetailsUiState,
-    settings: com.sinxn.mymoney.core.data.preferences.FormattingSettings
+private fun ViewStackedDetailBlock(
+    icon: ImageVector,
+    iconTint: Color,
+    label: String,
+    value: String
 ) {
-    val transaction = uiState.transaction?.transaction ?: return
-    
-    // Date & Time Merge
-    val date = com.sinxn.mymoney.core.util.DateUtils.parseDate(transaction.date)
-    val formattedDate = com.sinxn.mymoney.core.util.DateUtils.formatDate(date, settings.dateFormat)
-    val formattedTime = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(date)
-    
-    DetailItem(
-        icon = Icons.Default.CalendarToday,
-        label = "Date & Time", 
-        value = "$formattedDate, $formattedTime"
-    )
-    
-    // Wallet (Missing field added)
-    DetailItem(
-        icon = Icons.Default.AccountBalanceWallet,
-        label = "Wallet",
-        value = uiState.walletName
-    )
-    
-    if (!transaction.note.isNullOrEmpty()) {
-        DetailItem(
-            icon = Icons.Default.Notes,
-            label = "Note", 
-            value = transaction.note
-        )
-    }
-    
-    if (!transaction.description.isNullOrEmpty()) {
-        DetailItem(
-            icon = Icons.Default.Description,
-            label = "Description", 
-            value = transaction.description
-        )
-    }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
 
-    // Extended Fields
-    uiState.place?.let { 
-        DetailItem(
-            icon = Icons.Default.LocationOn,
-            label = "Place", 
-            value = it.name
-        ) 
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.4f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                lineHeight = 22.sp,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
+            )
+        }
     }
-    uiState.event?.let { 
-        DetailItem(
-            icon = Icons.Default.Event,
-            label = "Event", 
-            value = it.name
-        ) 
-    }
-    if (uiState.people.isNotEmpty()) {
-        DetailItem(
-            icon = Icons.Default.People,
-            label = "People", 
-            value = uiState.people.joinToString { it.name }
-        )
-    }
-    if (uiState.attachments.isNotEmpty()) {
-        DetailItem(
-            icon = Icons.Default.AttachFile,
-            label = "Attachments", 
-            value = "${uiState.attachments.size} files"
-        )
-    }
-
-    DetailItem(
-        icon = Icons.Default.Info,
-        label = "Status", 
-        value = if (transaction.confirmed) "Confirmed" else "Pending"
-    )
-    DetailItem(
-        icon = Icons.Default.Info,
-        label = "Impact", 
-        value = if (transaction.countInTotal) "Included in Total" else "Excluded"
-    )
 }
+
+@Composable
+private fun ViewDetailRow(
+    icon: @Composable () -> Unit,
+    label: String,
+    value: String,
+    trailingBadge: @Composable (() -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            icon()
+            Spacer(modifier = Modifier.width(14.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        if (trailingBadge != null) {
+            trailingBadge()
+        } else {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+// ==========================================
+// EDIT / ADD MODE CONTENT (Numpad + Form)
+// ==========================================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditForm(
+fun UltraCleanTransactionContent(
     uiState: TransactionDetailsUiState,
-    viewModel: TransactionDetailsViewModel
+    settings: com.sinxn.mymoney.core.data.preferences.FormattingSettings,
+    viewModel: TransactionDetailsViewModel,
+    onNavigateBack: () -> Unit
 ) {
-    // Dialog States
+    val scrollState = rememberScrollState()
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     var showCategoryPicker by remember { mutableStateOf(false) }
     var showWalletPicker by remember { mutableStateOf(false) }
     var showPlacePicker by remember { mutableStateOf(false) }
     var showEventPicker by remember { mutableStateOf(false) }
     var showPeoplePicker by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
-    var showTimePicker by remember { mutableStateOf(false) }
+    var isNumpadVisible by remember { mutableStateOf(true) }
 
-    // Logic to hide Category for Debt/Saving
-    // Ideally this logic relies on Checking TransactionType, which we should expose in UiState if needed.
-    // Legacy app hides Category for DEBT (2) and SAVING (3)
-    val transactionType = uiState.transaction?.transaction?.type ?: 0
-    val showCategory = transactionType != 2 && transactionType != 3
-
-    // Amount
-    OutlinedTextField(
-        value = uiState.editAmount,
-        onValueChange = viewModel::onAmountChange,
-        label = { Text("Amount") },
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        leadingIcon = { Icon(Icons.Default.Inventory, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-        ),
-        colors = OutlinedTextFieldDefaults.colors(
-            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-            focusedBorderColor = MaterialTheme.colorScheme.primary
-        )
-    )
-
-    // Date & Time Selectors
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        val dateTimeParts = uiState.editDate.split(" ")
-        val datePart = dateTimeParts.firstOrNull() ?: ""
-        val timePart = dateTimeParts.getOrNull(1)?.take(5) ?: "" // Take HH:mm
-        
-        OutlinedTextField(
-            value = datePart,
-            onValueChange = {},
-            label = { Text("Date") },
-            modifier = Modifier.weight(1.6f).clickable { showDatePicker = true },
-            enabled = false,
-            shape = RoundedCornerShape(16.dp),
-            leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-            colors = OutlinedTextFieldDefaults.colors(
-                disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                disabledBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                disabledLeadingIconColor = MaterialTheme.colorScheme.primary
-            )
-        )
-        OutlinedTextField(
-            value = timePart,
-            onValueChange = {},
-            label = { Text("Time") },
-            modifier = Modifier.weight(1f).clickable { showTimePicker = true },
-            enabled = false,
-            shape = RoundedCornerShape(16.dp),
-            leadingIcon = { Icon(Icons.Default.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-            colors = OutlinedTextFieldDefaults.colors(
-                disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                disabledBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                disabledLeadingIconColor = MaterialTheme.colorScheme.primary
-            )
-        )
+    // Minimal Direction Accent
+    val accentColor = when (uiState.editDirection) {
+        1 -> Color(0xFF10B981) // Income Mint
+        2 -> Color(0xFF0284C7) // Transfer Blue
+        else -> Color(0xFFE11D48) // Expense Rose
     }
-    
-    // Pickers
-    if (showCategory) {
-        val (catName, parentName) = resolveCategoryHierarchy(uiState.editCategoryId, uiState.availableCategories)
-        val displayValue = if (parentName != null) "$parentName / $catName" else catName
 
-        PickerField(
-            icon = Icons.Default.Inventory,
-            label = "Category",
-            value = displayValue,
-            onClick = { showCategoryPicker = true }
-        )
+    val hasOperatorInAmount = run {
+        val amountStr = uiState.editAmount.trim()
+        val rest = if (amountStr.startsWith("-")) amountStr.substring(1) else amountStr
+        rest.contains("+") || rest.contains("-") || rest.contains("×") || rest.contains("÷")
     }
-    
-    PickerField(
-        icon = Icons.Default.AccountBalanceWallet,
-        label = "Wallet",
-        value = uiState.availableWallets.find { it.id == uiState.editWalletId }?.name ?: "Select Wallet",
-        onClick = { showWalletPicker = true }
-    )
 
-    // Note & Description
-    OutlinedTextField(
-        value = uiState.editNote,
-        onValueChange = viewModel::onNoteChange,
-        label = { Text("Note") },
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        leadingIcon = { Icon(Icons.Default.Notes, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        colors = OutlinedTextFieldDefaults.colors(
-            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-            focusedBorderColor = MaterialTheme.colorScheme.primary
-        )
-    )
+    val evaluatedAmountStr = viewModel.getImmediateResult(uiState.editAmount)
+    val amountValue = evaluatedAmountStr.toDoubleOrNull()
+    val isCategorySelected = !uiState.editCategoryId.isNullOrBlank()
+    val isWalletSelected = uiState.editWalletId.isNotBlank()
+    val isAmountNonNegative = amountValue != null && amountValue >= 0.0
 
-    OutlinedTextField(
-        value = uiState.editDescription,
-        onValueChange = viewModel::onDescriptionChange,
-        label = { Text("Description") },
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        leadingIcon = { Icon(Icons.Default.Description, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        colors = OutlinedTextFieldDefaults.colors(
-            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-            focusedBorderColor = MaterialTheme.colorScheme.primary
-        )
-    )
+    val isSaveEnabled = !uiState.isSaving && isCategorySelected && isWalletSelected && isAmountNonNegative
 
-    // Advanced Fields
-    PickerField(
-        icon = Icons.Default.LocationOn,
-        label = "Place",
-        value = uiState.availablePlaces.find { it.id == uiState.editPlaceId }?.name ?: "No Place",
-        onClick = { showPlacePicker = true }
-    )
-    
-    PickerField(
-        icon = Icons.Default.Event,
-        label = "Event",
-        value = uiState.availableEvents.find { it.id == uiState.editEventId }?.name ?: "No Event",
-        onClick = { showEventPicker = true }
-    )
+    val actionBtnText = if (uiState.isNewTransaction) {
+        val dirName = if (uiState.editDirection == 1) "Income" else if (uiState.editDirection == 2) "Transfer" else "Expense"
+        "Add $dirName"
+    } else {
+        "Save Changes"
+    }
 
-    val selectedPeopleNames = uiState.availablePeople
-        .filter { it.id in uiState.editPeopleIds }
-        .joinToString { it.name }
-        .ifEmpty { "No People" }
-    
-    PickerField(
-        icon = Icons.Default.People,
-        label = "People",
-        value = selectedPeopleNames,
-        onClick = { showPeoplePicker = true }
-    )
-
-    // Toggles with better styling
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    Column(
+        modifier = Modifier.fillMaxSize()
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+        // Scrollable Form Content
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(scrollState)
+                .padding(bottom = 16.dp)
+        ) {
+            // 1. Centered Large Amount Display (Click to open Numpad)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .clickable {
+                        focusManager.clearFocus()
+                        keyboardController?.hide()
+                        isNumpadVisible = true
+                    }
+                    .padding(vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Text("Confirmed", style = MaterialTheme.typography.bodyLarge)
+                val displayAmount = if (hasOperatorInAmount) {
+                    viewModel.getImmediateResult(uiState.editAmount)
+                } else {
+                    if (uiState.editAmount.isEmpty()) "0" else uiState.editAmount
                 }
-                Switch(checked = uiState.editConfirmed, onCheckedChange = viewModel::onConfirmedChange)
+
+                if (hasOperatorInAmount) {
+                    Text(
+                        text = uiState.editAmount,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = accentColor,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = uiState.currencySymbol,
+                        fontSize = 38.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = accentColor
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = displayAmount,
+                        fontSize = 60.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        letterSpacing = (-1.5).sp
+                    )
+                }
+
+                if (!isNumpadVisible) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit Amount",
+                            tint = accentColor.copy(alpha = 0.7f),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Tap to edit amount",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = accentColor.copy(alpha = 0.7f),
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
             }
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+            // 2. Description Card (Top of inputs)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Text("Count in Total", style = MaterialTheme.typography.bodyLarge)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                ) {
+                    OutlinedTextField(
+                        value = uiState.editDescription,
+                        onValueChange = viewModel::onDescriptionChange,
+                        placeholder = { Text("Add description...") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(focusRequester)
+                            .onFocusChanged { focusState ->
+                                if (focusState.isFocused) {
+                                    isNumpadVisible = false
+                                }
+                            },
+                        shape = RoundedCornerShape(14.dp)
+                    )
                 }
-                Switch(checked = uiState.editCountInTotal, onCheckedChange = viewModel::onCountInTotalChange)
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // 3. Single Unified Options Card (Category to Count in Total)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Column {
+                    // Category Row
+                    val activeCategory = uiState.availableCategories.find { it.id == uiState.editCategoryId }
+                    CleanListRow(
+                        icon = {
+                            if (activeCategory != null) {
+                                CategoryIcon(
+                                    iconString = activeCategory.icon,
+                                    categoryName = activeCategory.name,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            } else {
+                                Icon(Icons.Default.Category, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
+                            }
+                        },
+                        label = "Category",
+                        value = activeCategory?.name?.replace("  ↳ ", "") ?: "Select Category",
+                        onClick = {
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                            isNumpadVisible = false
+                            showCategoryPicker = true
+                        }
+                    )
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                    // Wallet Row
+                    val activeWallet = uiState.availableWallets.find { it.id == uiState.editWalletId }
+                    CleanListRow(
+                        icon = {
+                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
+                        },
+                        label = "Wallet",
+                        value = activeWallet?.name ?: "Select Wallet",
+                        onClick = {
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                            isNumpadVisible = false
+                            showWalletPicker = true
+                        }
+                    )
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                    // Date Row
+                    val parsedDate = DateUtils.parseDate(uiState.editDate)
+                    val dateText = when {
+                        DateUtils.isToday(parsedDate) -> "Today"
+                        DateUtils.isYesterday(parsedDate) -> "Yesterday"
+                        else -> DateUtils.formatDate(parsedDate, settings.dateFormat)
+                    }
+
+                    CleanListRow(
+                        icon = {
+                            Icon(Icons.Default.CalendarToday, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp))
+                        },
+                        label = "Date",
+                        value = dateText,
+                        onClick = {
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                            isNumpadVisible = false
+                            showDatePicker = true
+                        }
+                    )
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                    // People Row
+                    val selectedPeopleNames = uiState.availablePeople
+                        .filter { it.id in uiState.editPeopleIds }
+                        .joinToString { it.name }
+                        .ifEmpty { "None" }
+
+                    CleanListRow(
+                        icon = { Icon(Icons.Default.People, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
+                        label = "People",
+                        value = selectedPeopleNames,
+                        onClick = {
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                            isNumpadVisible = false
+                            showPeoplePicker = true
+                        }
+                    )
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                    // Place Row
+                    val activePlace = uiState.availablePlaces.find { it.id == uiState.editPlaceId }
+                    CleanListRow(
+                        icon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
+                        label = "Place",
+                        value = activePlace?.name ?: "None",
+                        onClick = {
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                            isNumpadVisible = false
+                            showPlacePicker = true
+                        }
+                    )
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                    // Event Row
+                    val activeEvent = uiState.availableEvents.find { it.id == uiState.editEventId }
+                    CleanListRow(
+                        icon = { Icon(Icons.Default.Event, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
+                        label = "Event",
+                        value = activeEvent?.name ?: "None",
+                        onClick = {
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                            isNumpadVisible = false
+                            showEventPicker = true
+                        }
+                    )
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                    // Note Field
+                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        OutlinedTextField(
+                            value = uiState.editNote,
+                            onValueChange = viewModel::onNoteChange,
+                            label = { Text("Note") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onFocusChanged { focusState ->
+                                    if (focusState.isFocused) {
+                                        isNumpadVisible = false
+                                    }
+                                },
+                            shape = RoundedCornerShape(14.dp),
+                            leadingIcon = { Icon(Icons.Default.Notes, contentDescription = null, tint = accentColor) }
+                        )
+                    }
+
+                    if (!settings.hideStatusAndImpact) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                        // Confirmed Switch Row
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Confirmed", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                            Switch(
+                                checked = uiState.editConfirmed,
+                                onCheckedChange = {
+                                    focusManager.clearFocus()
+                                    keyboardController?.hide()
+                                    viewModel.onConfirmedChange(it)
+                                }
+                            )
+                        }
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                        // Count in Total Switch Row
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Count in Total", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                            Switch(
+                                checked = uiState.editCountInTotal,
+                                onCheckedChange = {
+                                    focusManager.clearFocus()
+                                    keyboardController?.hide()
+                                    viewModel.onCountInTotalChange(it)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Docked Bottom Bar (Numpad or Save Button like IME sheet)
+        Surface(
+            tonalElevation = 6.dp,
+            shadowElevation = 8.dp,
+            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        ) {
+            Column {
+                AnimatedVisibility(
+                    visible = isNumpadVisible,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    NumpadView(
+                        onKeyPress = viewModel::onNumpadKeyPress,
+                        onEvaluate = viewModel::evaluateMathExpression,
+                        onSave = {
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                            viewModel.saveChanges()
+                            onNavigateBack()
+                        },
+                        onNext = {
+                            isNumpadVisible = false
+                            focusRequester.requestFocus()
+                            keyboardController?.show()
+                        },
+                        hasOperatorInAmount = hasOperatorInAmount,
+                        saveButtonText = actionBtnText,
+                        saveButtonColor = accentColor,
+                        isSaving = uiState.isSaving,
+                        isSaveEnabled = isSaveEnabled
+                    )
+                }
+
+                if (!isNumpadVisible) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 10.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                focusManager.clearFocus()
+                                keyboardController?.hide()
+                                viewModel.saveChanges()
+                                onNavigateBack()
+                            },
+                            enabled = isSaveEnabled,
+                            shape = RoundedCornerShape(20.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = accentColor,
+                                contentColor = Color.White
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(54.dp)
+                        ) {
+                            Text(
+                                text = actionBtnText,
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                     }
+                }
             }
         }
     }
 
-    // Dialogs
+    // Modal Dialog Pickers
     if (showCategoryPicker) {
         CategorySelectionDialog(
             showIncome = uiState.editDirection == 1,
             incomeCategories = uiState.availableIncomeCategories,
             expenseCategories = uiState.availableExpenseCategories,
             selectedCategoryId = uiState.editCategoryId,
-            onCategorySelected = { category ->
-                viewModel.onCategoryIdChange(category.id)
-            },
+            onCategorySelected = { category -> viewModel.onCategoryIdChange(category.id) },
             onDismissRequest = { showCategoryPicker = false }
         )
     }
-    
+
     if (showWalletPicker) {
-        com.sinxn.mymoney.core.ui.components.SelectionDialog(
+        SelectionDialog(
             title = "Select Wallet",
             options = uiState.availableWallets,
-            onOptionSelected = { viewModel.onWalletIdChange(it.id); showWalletPicker = false },
+            onOptionSelected = {
+                viewModel.onWalletIdChange(it.id)
+                showWalletPicker = false
+            },
             onDismissRequest = { showWalletPicker = false },
             labelProvider = { it.name }
         )
     }
-    
+
     if (showPlacePicker) {
-        com.sinxn.mymoney.core.ui.components.SelectionDialog(
+        SelectionDialog(
             title = "Select Place",
             options = uiState.availablePlaces + com.sinxn.mymoney.core.data.local.entity.PlaceEntity("null", "None", "", null, null, null, false, 0, null),
-            onOptionSelected = { 
+            onOptionSelected = {
                 viewModel.onPlaceIdChange(if (it.id == "null") null else it.id)
-                showPlacePicker = false 
+                showPlacePicker = false
             },
             onDismissRequest = { showPlacePicker = false },
             labelProvider = { it.name }
         )
     }
-    
+
     if (showEventPicker) {
-         com.sinxn.mymoney.core.ui.components.SelectionDialog(
+        SelectionDialog(
             title = "Select Event",
             options = uiState.availableEvents + com.sinxn.mymoney.core.data.local.entity.EventEntity("null", "None", "", null, "", "", false, 0, null),
-            onOptionSelected = { 
+            onOptionSelected = {
                 viewModel.onEventIdChange(if (it.id == "null") null else it.id)
-                showEventPicker = false 
+                showEventPicker = false
             },
             onDismissRequest = { showEventPicker = false },
             labelProvider = { it.name }
         )
     }
-    
+
     if (showPeoplePicker) {
-        com.sinxn.mymoney.core.ui.components.SelectionDialog(
+        SelectionDialog(
             title = "Select People",
             options = uiState.availablePeople,
             selectedOptions = uiState.availablePeople.filter { it.id in uiState.editPeopleIds }.toSet(),
@@ -716,8 +1176,7 @@ fun EditForm(
             multiSelect = true
         )
     }
-    
-    // Date/Time Dialogs
+
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState()
         DatePickerDialog(
@@ -734,90 +1193,54 @@ fun EditForm(
             DatePicker(state = datePickerState)
         }
     }
-    
-    if (showTimePicker) {
-        val timePickerState = rememberTimePickerState()
-        // Custom Dialog for Time Picker since Material3 TimePickerDialog is experimental/limited in some versions
-        AlertDialog(
-            onDismissRequest = { showTimePicker = false },
-            confirmButton = {
-                  TextButton(onClick = {
-                      viewModel.onTimeChange(timePickerState.hour, timePickerState.minute)
-                      showTimePicker = false
-                }) { Text("OK") }
-            },
-            text = {
-                TimePicker(state = timePickerState)
-            }
-        )
-    }
 }
 
 @Composable
-fun PickerField(
-    icon: ImageVector,
+private fun CleanListRow(
+    icon: @Composable () -> Unit,
     label: String,
     value: String,
     onClick: () -> Unit
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = {},
-        label = { Text(label) },
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        enabled = false,
-        shape = RoundedCornerShape(16.dp),
-        leadingIcon = { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        colors = OutlinedTextFieldDefaults.colors(
-            disabledTextColor = MaterialTheme.colorScheme.onSurface,
-            disabledBorderColor = MaterialTheme.colorScheme.outlineVariant,
-            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            disabledLeadingIconColor = MaterialTheme.colorScheme.primary
-        ),
-        trailingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
-    )
-}
-
-@Composable
-fun DetailItem(
-    icon: ImageVector,
-    label: String, 
-    value: String
-) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                    shape = CircleShape
-                ),
-            contentAlignment = Alignment.Center
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
+            icon()
+            Spacer(modifier = Modifier.width(14.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
-        
-        Column(modifier = Modifier.weight(1f)) {
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
-                text = label, 
-                style = MaterialTheme.typography.labelMedium, 
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-            Text(
-                text = value, 
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Medium
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(20.dp)
             )
         }
     }

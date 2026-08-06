@@ -21,11 +21,13 @@ data class FormattingSettings(
     val groupDigits: Boolean = true,
     val roundDecimals: Boolean = false,
     val showPlusMinus: Boolean = false,
+    val hideTime: Boolean = false,
     val dateFormat: Int = 2,
     val firstDayOfWeek: Int = java.util.Calendar.getInstance().firstDayOfWeek,
     val firstDayOfMonth: Int = 1,
     val includeFutureTransactions: Boolean = false,
     val excludeArchivedFromTotal: Boolean = false,
+    val hideStatusAndImpact: Boolean = false,
     val globalCurrency: String = "USD"
 )
 
@@ -42,11 +44,13 @@ class SettingsRepository @Inject constructor(
         val GROUP_DIGITS = booleanPreferencesKey("group_digits")
         val ROUND_DECIMALS = booleanPreferencesKey("round_decimals")
         val SHOW_PLUS_MINUS = booleanPreferencesKey("show_plus_minus_symbol")
+        val HIDE_TIME = booleanPreferencesKey("hide_time")
         val DATE_FORMAT = intPreferencesKey("date_format")
         val FIRST_DAY_OF_WEEK = intPreferencesKey("first_day_of_week")
         val FIRST_DAY_OF_MONTH = intPreferencesKey("first_day_of_month")
         val INCLUDE_FUTURE_TRANSACTIONS = booleanPreferencesKey("include_future_transactions")
         val EXCLUDE_ARCHIVED_FROM_TOTAL = booleanPreferencesKey("exclude_archived_from_total")
+        val HIDE_STATUS_AND_IMPACT = booleanPreferencesKey("hide_status_and_impact")
         val GLOBAL_CURRENCY = stringPreferencesKey("global_currency")
     }
 
@@ -62,11 +66,13 @@ class SettingsRepository @Inject constructor(
                 groupDigits = preferences[GROUP_DIGITS] ?: true,
                 roundDecimals = preferences[ROUND_DECIMALS] ?: false,
                 showPlusMinus = preferences[SHOW_PLUS_MINUS] ?: false,
+                hideTime = preferences[HIDE_TIME] ?: false,
                 dateFormat = preferences[DATE_FORMAT] ?: 2,
                 firstDayOfWeek = preferences[FIRST_DAY_OF_WEEK] ?: java.util.Calendar.getInstance().firstDayOfWeek,
                 firstDayOfMonth = preferences[FIRST_DAY_OF_MONTH] ?: 1,
                 includeFutureTransactions = preferences[INCLUDE_FUTURE_TRANSACTIONS] ?: false,
                 excludeArchivedFromTotal = preferences[EXCLUDE_ARCHIVED_FROM_TOTAL] ?: false,
+                hideStatusAndImpact = preferences[HIDE_STATUS_AND_IMPACT] ?: false,
                 globalCurrency = preferences[GLOBAL_CURRENCY] ?: "USD"
             )
         }
@@ -101,6 +107,12 @@ class SettingsRepository @Inject constructor(
         }
     }
 
+    suspend fun setHideTime(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[HIDE_TIME] = enabled
+        }
+    }
+
     suspend fun setDateFormat(format: Int) {
         dataStore.edit { preferences ->
             preferences[DATE_FORMAT] = format
@@ -128,6 +140,12 @@ class SettingsRepository @Inject constructor(
     suspend fun setExcludeArchivedFromTotal(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[EXCLUDE_ARCHIVED_FROM_TOTAL] = enabled
+        }
+    }
+
+    suspend fun setHideStatusAndImpact(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[HIDE_STATUS_AND_IMPACT] = enabled
         }
     }
 

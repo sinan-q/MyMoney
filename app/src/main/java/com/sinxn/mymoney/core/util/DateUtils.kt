@@ -126,4 +126,18 @@ object DateUtils {
         return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
                 cal1.get(Calendar.MONTH) == cal2.get(Calendar.MONTH)
     }
+
+    fun isToday(date: Date): Boolean {
+        val cal1 = Calendar.getInstance().apply { time = date }
+        val cal2 = Calendar.getInstance()
+        return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
+                cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
+    }
+
+    fun isYesterday(date: Date): Boolean {
+        val cal1 = Calendar.getInstance().apply { time = date }
+        val cal2 = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }
+        return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
+                cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
+    }
 }

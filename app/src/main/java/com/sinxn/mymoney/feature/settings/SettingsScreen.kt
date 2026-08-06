@@ -100,6 +100,12 @@ fun SettingsScreen(
                 checked = settings.showPlusMinus,
                 onCheckedChange = viewModel::updateShowPlusMinus
             )
+
+            SettingsSwitchItem(
+                title = "Hide Time",
+                checked = settings.hideTime,
+                onCheckedChange = viewModel::updateHideTime
+            )
             
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
@@ -119,6 +125,12 @@ fun SettingsScreen(
                 title = "Exclude Archived from Total",
                 checked = settings.excludeArchivedFromTotal,
                 onCheckedChange = viewModel::updateExcludeArchivedFromTotal
+            )
+
+            SettingsSwitchItem(
+                title = "Hide Status & Impact",
+                checked = settings.hideStatusAndImpact,
+                onCheckedChange = viewModel::updateHideStatusAndImpact
             )
             
             SettingsItem(

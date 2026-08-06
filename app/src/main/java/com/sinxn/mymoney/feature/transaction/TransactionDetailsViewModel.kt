@@ -309,6 +309,128 @@ class TransactionDetailsViewModel @Inject constructor(
     }
 
     fun onAmountChange(value: String) { _editAmount.value = value }
+
+    fun onNumpadKeyPress(key: String) {
+        var current = _editAmount.value
+        if (key == "BACKSPACE") {
+            if (current.isNotEmpty()) {
+                current = current.trimEnd()
+                if (current.isNotEmpty()) {
+                    current = current.dropLast(1).trimEnd()
+                }
+                _editAmount.value = current.ifEmpty { "0" }
+            }
+        } else if (key in listOf("+", "-", "×", "÷")) {
+            val trimmed = current.trim()
+            val base = if (trimmed.endsWith("+") || trimmed.endsWith("-") || trimmed.endsWith("×") || trimmed.endsWith("÷")) {
+                trimmed.dropLast(1).trim()
+            } else {
+                trimmed
+            }
+            _editAmount.value = "$base $key "
+        } else if (key == ".") {
+            val lastToken = current.split(" ").lastOrNull() ?: ""
+            if (!lastToken.contains(".")) {
+                _editAmount.value = "$current."
+            }
+        } else {
+            val trimmed = current.trim()
+            if (trimmed == "0" || trimmed == "0.0" || trimmed == "0.00") {
+                _editAmount.value = key
+            } else {
+                _editAmount.value = current + key
+            }
+        }
+    }
+
+    fun evaluateMathExpression() {
+        val expr = _editAmount.value.replace("×", "*").replace("÷", "/")
+        val result = evaluateSimpleMath(expr)
+        if (result != null) {
+            val decimals = uiState.value.currencyDecimals
+            _editAmount.value = if (result % 1.0 == 0.0) {
+                result.toLong().toString()
+            } else {
+                "%.${decimals}f".format(java.util.Locale.US, result)
+            }
+        }
+    }
+
+    private fun evaluateSimpleMath(expr: String): Double? {
+        val cleanExpr = expr.replace("×", "*").replace("÷", "/").trim()
+        if (cleanExpr.isEmpty()) return null
+
+        val tokens = mutableListOf<String>()
+        var sb = StringBuilder()
+
+        for (i in cleanExpr.indices) {
+            val ch = cleanExpr[i]
+            if (ch in listOf('+', '-', '*', '/')) {
+                val isUnaryMinus = ch == '-' && (
+                    sb.isEmpty() && (tokens.isEmpty() || tokens.last() in listOf("+", "-", "*", "/"))
+                )
+
+                if (isUnaryMinus) {
+                    sb.append(ch)
+                } else {
+                    if (sb.isNotEmpty()) {
+                        tokens.add(sb.toString().trim())
+                        sb = StringBuilder()
+                    }
+                    tokens.add(ch.toString())
+                }
+            } else if (ch != ' ') {
+                sb.append(ch)
+            }
+        }
+        if (sb.isNotEmpty()) {
+            tokens.add(sb.toString().trim())
+        }
+
+        if (tokens.isEmpty()) return null
+        var currentVal = tokens[0].toDoubleOrNull() ?: return null
+
+        var idx = 1
+        while (idx < tokens.size - 1) {
+            val op = tokens[idx]
+            val nextVal = tokens[idx + 1].toDoubleOrNull() ?: break
+            when (op) {
+                "+" -> currentVal += nextVal
+                "-" -> currentVal -= nextVal
+                "*" -> currentVal *= nextVal
+                "/" -> if (nextVal != 0.0) currentVal /= nextVal
+            }
+            idx += 2
+        }
+        return currentVal
+    }
+
+    fun setQuickDate(type: String) {
+        val cal = Calendar.getInstance()
+        when (type) {
+            "TODAY" -> {
+                val now = Calendar.getInstance()
+                cal.set(now.get(Calendar.YEAR), now.get(Calendar.MONTH), now.get(Calendar.DAY_OF_MONTH))
+            }
+            "YESTERDAY" -> {
+                val now = Calendar.getInstance()
+                now.add(Calendar.DAY_OF_YEAR, -1)
+                cal.set(now.get(Calendar.YEAR), now.get(Calendar.MONTH), now.get(Calendar.DAY_OF_MONTH))
+            }
+        }
+        _editDate.value = DateUtils.getSQLDateTimeString(cal.time)
+    }
+
+    fun deleteTransaction(onComplete: () -> Unit) {
+        viewModelScope.launch {
+            if (!isNewTransaction) {
+                val current = uiState.value.transaction?.transaction ?: return@launch
+                moneyDao.updateTransaction(current.copy(isDeleted = true, lastEdit = System.currentTimeMillis()))
+            }
+            onComplete()
+        }
+    }
+
     fun onNoteChange(value: String) { _editNote.value = value }
     fun onDescriptionChange(value: String) { _editDescription.value = value }
     fun onConfirmedChange(value: Boolean) { _editConfirmed.value = value }
@@ -360,6 +482,22 @@ class TransactionDetailsViewModel @Inject constructor(
         _editPeopleIds.value = current
     }
 
+    fun getImmediateResult(editAmount: String): String {
+        val trimmed = editAmount.trim()
+        val rest = if (trimmed.startsWith("-")) trimmed.substring(1) else trimmed
+        if (!rest.any { it in listOf('+', '-', '×', '÷', '*', '/') }) {
+            return if (trimmed.isEmpty()) "0" else trimmed
+        }
+        val expr = trimmed.replace("×", "*").replace("÷", "/")
+        val result = evaluateSimpleMath(expr) ?: return if (trimmed.isEmpty()) "0" else trimmed
+        val decimals = uiState.value.currencyDecimals
+        return if (result % 1.0 == 0.0) {
+            result.toLong().toString()
+        } else {
+            "%.${decimals}f".format(java.util.Locale.US, result)
+        }
+    }
+
     fun saveChanges() {
         viewModelScope.launch {
             _isSaving.value = true
@@ -370,7 +508,7 @@ class TransactionDetailsViewModel @Inject constructor(
                 // Parse decimal string back to Long base units
                 val moneyValue = try {
                     val multiplier = 10.0.pow(decimals.toDouble())
-                    (_editAmount.value.replace(",", ".").toDouble() * multiplier).toLong()
+                    (getImmediateResult(_editAmount.value).replace(",", ".").toDouble() * multiplier).toLong()
                 } catch (e: Exception) {
                     0L
                 }

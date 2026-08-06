@@ -47,6 +47,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun updateHideTime(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setHideTime(enabled)
+        }
+    }
+
     fun updateDateFormat(format: Int) {
         viewModelScope.launch {
             settingsRepository.setDateFormat(format)
@@ -62,6 +68,12 @@ class SettingsViewModel @Inject constructor(
     fun updateExcludeArchivedFromTotal(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setExcludeArchivedFromTotal(enabled)
+        }
+    }
+
+    fun updateHideStatusAndImpact(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setHideStatusAndImpact(enabled)
         }
     }
 
