@@ -52,6 +52,13 @@ import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.generateColor
 import com.sinxn.mymoney.feature.recap.YearRecapScreen
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.rememberCoroutineScope
+import com.sinxn.mymoney.core.ui.components.NavigationMenuPage
+import kotlinx.coroutines.launch
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WalletDetailsScreen(
@@ -59,6 +66,7 @@ fun WalletDetailsScreen(
     onTransactionClick: (String) -> Unit,
     onNavigateToRecap: () -> Unit,
     onAddTransaction: () -> Unit,
+    onNavigateToDebts: () -> Unit = {},
     viewModel: WalletDetailsViewModel = hiltViewModel()
 ) {
     val wallet by viewModel.wallet.collectAsState(initial = null)
@@ -82,6 +90,15 @@ fun WalletDetailsScreen(
         roundDecimals = settings.roundDecimals,
         showPlusMinus = settings.showPlusMinus
     )
+
+    val pagerState = rememberPagerState(pageCount = { 2 })
+    val coroutineScope = rememberCoroutineScope()
+
+    BackHandler(enabled = pagerState.currentPage == 1) {
+        coroutineScope.launch {
+            pagerState.animateScrollToPage(0)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -132,32 +149,64 @@ fun WalletDetailsScreen(
             }
         }
     ) { paddingValues ->
-        Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .padding(paddingValues)
+                .fillMaxSize()
+        ) {
             if (wallet == null) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
             } else {
-                TransactionList(
-                    wallet = wallet!!,
-                    items = transactions,
-                    decimals = wallet!!.decimals,
-                    currencyCode = wallet!!.wallet.currency,
-                    formatterConfig = formatterConfig,
-                    dateFormat = settings.dateFormat,
-                    listState = listState,
-                    onTransactionClick = onTransactionClick,
-                    onRecapClick = onNavigateToRecap
-                )
-            }
+                // Keep WalletHeader intact at top above horizontal pager
+                WalletHeader(wallet = wallet!!, formatterConfig = formatterConfig)
 
-            if (showSettings && wallet != null) {
-                WalletSettingsBottomSheet(
-                    wallet = wallet!!,
-                    onDismiss = { showSettings = false },
-                    onToggleCountInTotal = { viewModel.toggleCountInTotal() },
-                    onToggleArchived = { viewModel.toggleArchived() },
-                    sheetState = sheetState
-                )
+                // Swipe area only for transaction list below header
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                ) { page ->
+                    when (page) {
+                        0 -> {
+                            TransactionList(
+                                wallet = wallet!!,
+                                items = transactions,
+                                decimals = wallet!!.decimals,
+                                currencyCode = wallet!!.wallet.currency,
+                                formatterConfig = formatterConfig,
+                                dateFormat = settings.dateFormat,
+                                listState = listState,
+                                onTransactionClick = onTransactionClick,
+                                onRecapClick = onNavigateToRecap
+                            )
+                        }
+                        1 -> {
+                            com.sinxn.mymoney.core.ui.components.NavigationMenuContent(
+                                showHeaderCard = false,
+                                onItemClick = { item ->
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(0)
+                                    }
+                                    if (item.id == "debts") {
+                                        onNavigateToDebts()
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
             }
+        }
+
+        if (showSettings && wallet != null) {
+            WalletSettingsBottomSheet(
+                wallet = wallet!!,
+                onDismiss = { showSettings = false },
+                onToggleCountInTotal = { viewModel.toggleCountInTotal() },
+                onToggleArchived = { viewModel.toggleArchived() },
+                sheetState = sheetState
+            )
         }
     }
 }
@@ -486,11 +535,6 @@ fun TransactionList(
         state = listState,
         contentPadding = PaddingValues(bottom = 80.dp),
     ) {
-        item {
-            WalletHeader(wallet, formatterConfig)
-        }
-        
-
         if (items.isEmpty()) {
             item {
                 Box(

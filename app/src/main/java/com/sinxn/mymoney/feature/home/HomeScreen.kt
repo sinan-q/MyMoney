@@ -45,6 +45,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.core.util.Constants
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.rememberCoroutineScope
+import com.sinxn.mymoney.core.ui.components.NavigationMenuPage
+import kotlinx.coroutines.launch
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -52,10 +59,20 @@ fun HomeScreen(
     onNavigateToWallet: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
     onAddTransaction: () -> Unit,
+    onNavigateToDebts: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
+
+    val pagerState = rememberPagerState(pageCount = { 2 })
+    val coroutineScope = rememberCoroutineScope()
+
+    BackHandler(enabled = pagerState.currentPage == 1) {
+        coroutineScope.launch {
+            pagerState.animateScrollToPage(0)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -113,60 +130,87 @@ fun HomeScreen(
         val totalWallet = uiState.activeWallets.find { it.wallet.id == Constants.TOTAL_WALLET_ID }
         val otherWallets = uiState.activeWallets.filter { it.wallet.id != Constants.TOTAL_WALLET_ID }
 
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .padding(padding)
-                .fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 80.dp), // More bottom padding for FAB
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .fillMaxSize()
         ) {
-            // Grand Total Header
+            // Grand Total Header (Intact at top)
             totalWallet?.let {
-                item {
-                    GrandTotalHeader(
-                        wallet = it,
-                        isTotalValid = uiState.isTotalValid,
-                        balanceBreakdown = uiState.balanceBreakdown,
-                        onClick = { onNavigateToWallet(it.wallet.id) }
-                    )
-                }
-            }
-
-            // Section Label
-            if (otherWallets.isNotEmpty()) {
-                item {
-                    Text(
-                        text = "Your Wallets",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                    )
-                }
-            }
-
-            // Active Wallets
-            items(otherWallets) { walletWithBalance ->
-                WalletItem(
-                    item = walletWithBalance,
-                    onClick = { onNavigateToWallet(walletWithBalance.wallet.id) }
+                GrandTotalHeader(
+                    wallet = it,
+                    isTotalValid = uiState.isTotalValid,
+                    balanceBreakdown = uiState.balanceBreakdown,
+                    onClick = { onNavigateToWallet(it.wallet.id) }
                 )
             }
 
-            // Archived Wallets
-            if (uiState.archivedWallets.isNotEmpty()) {
-                item {
-                    Text(
-                        text = "Archived",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                    )
-                }
-                items(uiState.archivedWallets) { walletWithBalance ->
-                    WalletItem(
-                        item = walletWithBalance,
-                        onClick = { onNavigateToWallet(walletWithBalance.wallet.id) }
-                    )
+            // HorizontalPager only for the list content below header
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) { page ->
+                when (page) {
+                    0 -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 80.dp), // More bottom padding for FAB
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // Section Label
+                            if (otherWallets.isNotEmpty()) {
+                                item {
+                                    Text(
+                                        text = "Your Wallets",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = MaterialTheme.colorScheme.outline,
+                                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                                    )
+                                }
+                            }
+
+                            // Active Wallets
+                            items(otherWallets) { walletWithBalance ->
+                                WalletItem(
+                                    item = walletWithBalance,
+                                    onClick = { onNavigateToWallet(walletWithBalance.wallet.id) }
+                                )
+                            }
+
+                            // Archived Wallets
+                            if (uiState.archivedWallets.isNotEmpty()) {
+                                item {
+                                    Text(
+                                        text = "Archived",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = MaterialTheme.colorScheme.outline,
+                                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                                    )
+                                }
+                                items(uiState.archivedWallets) { walletWithBalance ->
+                                    WalletItem(
+                                        item = walletWithBalance,
+                                        onClick = { onNavigateToWallet(walletWithBalance.wallet.id) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    1 -> {
+                        com.sinxn.mymoney.core.ui.components.NavigationMenuContent(
+                            showHeaderCard = false,
+                            onItemClick = { item ->
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(0)
+                                }
+                                if (item.id == "debts") {
+                                    onNavigateToDebts()
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }

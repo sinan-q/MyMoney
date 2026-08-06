@@ -51,7 +51,40 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onAddTransaction = {
                                         navController.navigate("transaction_details/new")
+                                    },
+                                    onNavigateToDebts = {
+                                        navController.navigate("debts")
                                     }
+                                )
+                            }
+                            composable("debts") {
+                                com.sinxn.mymoney.feature.debt.DebtListScreen(
+                                    onNavigateUp = { navController.navigateUp() },
+                                    onDebtClick = { debtId ->
+                                        navController.navigate("debt_details/$debtId")
+                                    },
+                                    onAddDebt = { type ->
+                                        navController.navigate("debt_details/new?type=$type")
+                                    },
+                                    onNavigateMenuItem = { itemId ->
+                                        if (itemId != "debts") {
+                                            try { navController.navigate(itemId) } catch (e: Exception) {}
+                                        }
+                                    }
+                                )
+                            }
+                            composable(
+                                "debt_details/{debtId}?type={type}",
+                                arguments = listOf(
+                                    androidx.navigation.navArgument("debtId") { type = androidx.navigation.NavType.StringType },
+                                    androidx.navigation.navArgument("type") {
+                                        type = androidx.navigation.NavType.IntType
+                                        defaultValue = 0
+                                    }
+                                )
+                            ) {
+                                com.sinxn.mymoney.feature.debt.DebtDetailsScreen(
+                                    onNavigateBack = { navController.navigateUp() }
                                 )
                             }
                             composable("backup") {
@@ -90,6 +123,9 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onAddTransaction = {
                                         navController.navigate("transaction_details/new")
+                                    },
+                                    onNavigateToDebts = {
+                                        navController.navigate("debts")
                                     }
                                 )
                             }

@@ -2,8 +2,12 @@ package com.sinxn.mymoney.core.data.local.dao
 
 import androidx.room.*
 import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
+import com.sinxn.mymoney.core.data.local.entity.DebtEntity
+import com.sinxn.mymoney.core.data.local.entity.DebtPeopleEntity
 import com.sinxn.mymoney.core.data.local.entity.TransactionEntity
 import com.sinxn.mymoney.core.data.local.entity.WalletEntity
+import com.sinxn.mymoney.core.data.local.model.DebtWithDetails
+import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import kotlinx.coroutines.flow.Flow
 
@@ -314,4 +318,126 @@ interface MoneyDao {
         WHERE ta.transactionId = :transactionId
     """)
     fun getAttachmentsForTransaction(transactionId: String): Flow<List<com.sinxn.mymoney.core.data.local.entity.AttachmentEntity>>
+
+    // Debts
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDebt(debt: DebtEntity)
+
+    @Update
+    suspend fun updateDebt(debt: DebtEntity)
+
+    @Query("UPDATE debts SET isArchived = :isArchived, lastEdit = :lastEdit WHERE id = :debtId")
+    suspend fun updateDebtArchived(debtId: String, isArchived: Boolean, lastEdit: Long)
+
+    @Query("UPDATE debts SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :debtId")
+    suspend fun softDeleteDebt(debtId: String, lastEdit: Long)
+
+    @Query("DELETE FROM debts WHERE id = :debtId")
+    suspend fun hardDeleteDebt(debtId: String)
+
+    @Query("SELECT * FROM debts WHERE id = :debtId AND isDeleted = 0")
+    suspend fun getDebtById(debtId: String): DebtEntity?
+
+    @Query("DELETE FROM debt_people WHERE debtId = :debtId")
+    suspend fun deletePeopleForDebt(debtId: String)
+
+    @Query("""
+        SELECT p.* 
+        FROM people p
+        INNER JOIN debt_people dp ON p.id = dp.personId
+        WHERE dp.debtId = :debtId AND dp.isDeleted = 0 AND p.isDeleted = 0
+    """)
+    fun getPeopleForDebt(debtId: String): Flow<List<com.sinxn.mymoney.core.data.local.entity.PersonEntity>>
+
+    @Query("""
+        SELECT p.* 
+        FROM people p
+        INNER JOIN debt_people dp ON p.id = dp.personId
+        WHERE dp.debtId = :debtId AND dp.isDeleted = 0 AND p.isDeleted = 0
+    """)
+    suspend fun getPeopleListForDebt(debtId: String): List<com.sinxn.mymoney.core.data.local.entity.PersonEntity>
+
+    @androidx.room.Transaction
+    @Query("""
+        SELECT d.*, 
+               w.name as walletName, w.icon as walletIcon, w.currency as walletCurrency, w.isArchived as walletArchived,
+               p.name as placeName, p.icon as placeIcon,
+               COALESCE((
+                   SELECT SUM(((t.direction * 2) - 1) * t.money)
+                   FROM transactions t
+                   LEFT JOIN categories c ON t.categoryId = c.id
+                   WHERE t.debtId = d.id 
+                     AND t.isDeleted = 0 
+                     AND t.confirmed = 1 
+                     AND (c.tag = 'system::paid_debt' OR c.tag = 'system::paid_credit')
+                     AND t.date <= :maxDate
+               ), 0) as progress
+        FROM debts d
+        INNER JOIN wallets w ON d.walletId = w.id
+        LEFT JOIN places p ON d.placeId = p.id
+        WHERE d.isDeleted = 0 
+          AND (:type IS NULL OR d.type = :type)
+          AND (:includeArchived = 1 OR d.isArchived = 0)
+        ORDER BY d.isArchived ASC, d.date DESC
+    """)
+    fun getDebtsWithDetails(
+        type: Int?, 
+        includeArchived: Boolean, 
+        maxDate: String
+    ): Flow<List<DebtWithDetails>>
+
+    @androidx.room.Transaction
+    @Query("""
+        SELECT d.*, 
+               w.name as walletName, w.icon as walletIcon, w.currency as walletCurrency, w.isArchived as walletArchived,
+               p.name as placeName, p.icon as placeIcon,
+               COALESCE((
+                   SELECT SUM(((t.direction * 2) - 1) * t.money)
+                   FROM transactions t
+                   LEFT JOIN categories c ON t.categoryId = c.id
+                   WHERE t.debtId = d.id 
+                     AND t.isDeleted = 0 
+                     AND t.confirmed = 1 
+                     AND (c.tag = 'system::paid_debt' OR c.tag = 'system::paid_credit')
+                     AND t.date <= :maxDate
+               ), 0) as progress
+        FROM debts d
+        INNER JOIN wallets w ON d.walletId = w.id
+        LEFT JOIN places p ON d.placeId = p.id
+        WHERE d.id = :debtId AND d.isDeleted = 0
+    """)
+    fun getDebtWithDetailsById(debtId: String, maxDate: String): Flow<DebtWithDetails?>
+
+    @androidx.room.Transaction
+    @Query("""
+        SELECT t.*, c.name as categoryName, c.icon as categoryIcon,
+               COALESCE(curr.decimals, 2) as decimals, curr.symbol as currencySymbol,
+               w.currency as currencyCode
+        FROM transactions t
+        LEFT JOIN categories c ON t.categoryId = c.id
+        INNER JOIN wallets w ON t.walletId = w.id
+        LEFT JOIN currencies curr ON w.currency = curr.iso
+        WHERE t.debtId = :debtId AND t.isDeleted = 0
+        ORDER BY t.date DESC
+    """)
+    fun getTransactionsForDebt(debtId: String): Flow<List<TransactionWithCategory>>
+
+    @Query("SELECT * FROM categories WHERE tag = :tag AND isDeleted = 0 LIMIT 1")
+    suspend fun getCategoryByTag(tag: String): CategoryEntity?
+
+    @Query("""
+        SELECT t.* FROM transactions t
+        LEFT JOIN categories c ON t.categoryId = c.id
+        WHERE t.debtId = :debtId AND t.type = 2 AND t.isDeleted = 0
+          AND (c.tag = 'system::debt' OR c.tag = 'system::credit')
+        LIMIT 1
+    """)
+    suspend fun getMasterTransactionForDebt(debtId: String): TransactionEntity?
+
+    @Query("UPDATE transactions SET isDeleted = 1, lastEdit = :lastEdit WHERE debtId = :debtId")
+    suspend fun softDeleteTransactionsForDebt(debtId: String, lastEdit: Long)
+
+    @Query("UPDATE debt_people SET isDeleted = 1, lastEdit = :lastEdit WHERE debtId = :debtId")
+    suspend fun softDeletePeopleForDebt(debtId: String, lastEdit: Long)
 }
+
