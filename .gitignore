@@ -1,16 +1,38 @@
+# Gradle & Build outputs
+.gradle/
+/build/
+**/build/
+*.apk
+*.aar
+*.aab
+*.dex
+*.class
+app/release/
+
+# Android Studio & IDEs
+.idea/
 *.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+*.iws
+*.ipr
+.kotlin/
+
+# Local configuration & secrets
 local.properties
-/build_error.log
+
+# Logs and local build scripts
+*.log
+build_error.log
+build_log*.txt
+build_output.txt
+run_build.bat
+
+# OS generated files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Android NDK / Native build
+.externalNativeBuild/
+.cxx/
+/captures/
+
