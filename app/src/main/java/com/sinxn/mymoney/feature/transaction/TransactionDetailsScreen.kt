@@ -101,6 +101,7 @@ import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CategorySelectionDialog
 import com.sinxn.mymoney.core.ui.components.NumpadView
 import com.sinxn.mymoney.core.ui.components.SelectionDialog
+import com.sinxn.mymoney.core.ui.components.WalletSelectionDialog
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import java.text.SimpleDateFormat
@@ -1127,15 +1128,15 @@ fun UltraCleanTransactionContent(
     }
 
     if (showWalletPicker) {
-        SelectionDialog(
+        WalletSelectionDialog(
             title = "Select Wallet",
-            options = uiState.availableWallets,
-            onOptionSelected = {
-                viewModel.onWalletIdChange(it.id)
+            wallets = uiState.availableWallets,
+            selectedWalletId = uiState.editWalletId,
+            onWalletSelected = { wallet ->
+                viewModel.onWalletIdChange(wallet.id)
                 showWalletPicker = false
             },
-            onDismissRequest = { showWalletPicker = false },
-            labelProvider = { it.name }
+            onDismissRequest = { showWalletPicker = false }
         )
     }
 
