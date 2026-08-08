@@ -61,6 +61,12 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onDebtClick = { debtId ->
                                         navController.navigate("debt_details/$debtId")
+                                    },
+                                    onNavigateToBudgets = {
+                                        navController.navigate("budgets")
+                                    },
+                                    onNavigateToSavings = {
+                                        navController.navigate("savings")
                                     }
                                 )
                             }
@@ -157,16 +163,116 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onDebtClick = { debtId ->
                                         navController.navigate("debt_details/$debtId")
+                                    },
+                                    onNavigateToBudgets = { walletId ->
+                                        val route = if (!walletId.isNullOrBlank()) "budgets?walletId=$walletId" else "budgets"
+                                        navController.navigate(route)
+                                    },
+                                    onNavigateToSavings = { walletId ->
+                                        val route = if (!walletId.isNullOrBlank()) "savings?walletId=$walletId" else "savings"
+                                        navController.navigate(route)
                                     }
                                 )
                             }
                             composable(
-                                "transaction_details/{transactionId}",
+                                "transaction_details/{transactionId}?savingId={savingId}&action={action}",
+                                arguments = listOf(
+                                    androidx.navigation.navArgument("transactionId") { type = androidx.navigation.NavType.StringType },
+                                    androidx.navigation.navArgument("savingId") {
+                                        type = androidx.navigation.NavType.StringType
+                                        nullable = true
+                                        defaultValue = null
+                                    },
+                                    androidx.navigation.navArgument("action") {
+                                        type = androidx.navigation.NavType.StringType
+                                        nullable = true
+                                        defaultValue = null
+                                    }
+                                ),
                                 deepLinks = listOf(
                                     androidx.navigation.navDeepLink { uriPattern = "mymoney://transaction/{transactionId}" }
                                 )
                             ) {
                                 com.sinxn.mymoney.feature.transaction.TransactionDetailsScreen(
+                                    onNavigateBack = { navController.navigateUp() }
+                                )
+                            }
+                            composable(
+                                "budgets?walletId={walletId}",
+                                arguments = listOf(
+                                    androidx.navigation.navArgument("walletId") {
+                                        type = androidx.navigation.NavType.StringType
+                                        nullable = true
+                                        defaultValue = null
+                                    }
+                                )
+                            ) { backStackEntry ->
+                                com.sinxn.mymoney.feature.budget.BudgetListScreen(
+                                    onNavigateUp = { navController.navigateUp() },
+                                    onBudgetClick = { budgetId ->
+                                        navController.navigate("budget_details/$budgetId")
+                                    },
+                                    onAddBudget = {
+                                        navController.navigate("budget_details/new")
+                                    },
+                                    onNavigateMenuItem = { itemId ->
+                                        if (itemId != "budgets") {
+                                            try { navController.navigate(itemId) } catch (e: Exception) {}
+                                        }
+                                    }
+                                )
+                            }
+                            composable(
+                                "budget_details/{budgetId}",
+                                arguments = listOf(
+                                    androidx.navigation.navArgument("budgetId") { type = androidx.navigation.NavType.StringType }
+                                )
+                            ) {
+                                com.sinxn.mymoney.feature.budget.BudgetDetailsScreen(
+                                    onNavigateBack = { navController.navigateUp() }
+                                )
+                            }
+                            composable(
+                                "savings?walletId={walletId}",
+                                arguments = listOf(
+                                    androidx.navigation.navArgument("walletId") {
+                                        type = androidx.navigation.NavType.StringType
+                                        nullable = true
+                                        defaultValue = null
+                                    }
+                                )
+                            ) { backStackEntry ->
+                                com.sinxn.mymoney.feature.saving.SavingListScreen(
+                                    onNavigateUp = { navController.navigateUp() },
+                                    onSavingClick = { savingId ->
+                                        navController.navigate("saving_details/$savingId")
+                                    },
+                                    onAddSaving = {
+                                        navController.navigate("saving_details/new")
+                                    },
+                                    onDeposit = { savingId ->
+                                        navController.navigate("transaction_details/new?savingId=$savingId&action=deposit")
+                                    },
+                                    onWithdraw = { savingId ->
+                                        navController.navigate("transaction_details/new?savingId=$savingId&action=withdraw")
+                                    },
+                                    onWithdrawEverything = { savingId ->
+                                        navController.navigate("transaction_details/new?savingId=$savingId&action=withdraw_everything")
+                                    },
+                                    onNavigateMenuItem = { itemId ->
+                                        if (itemId != "savings") {
+                                            try { navController.navigate(itemId) } catch (e: Exception) {}
+                                        }
+                                    }
+                                )
+                            }
+                            composable(
+                                "saving_details/{savingId}",
+                                arguments = listOf(
+                                    androidx.navigation.navArgument("savingId") { type = androidx.navigation.NavType.StringType }
+                                )
+                            ) {
+                                com.sinxn.mymoney.feature.saving.SavingDetailsScreen(
                                     onNavigateBack = { navController.navigateUp() }
                                 )
                             }

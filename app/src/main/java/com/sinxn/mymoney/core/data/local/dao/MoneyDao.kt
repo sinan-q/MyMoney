@@ -6,7 +6,9 @@ import com.sinxn.mymoney.core.data.local.entity.DebtEntity
 import com.sinxn.mymoney.core.data.local.entity.DebtPeopleEntity
 import com.sinxn.mymoney.core.data.local.entity.TransactionEntity
 import com.sinxn.mymoney.core.data.local.entity.WalletEntity
+import com.sinxn.mymoney.core.data.local.model.BudgetWithDetails
 import com.sinxn.mymoney.core.data.local.model.DebtWithDetails
+import com.sinxn.mymoney.core.data.local.model.SavingWithDetails
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import kotlinx.coroutines.flow.Flow
@@ -448,5 +450,209 @@ interface MoneyDao {
 
     @Query("UPDATE debt_people SET isDeleted = 1, lastEdit = :lastEdit WHERE debtId = :debtId")
     suspend fun softDeletePeopleForDebt(debtId: String, lastEdit: Long)
+
+    // --- Budget Queries & Operations ---
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertBudget(budget: com.sinxn.mymoney.core.data.local.entity.BudgetEntity)
+
+    @Update
+    suspend fun updateBudget(budget: com.sinxn.mymoney.core.data.local.entity.BudgetEntity)
+
+    @Query("UPDATE budgets SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :budgetId")
+    suspend fun softDeleteBudget(budgetId: String, lastEdit: Long)
+
+    @Query("DELETE FROM budget_wallets WHERE budgetId = :budgetId")
+    suspend fun deleteBudgetWallets(budgetId: String)
+
+    @Query("SELECT walletId FROM budget_wallets WHERE budgetId = :budgetId AND isDeleted = 0")
+    suspend fun getWalletIdsForBudget(budgetId: String): List<String>
+
+    @Query("SELECT * FROM wallets WHERE id IN (SELECT walletId FROM budget_wallets WHERE budgetId = :budgetId AND isDeleted = 0) AND isDeleted = 0")
+    suspend fun getWalletsForBudget(budgetId: String): List<WalletEntity>
+
+    @androidx.room.Transaction
+    @Query("""
+        SELECT b.*,
+               c.name as categoryName, c.icon as categoryIcon, c.type as categoryType,
+               c.showReport as categoryShowReport, c.tag as categoryTag,
+               GROUP_CONCAT('<' || bw.walletId || '>') as walletIds,
+               MAX(w.countInTotal) as hasWalletInTotal,
+               COALESCE((
+                   CASE b.type
+                       WHEN 0 THEN (
+                           SELECT SUM(t.money)
+                           FROM transactions t
+                           INNER JOIN budget_wallets bw2 ON t.walletId = bw2.walletId
+                           WHERE bw2.budgetId = b.id AND bw2.isDeleted = 0 AND t.isDeleted = 0
+                             AND t.direction = 0 AND t.date <= :maxDate
+                             AND DATE(t.date) >= DATE(b.startDate) AND DATE(t.date) <= DATE(b.endDate)
+                             AND t.id NOT IN (
+                                 SELECT tf.transactionFromId
+                                 FROM transfers tf
+                                 INNER JOIN transactions t2 ON tf.transactionToId = t2.id
+                                 INNER JOIN budget_wallets bw3 ON t2.walletId = bw3.walletId
+                                 WHERE bw3.budgetId = b.id AND bw3.walletId != t.walletId
+                             )
+                       )
+                       WHEN 1 THEN (
+                           SELECT SUM(t.money)
+                           FROM transactions t
+                           INNER JOIN budget_wallets bw2 ON t.walletId = bw2.walletId
+                           WHERE bw2.budgetId = b.id AND bw2.isDeleted = 0 AND t.isDeleted = 0
+                             AND t.direction = 1 AND t.date <= :maxDate
+                             AND DATE(t.date) >= DATE(b.startDate) AND DATE(t.date) <= DATE(b.endDate)
+                             AND t.id NOT IN (
+                                 SELECT tf.transactionToId
+                                 FROM transfers tf
+                                 INNER JOIN transactions t2 ON tf.transactionFromId = t2.id
+                                 INNER JOIN budget_wallets bw3 ON t2.walletId = bw3.walletId
+                                 WHERE bw3.budgetId = b.id AND bw3.walletId != t.walletId
+                             )
+                       )
+                       WHEN 2 THEN (
+                           SELECT SUM(((t.direction * 2) - 1) * t.money)
+                           FROM transactions t
+                           INNER JOIN budget_wallets bw2 ON t.walletId = bw2.walletId
+                           LEFT JOIN categories tc ON t.categoryId = tc.id
+                           WHERE bw2.budgetId = b.id AND bw2.isDeleted = 0 AND t.isDeleted = 0 AND tc.isDeleted = 0
+                             AND t.date <= :maxDate
+                             AND DATE(t.date) >= DATE(b.startDate) AND DATE(t.date) <= DATE(b.endDate)
+                             AND (b.categoryId = t.categoryId OR b.categoryId = tc.parentId)
+                       )
+                       ELSE 0
+                   END
+               ), 0) as progress
+        FROM budgets b
+        INNER JOIN budget_wallets bw ON b.id = bw.budgetId AND bw.isDeleted = 0
+        INNER JOIN wallets w ON bw.walletId = w.id AND w.isDeleted = 0
+        LEFT JOIN categories c ON b.categoryId = c.id AND c.isDeleted = 0
+        WHERE b.isDeleted = 0
+          AND (
+            (:walletId IS NULL OR :walletId = 'total' OR :walletId = '') AND w.countInTotal = 1
+            OR (:walletId IS NOT NULL AND :walletId != 'total' AND :walletId != '' AND bw.walletId = :walletId)
+          )
+        GROUP BY b.id
+        ORDER BY b.startDate DESC
+    """)
+    fun getBudgetsWithDetails(walletId: String? = null, maxDate: String): Flow<List<BudgetWithDetails>>
+
+    @androidx.room.Transaction
+    @Query("""
+        SELECT b.*,
+               c.name as categoryName, c.icon as categoryIcon, c.type as categoryType,
+               c.showReport as categoryShowReport, c.tag as categoryTag,
+               GROUP_CONCAT('<' || bw.walletId || '>') as walletIds,
+               MAX(w.countInTotal) as hasWalletInTotal,
+               COALESCE((
+                   CASE b.type
+                       WHEN 0 THEN (
+                           SELECT SUM(t.money)
+                           FROM transactions t
+                           INNER JOIN budget_wallets bw2 ON t.walletId = bw2.walletId
+                           WHERE bw2.budgetId = b.id AND bw2.isDeleted = 0 AND t.isDeleted = 0
+                             AND t.direction = 0 AND t.date <= :maxDate
+                             AND DATE(t.date) >= DATE(b.startDate) AND DATE(t.date) <= DATE(b.endDate)
+                       )
+                       WHEN 1 THEN (
+                           SELECT SUM(t.money)
+                           FROM transactions t
+                           INNER JOIN budget_wallets bw2 ON t.walletId = bw2.walletId
+                           WHERE bw2.budgetId = b.id AND bw2.isDeleted = 0 AND t.isDeleted = 0
+                             AND t.direction = 1 AND t.date <= :maxDate
+                             AND DATE(t.date) >= DATE(b.startDate) AND DATE(t.date) <= DATE(b.endDate)
+                       )
+                       WHEN 2 THEN (
+                           SELECT SUM(((t.direction * 2) - 1) * t.money)
+                           FROM transactions t
+                           INNER JOIN budget_wallets bw2 ON t.walletId = bw2.walletId
+                           LEFT JOIN categories tc ON t.categoryId = tc.id
+                           WHERE bw2.budgetId = b.id AND bw2.isDeleted = 0 AND t.isDeleted = 0 AND tc.isDeleted = 0
+                             AND t.date <= :maxDate
+                             AND DATE(t.date) >= DATE(b.startDate) AND DATE(t.date) <= DATE(b.endDate)
+                             AND (b.categoryId = t.categoryId OR b.categoryId = tc.parentId)
+                       )
+                       ELSE 0
+                   END
+               ), 0) as progress
+        FROM budgets b
+        INNER JOIN budget_wallets bw ON b.id = bw.budgetId AND bw.isDeleted = 0
+        INNER JOIN wallets w ON bw.walletId = w.id AND w.isDeleted = 0
+        LEFT JOIN categories c ON b.categoryId = c.id AND c.isDeleted = 0
+        WHERE b.id = :budgetId AND b.isDeleted = 0
+        GROUP BY b.id
+    """)
+    fun getBudgetWithDetailsById(budgetId: String, maxDate: String): Flow<BudgetWithDetails?>
+
+    // --- Savings Queries & Operations ---
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSaving(saving: com.sinxn.mymoney.core.data.local.entity.SavingEntity)
+
+    @Update
+    suspend fun updateSaving(saving: com.sinxn.mymoney.core.data.local.entity.SavingEntity)
+
+    @Query("UPDATE savings SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :savingId")
+    suspend fun softDeleteSaving(savingId: String, lastEdit: Long)
+
+    @Query("UPDATE savings SET isComplete = :isComplete, lastEdit = :lastEdit WHERE id = :savingId")
+    suspend fun updateSavingComplete(savingId: String, isComplete: Boolean, lastEdit: Long)
+
+    @androidx.room.Transaction
+    @Query("""
+        SELECT s.*,
+               w.name as walletName, w.icon as walletIcon, w.currency as walletCurrency,
+               w.countInTotal as walletCountInTotal, w.isArchived as walletArchived, w.tag as walletTag,
+               COALESCE((
+                   SELECT SUM(((t.direction * -2) + 1) * t.money)
+                   FROM transactions t
+                   LEFT JOIN categories c ON t.categoryId = c.id
+                   WHERE t.savingId = s.id AND t.isDeleted = 0 AND t.confirmed = 1
+                     AND (c.tag = 'system::deposit' OR c.tag = 'system::withdraw')
+                     AND t.date <= :maxDate
+               ), 0) as progress
+        FROM savings s
+        INNER JOIN wallets w ON s.walletId = w.id AND w.isDeleted = 0
+        WHERE s.isDeleted = 0
+          AND s.isComplete = :isComplete
+          AND (
+            (:walletId IS NULL OR :walletId = 'total' OR :walletId = '') AND w.countInTotal = 1
+            OR (:walletId IS NOT NULL AND :walletId != 'total' AND :walletId != '' AND s.walletId = :walletId)
+          )
+        ORDER BY s.id DESC
+    """)
+    fun getSavingsWithDetails(walletId: String? = null, isComplete: Boolean = false, maxDate: String): Flow<List<SavingWithDetails>>
+
+    @androidx.room.Transaction
+    @Query("""
+        SELECT s.*,
+               w.name as walletName, w.icon as walletIcon, w.currency as walletCurrency,
+               w.countInTotal as walletCountInTotal, w.isArchived as walletArchived, w.tag as walletTag,
+               COALESCE((
+                   SELECT SUM(((t.direction * -2) + 1) * t.money)
+                   FROM transactions t
+                   LEFT JOIN categories c ON t.categoryId = c.id
+                   WHERE t.savingId = s.id AND t.isDeleted = 0 AND t.confirmed = 1
+                     AND (c.tag = 'system::deposit' OR c.tag = 'system::withdraw')
+                     AND t.date <= :maxDate
+               ), 0) as progress
+        FROM savings s
+        INNER JOIN wallets w ON s.walletId = w.id AND w.isDeleted = 0
+        WHERE s.id = :savingId AND s.isDeleted = 0
+    """)
+    fun getSavingWithDetailsById(savingId: String, maxDate: String): Flow<SavingWithDetails?>
+
+    @androidx.room.Transaction
+    @Query("""
+        SELECT t.*, c.name as categoryName, c.icon as categoryIcon,
+               COALESCE(curr.decimals, 2) as decimals, curr.symbol as currencySymbol,
+               w.currency as currencyCode
+        FROM transactions t
+        LEFT JOIN categories c ON t.categoryId = c.id
+        INNER JOIN wallets w ON t.walletId = w.id
+        LEFT JOIN currencies curr ON w.currency = curr.iso
+        WHERE t.savingId = :savingId AND t.isDeleted = 0
+        ORDER BY t.date DESC
+    """)
+    fun getTransactionsForSaving(savingId: String): Flow<List<TransactionWithCategory>>
 }
+
 

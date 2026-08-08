@@ -68,6 +68,8 @@ fun WalletDetailsScreen(
     onNavigateToRecap: () -> Unit,
     onAddTransaction: () -> Unit,
     onNavigateToDebts: (String?) -> Unit = {},
+    onNavigateToBudgets: (String?) -> Unit = {},
+    onNavigateToSavings: (String?) -> Unit = {},
     onAddDebt: (walletId: String?, type: Int) -> Unit = { _, _ -> },
     onDebtClick: (String) -> Unit = {},
     viewModel: WalletDetailsViewModel = hiltViewModel()
@@ -241,6 +243,8 @@ fun WalletDetailsScreen(
                                     when (item.id) {
                                         "debts" -> activeSection = "debts"
                                         "transactions" -> activeSection = "transactions"
+                                        "budgets" -> onNavigateToBudgets(wallet?.wallet?.id)
+                                        "savings" -> onNavigateToSavings(wallet?.wallet?.id)
                                         else -> {}
                                     }
                                 }

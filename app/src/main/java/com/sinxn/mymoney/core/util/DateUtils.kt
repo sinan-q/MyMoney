@@ -140,4 +140,10 @@ object DateUtils {
         return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
                 cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
     }
+
+    fun addMonths(calendar: Calendar, months: Int): Date {
+        val cal = calendar.clone() as Calendar
+        cal.add(Calendar.MONTH, months)
+        return cal.time
+    }
 }

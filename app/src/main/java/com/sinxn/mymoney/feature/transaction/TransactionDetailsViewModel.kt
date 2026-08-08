@@ -14,12 +14,14 @@ import com.sinxn.mymoney.core.data.local.entity.WalletEntity
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
+import com.sinxn.mymoney.core.data.repository.SavingRepository
 import com.sinxn.mymoney.core.util.DateUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Calendar
@@ -76,11 +78,15 @@ data class TransactionDetailsUiState(
 class TransactionDetailsViewModel @Inject constructor(
     private val moneyDao: MoneyDao,
     private val settingsRepository: SettingsRepository,
+    private val savingRepository: SavingRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val transactionId: String = checkNotNull(savedStateHandle["transactionId"])
     private val isNewTransaction = transactionId == "new"
+
+    private val _savingId = MutableStateFlow<String?>(savedStateHandle.get<String>("savingId"))
+    private val _savingCompletedOnSave = MutableStateFlow(false)
 
     private val _isEditMode = MutableStateFlow(isNewTransaction)
     private val _isSaving = MutableStateFlow(false)
@@ -107,6 +113,31 @@ class TransactionDetailsViewModel @Inject constructor(
     private val _transferEntity = MutableStateFlow<com.sinxn.mymoney.core.data.local.entity.TransferEntity?>(null)
 
     init {
+        val savingIdArg: String? = savedStateHandle.get<String>("savingId")
+        val savingActionArg: String? = savedStateHandle.get<String>("action")
+
+        if (isNewTransaction && !savingIdArg.isNullOrBlank()) {
+            _savingId.value = savingIdArg
+            viewModelScope.launch {
+                savingRepository.getSavingDetails(savingIdArg).firstOrNull()?.let { savingDetails ->
+                    _editWalletId.value = savingDetails.saving.walletId
+                    _editDescription.value = savingDetails.saving.description ?: "Saving"
+
+                    val isDeposit = savingActionArg == "deposit"
+                    val tag = if (isDeposit) SavingRepository.TAG_SAVING_DEPOSIT else SavingRepository.TAG_SAVING_WITHDRAW
+                    val cat = savingRepository.getOrCreateSystemCategory(tag)
+                    _editCategoryId.value = cat.id
+                    _editDirection.value = if (isDeposit) 0 else 1
+
+                    if (savingActionArg == "withdraw_everything") {
+                        val targetOrCurrent = if (savingDetails.neededMoney == 0L) savingDetails.saving.endMoney else savingDetails.currentMoney
+                        _editAmount.value = (targetOrCurrent / 100.0).toString()
+                        _savingCompletedOnSave.value = true
+                    }
+                }
+            }
+        }
+
         if (!isNewTransaction) {
             viewModelScope.launch {
                 val tx = moneyDao.getTransactionById(transactionId)
@@ -758,12 +789,18 @@ class TransactionDetailsViewModel @Inject constructor(
                             type = 0,
                             isDeleted = false,
                             debtId = null,
-                            savingId = null,
+                            savingId = _savingId.value,
                             recurrenceId = null,
                             tag = null,
                             lastEdit = System.currentTimeMillis()
                         )
                         moneyDao.insertTransaction(newTransaction)
+
+                        _savingId.value?.let { sid ->
+                            if (_savingCompletedOnSave.value) {
+                                savingRepository.setSavingComplete(sid, true)
+                            }
+                        }
                     } else {
                         val current = uiState.value.transaction?.transaction ?: return@launch
                         val updated = current.copy(

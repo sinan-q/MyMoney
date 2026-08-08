@@ -63,6 +63,8 @@ fun HomeScreen(
     onNavigateToDebts: (String?) -> Unit = {},
     onAddDebt: (type: Int) -> Unit = {},
     onDebtClick: (String) -> Unit = {},
+    onNavigateToBudgets: () -> Unit = {},
+    onNavigateToSavings: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -267,6 +269,8 @@ fun HomeScreen(
                                 when (item.id) {
                                     "debts" -> activeSection = "debts"
                                     "transactions" -> activeSection = "transactions"
+                                    "budgets" -> onNavigateToBudgets()
+                                    "savings" -> onNavigateToSavings()
                                     "settings" -> onNavigateToSettings()
                                     else -> {}
                                 }

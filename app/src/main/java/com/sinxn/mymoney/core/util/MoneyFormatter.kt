@@ -16,7 +16,7 @@ object MoneyFormatter {
     fun format(
         amount: Long, 
         currencyCode: String, 
-        decimals: Int, 
+        decimals: Int = 2, 
         config: Config = Config()
     ): String {
         val divider = 10.0.pow(decimals.toDouble())
