@@ -103,8 +103,11 @@ interface MoneyDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertDebtPeople(items: List<com.sinxn.mymoney.core.data.local.entity.DebtPeopleEntity>)
 
-    @Query("SELECT * FROM wallets WHERE isDeleted = 0 AND isArchived = 0 ORDER BY `index` ASC")
+    @Query("SELECT * FROM wallets WHERE isDeleted = 0 ORDER BY `index` ASC")
     fun getWallets(): Flow<List<WalletEntity>>
+
+    @Query("SELECT * FROM wallets WHERE isDeleted = 0 ORDER BY `index` ASC")
+    suspend fun getWalletsList(): List<WalletEntity>
 
     @Query("SELECT * FROM wallets WHERE isDeleted = 0 ORDER BY `index` ASC")
     fun getAllWalletsIncludingArchived(): Flow<List<WalletEntity>>
@@ -175,8 +178,11 @@ interface MoneyDao {
     @Query("UPDATE categories SET showReport = :showReport, lastEdit = :lastEdit WHERE id = :categoryId")
     suspend fun updateCategoryShowReport(categoryId: String, showReport: Boolean, lastEdit: Long)
 
-    @Query("SELECT * FROM categories WHERE isDeleted = 0")
+    @Query("SELECT * FROM categories WHERE isDeleted = 0 ORDER BY `index` ASC")
     fun getCategories(): Flow<List<CategoryEntity>>
+
+    @Query("SELECT * FROM categories WHERE isDeleted = 0 ORDER BY `index` ASC")
+    suspend fun getCategoriesList(): List<CategoryEntity>
 
     // Transactions
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -284,12 +290,18 @@ interface MoneyDao {
     @Query("SELECT * FROM places WHERE isDeleted = 0")
     fun getPlaces(): Flow<List<com.sinxn.mymoney.core.data.local.entity.PlaceEntity>>
 
+    @Query("SELECT * FROM places WHERE isDeleted = 0")
+    suspend fun getPlacesList(): List<com.sinxn.mymoney.core.data.local.entity.PlaceEntity>
+
     @Query("SELECT * FROM places WHERE id = :id")
     suspend fun getPlaceById(id: String): com.sinxn.mymoney.core.data.local.entity.PlaceEntity?
 
     // Events
     @Query("SELECT * FROM events WHERE isDeleted = 0")
     fun getEvents(): Flow<List<com.sinxn.mymoney.core.data.local.entity.EventEntity>>
+
+    @Query("SELECT * FROM events WHERE isDeleted = 0")
+    suspend fun getEventsList(): List<com.sinxn.mymoney.core.data.local.entity.EventEntity>
 
     @Query("SELECT * FROM events WHERE id = :id")
     suspend fun getEventById(id: String): com.sinxn.mymoney.core.data.local.entity.EventEntity?
@@ -653,6 +665,59 @@ interface MoneyDao {
         ORDER BY t.date DESC
     """)
     fun getTransactionsForSaving(savingId: String): Flow<List<TransactionWithCategory>>
+
+    // Recurrent Transactions & Transfers
+    @androidx.room.Transaction
+    @Query("SELECT * FROM recurrent_transactions WHERE isDeleted = 0 ORDER BY startDate DESC")
+    fun getRecurrentTransactionsWithDetails(): Flow<List<com.sinxn.mymoney.core.data.local.model.RecurrentTransactionWithDetails>>
+
+    @androidx.room.Transaction
+    @Query("SELECT * FROM recurrent_transfers WHERE isDeleted = 0 ORDER BY startDate DESC")
+    fun getRecurrentTransfersWithDetails(): Flow<List<com.sinxn.mymoney.core.data.local.model.RecurrentTransferWithDetails>>
+
+    @Query("SELECT * FROM recurrent_transactions WHERE id = :id AND isDeleted = 0")
+    suspend fun getRecurrentTransactionById(id: String): com.sinxn.mymoney.core.data.local.entity.RecurrentTransactionEntity?
+
+    @Query("SELECT * FROM recurrent_transfers WHERE id = :id AND isDeleted = 0")
+    suspend fun getRecurrentTransferById(id: String): com.sinxn.mymoney.core.data.local.entity.RecurrentTransferEntity?
+
+    @androidx.room.Transaction
+    @Query("SELECT * FROM recurrent_transactions WHERE id = :id AND isDeleted = 0")
+    fun getRecurrentTransactionWithDetailsById(id: String): Flow<com.sinxn.mymoney.core.data.local.model.RecurrentTransactionWithDetails?>
+
+    @androidx.room.Transaction
+    @Query("SELECT * FROM recurrent_transfers WHERE id = :id AND isDeleted = 0")
+    fun getRecurrentTransferWithDetailsById(id: String): Flow<com.sinxn.mymoney.core.data.local.model.RecurrentTransferWithDetails?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRecurrentTransaction(entity: com.sinxn.mymoney.core.data.local.entity.RecurrentTransactionEntity)
+
+    @Update
+    suspend fun updateRecurrentTransaction(entity: com.sinxn.mymoney.core.data.local.entity.RecurrentTransactionEntity)
+
+    @Query("UPDATE recurrent_transactions SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :id")
+    suspend fun deleteRecurrentTransaction(id: String, lastEdit: Long = System.currentTimeMillis())
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRecurrentTransfer(entity: com.sinxn.mymoney.core.data.local.entity.RecurrentTransferEntity)
+
+    @Update
+    suspend fun updateRecurrentTransfer(entity: com.sinxn.mymoney.core.data.local.entity.RecurrentTransferEntity)
+
+    @Query("UPDATE recurrent_transfers SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :id")
+    suspend fun deleteRecurrentTransfer(id: String, lastEdit: Long = System.currentTimeMillis())
+
+    @Query("UPDATE transactions SET recurrenceId = NULL, lastEdit = :lastEdit WHERE recurrenceId = :recurrenceId")
+    suspend fun unlinkTransactionsForRecurrence(recurrenceId: String, lastEdit: Long = System.currentTimeMillis())
+
+    @Query("UPDATE transfers SET recurrenceId = NULL, lastEdit = :lastEdit WHERE recurrenceId = :recurrenceId")
+    suspend fun unlinkTransfersForRecurrence(recurrenceId: String, lastEdit: Long = System.currentTimeMillis())
+
+    @Query("SELECT * FROM recurrent_transactions WHERE isDeleted = 0 AND nextOccurrence IS NOT NULL AND DATE(nextOccurrence) <= DATE(:today)")
+    suspend fun getPendingRecurrentTransactions(today: String): List<com.sinxn.mymoney.core.data.local.entity.RecurrentTransactionEntity>
+
+    @Query("SELECT * FROM recurrent_transfers WHERE isDeleted = 0 AND nextOccurrence IS NOT NULL AND DATE(nextOccurrence) <= DATE(:today)")
+    suspend fun getPendingRecurrentTransfers(today: String): List<com.sinxn.mymoney.core.data.local.entity.RecurrentTransferEntity>
 }
 
 

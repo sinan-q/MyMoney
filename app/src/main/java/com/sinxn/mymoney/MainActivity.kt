@@ -17,15 +17,24 @@ import androidx.navigation.compose.rememberNavController
 import com.sinxn.mymoney.feature.home.HomeScreen
 import com.sinxn.mymoney.feature.settings.BackupScreen
 import com.sinxn.mymoney.feature.settings.SqlConsoleScreen
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import com.sinxn.mymoney.ui.theme.MyMoneyTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject
+    lateinit var recurrenceRepository: com.sinxn.mymoney.core.data.repository.RecurrenceRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        lifecycleScope.launch {
+            recurrenceRepository.processPendingRecurrences()
+        }
         setContent {
             MyMoneyTheme {
                 Surface(
@@ -67,7 +76,47 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onNavigateToSavings = {
                                         navController.navigate("savings")
+                                    },
+                                    onNavigateToRecurrences = {
+                                        navController.navigate("recurrences")
                                     }
+                                )
+                            }
+                            composable("recurrences") {
+                                com.sinxn.mymoney.feature.recurrence.RecurrenceScreen(
+                                    onNavigateUp = { navController.navigateUp() },
+                                    onAddRecurrentTransaction = {
+                                        navController.navigate("recurrent_transaction_details/new")
+                                    },
+                                    onAddRecurrentTransfer = {
+                                        navController.navigate("recurrent_transfer_details/new")
+                                    },
+                                    onRecurrentTransactionClick = { id ->
+                                        navController.navigate("recurrent_transaction_details/$id")
+                                    },
+                                    onRecurrentTransferClick = { id ->
+                                        navController.navigate("recurrent_transfer_details/$id")
+                                    }
+                                )
+                            }
+                            composable(
+                                "recurrent_transaction_details/{id}",
+                                arguments = listOf(
+                                    androidx.navigation.navArgument("id") { type = androidx.navigation.NavType.StringType }
+                                )
+                            ) {
+                                com.sinxn.mymoney.feature.recurrence.RecurrentTransactionDetailsScreen(
+                                    onNavigateBack = { navController.navigateUp() }
+                                )
+                            }
+                            composable(
+                                "recurrent_transfer_details/{id}",
+                                arguments = listOf(
+                                    androidx.navigation.navArgument("id") { type = androidx.navigation.NavType.StringType }
+                                )
+                            ) {
+                                com.sinxn.mymoney.feature.recurrence.RecurrentTransferDetailsScreen(
+                                    onNavigateBack = { navController.navigateUp() }
                                 )
                             }
                             composable(

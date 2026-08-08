@@ -87,5 +87,7 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.core.splashscreen)
 
-
+    // Recurrence Rule & WorkManager
+    implementation(libs.lib.recur)
+    implementation(libs.androidx.work.runtime.ktx)
 }

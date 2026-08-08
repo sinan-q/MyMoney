@@ -65,6 +65,7 @@ fun HomeScreen(
     onDebtClick: (String) -> Unit = {},
     onNavigateToBudgets: () -> Unit = {},
     onNavigateToSavings: () -> Unit = {},
+    onNavigateToRecurrences: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -271,6 +272,7 @@ fun HomeScreen(
                                     "transactions" -> activeSection = "transactions"
                                     "budgets" -> onNavigateToBudgets()
                                     "savings" -> onNavigateToSavings()
+                                    "recurrences" -> onNavigateToRecurrences()
                                     "settings" -> onNavigateToSettings()
                                     else -> {}
                                 }
