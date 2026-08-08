@@ -605,6 +605,9 @@ interface MoneyDao {
     @Query("UPDATE savings SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :savingId")
     suspend fun softDeleteSaving(savingId: String, lastEdit: Long)
 
+    @Query("UPDATE transactions SET isDeleted = 1, lastEdit = :lastEdit WHERE savingId = :savingId")
+    suspend fun softDeleteTransactionsForSaving(savingId: String, lastEdit: Long)
+
     @Query("UPDATE savings SET isComplete = :isComplete, lastEdit = :lastEdit WHERE id = :savingId")
     suspend fun updateSavingComplete(savingId: String, isComplete: Boolean, lastEdit: Long)
 

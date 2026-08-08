@@ -278,7 +278,7 @@ class DebtRepository @Inject constructor(
                 lastEdit = now
             )
 
-            moneyDao.insertTransaction(updatedTx)
+            moneyDao.updateTransaction(updatedTx)
 
             moneyDao.deletePeopleForTransaction(masterTx.id)
             if (peopleIds.isNotEmpty()) {

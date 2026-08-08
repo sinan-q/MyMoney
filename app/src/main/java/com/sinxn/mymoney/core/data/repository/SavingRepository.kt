@@ -130,6 +130,7 @@ class SavingRepository @Inject constructor(
      */
     suspend fun deleteSaving(savingId: String) {
         val now = System.currentTimeMillis()
+        moneyDao.softDeleteTransactionsForSaving(savingId, now)
         moneyDao.softDeleteSaving(savingId, now)
     }
 }
