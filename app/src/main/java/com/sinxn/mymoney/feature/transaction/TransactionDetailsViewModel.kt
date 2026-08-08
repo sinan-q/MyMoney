@@ -14,6 +14,7 @@ import com.sinxn.mymoney.core.data.local.entity.WalletEntity
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
+import com.sinxn.mymoney.core.data.repository.DebtRepository
 import com.sinxn.mymoney.core.data.repository.SavingRepository
 import com.sinxn.mymoney.core.util.DateUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -79,6 +80,7 @@ class TransactionDetailsViewModel @Inject constructor(
     private val moneyDao: MoneyDao,
     private val settingsRepository: SettingsRepository,
     private val savingRepository: SavingRepository,
+    private val debtRepository: DebtRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -87,6 +89,7 @@ class TransactionDetailsViewModel @Inject constructor(
 
     private val _savingId = MutableStateFlow<String?>(savedStateHandle.get<String>("savingId"))
     private val _savingCompletedOnSave = MutableStateFlow(false)
+    private val _debtId = MutableStateFlow<String?>(savedStateHandle.get<String>("debtId"))
 
     private val _isEditMode = MutableStateFlow(isNewTransaction)
     private val _isSaving = MutableStateFlow(false)
@@ -115,24 +118,60 @@ class TransactionDetailsViewModel @Inject constructor(
     init {
         val savingIdArg: String? = savedStateHandle.get<String>("savingId")
         val savingActionArg: String? = savedStateHandle.get<String>("action")
+        val debtIdArg: String? = savedStateHandle.get<String>("debtId")
+        val debtActionArg: String? = savedStateHandle.get<String>("debtAction")
+        val walletIdArg: String? = savedStateHandle.get<String>("walletId")
 
-        if (isNewTransaction && !savingIdArg.isNullOrBlank()) {
-            _savingId.value = savingIdArg
-            viewModelScope.launch {
-                savingRepository.getSavingDetails(savingIdArg).firstOrNull()?.let { savingDetails ->
-                    _editWalletId.value = savingDetails.saving.walletId
-                    _editDescription.value = savingDetails.saving.description ?: "Saving"
+        if (isNewTransaction) {
+            if (!walletIdArg.isNullOrBlank()) {
+                _editWalletId.value = walletIdArg
+            }
 
-                    val isDeposit = savingActionArg == "deposit"
-                    val tag = if (isDeposit) SavingRepository.TAG_SAVING_DEPOSIT else SavingRepository.TAG_SAVING_WITHDRAW
-                    val cat = savingRepository.getOrCreateSystemCategory(tag)
-                    _editCategoryId.value = cat.id
-                    _editDirection.value = if (isDeposit) 0 else 1
+            if (!savingIdArg.isNullOrBlank()) {
+                _savingId.value = savingIdArg
+                viewModelScope.launch {
+                    savingRepository.getSavingDetails(savingIdArg).firstOrNull()?.let { savingDetails ->
+                        _editWalletId.value = savingDetails.saving.walletId
+                        _editDescription.value = savingDetails.saving.description ?: "Saving"
 
-                    if (savingActionArg == "withdraw_everything") {
-                        val targetOrCurrent = if (savingDetails.neededMoney == 0L) savingDetails.saving.endMoney else savingDetails.currentMoney
-                        _editAmount.value = (targetOrCurrent / 100.0).toString()
-                        _savingCompletedOnSave.value = true
+                        val isDeposit = savingActionArg == "deposit"
+                        val tag = if (isDeposit) SavingRepository.TAG_SAVING_DEPOSIT else SavingRepository.TAG_SAVING_WITHDRAW
+                        val cat = savingRepository.getOrCreateSystemCategory(tag)
+                        _editCategoryId.value = cat.id
+                        _editDirection.value = if (isDeposit) 0 else 1
+
+                        if (savingActionArg == "withdraw_everything") {
+                            val targetOrCurrent = if (savingDetails.neededMoney == 0L) savingDetails.saving.endMoney else savingDetails.currentMoney
+                            _editAmount.value = (targetOrCurrent / 100.0).toString()
+                            _savingCompletedOnSave.value = true
+                        }
+                    }
+                }
+            } else if (!debtIdArg.isNullOrBlank()) {
+                _debtId.value = debtIdArg
+                viewModelScope.launch {
+                    debtRepository.getDebtDetails(debtIdArg).firstOrNull()?.let { debtDetails ->
+                        val debt = debtDetails.debt
+                        if (_editWalletId.value.isBlank()) {
+                            _editWalletId.value = debt.walletId
+                        }
+                        
+                        val isPay = debtActionArg.equals("PAY", ignoreCase = true) || (debtActionArg == null && debt.type == 0)
+
+                        val direction = if (isPay) 0 else 1 // Expense for paying debt, Income for collecting credit
+                        val catTag = if (isPay) DebtRepository.TAG_PAID_DEBT else DebtRepository.TAG_PAID_CREDIT
+                        val systemCat = debtRepository.getOrCreateSystemCategory(catTag)
+
+                        _editDirection.value = direction
+                        _editCategoryId.value = systemCat.id
+
+                        if (_editDescription.value.isBlank() && !debt.description.isNullOrBlank()) {
+                            _editDescription.value = debt.description
+                        }
+
+                        if (debtDetails.people.isNotEmpty()) {
+                            _editPeopleIds.value = debtDetails.people.map { it.id }.toSet()
+                        }
                     }
                 }
             }
@@ -142,6 +181,9 @@ class TransactionDetailsViewModel @Inject constructor(
             viewModelScope.launch {
                 val tx = moneyDao.getTransactionById(transactionId)
                 val transfer = moneyDao.getTransferByTransactionId(transactionId)
+                if (tx != null && tx.debtId != null) {
+                    _debtId.value = tx.debtId
+                }
                 if (transfer != null) {
                     _isTransfer.value = true
                     _transferEntity.value = transfer
@@ -151,7 +193,7 @@ class TransactionDetailsViewModel @Inject constructor(
                         _editWalletId.value = fromTx.walletId
                         _targetWalletId.value = toTx.walletId
                     }
-                } else if (tx != null && (tx.type == 1 || tx.type == 2 || tx.direction == 2)) {
+                } else if (tx != null && tx.debtId == null && (tx.type == 1 || tx.type == 2 || tx.direction == 2)) {
                     _isTransfer.value = true
                     _editDirection.value = 2
                     val siblingTx = moneyDao.findSiblingTransferTransaction(tx.money, tx.date, tx.id)
@@ -786,9 +828,9 @@ class TransactionDetailsViewModel @Inject constructor(
                             direction = updatedDirection,
                             confirmed = _editConfirmed.value,
                             countInTotal = _editCountInTotal.value,
-                            type = 0,
+                            type = if (_debtId.value != null) 2 else 0,
                             isDeleted = false,
-                            debtId = null,
+                            debtId = _debtId.value,
                             savingId = _savingId.value,
                             recurrenceId = null,
                             tag = null,
@@ -814,6 +856,7 @@ class TransactionDetailsViewModel @Inject constructor(
                             direction = updatedDirection,
                             confirmed = _editConfirmed.value,
                             countInTotal = _editCountInTotal.value,
+                            debtId = _debtId.value ?: current.debtId,
                             lastEdit = System.currentTimeMillis()
                         )
                         moneyDao.updateTransaction(updated)

@@ -179,7 +179,10 @@ class MainActivity : ComponentActivity() {
                                 )
                             ) {
                                 com.sinxn.mymoney.feature.debt.DebtDetailsScreen(
-                                    onNavigateBack = { navController.navigateUp() }
+                                    onNavigateBack = { navController.navigateUp() },
+                                    onRecordPayment = { debtId, walletId, debtAction ->
+                                        navController.navigate("transaction_details/new?walletId=$walletId&debtId=$debtId&debtAction=$debtAction")
+                                    }
                                 )
                             }
                             composable("backup") {
@@ -255,7 +258,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             composable(
-                                "transaction_details/{transactionId}?savingId={savingId}&action={action}",
+                                "transaction_details/{transactionId}?savingId={savingId}&action={action}&walletId={walletId}&debtId={debtId}&debtAction={debtAction}",
                                 arguments = listOf(
                                     androidx.navigation.navArgument("transactionId") { type = androidx.navigation.NavType.StringType },
                                     androidx.navigation.navArgument("savingId") {
@@ -264,6 +267,21 @@ class MainActivity : ComponentActivity() {
                                         defaultValue = null
                                     },
                                     androidx.navigation.navArgument("action") {
+                                        type = androidx.navigation.NavType.StringType
+                                        nullable = true
+                                        defaultValue = null
+                                    },
+                                    androidx.navigation.navArgument("walletId") {
+                                        type = androidx.navigation.NavType.StringType
+                                        nullable = true
+                                        defaultValue = null
+                                    },
+                                    androidx.navigation.navArgument("debtId") {
+                                        type = androidx.navigation.NavType.StringType
+                                        nullable = true
+                                        defaultValue = null
+                                    },
+                                    androidx.navigation.navArgument("debtAction") {
                                         type = androidx.navigation.NavType.StringType
                                         nullable = true
                                         defaultValue = null
@@ -290,6 +308,9 @@ class MainActivity : ComponentActivity() {
                                 com.sinxn.mymoney.feature.budget.BudgetListScreen(
                                     onNavigateUp = { navController.navigateUp() },
                                     onBudgetClick = { budgetId ->
+                                        navController.navigate("budget_overview/$budgetId")
+                                    },
+                                    onEditBudget = { budgetId ->
                                         navController.navigate("budget_details/$budgetId")
                                     },
                                     onAddBudget = {
@@ -312,6 +333,22 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             composable(
+                                "budget_overview/{budgetId}",
+                                arguments = listOf(
+                                    androidx.navigation.navArgument("budgetId") { type = androidx.navigation.NavType.StringType }
+                                )
+                            ) {
+                                com.sinxn.mymoney.feature.budget.BudgetOverviewScreen(
+                                    onNavigateBack = { navController.navigateUp() },
+                                    onNavigateToEdit = { budgetId ->
+                                        navController.navigate("budget_details/$budgetId")
+                                    },
+                                    onTransactionClick = { transactionId ->
+                                        navController.navigate("transaction_details/$transactionId")
+                                    }
+                                )
+                            }
+                            composable(
                                 "budget_details/{budgetId}",
                                 arguments = listOf(
                                     androidx.navigation.navArgument("budgetId") { type = androidx.navigation.NavType.StringType }
@@ -321,6 +358,7 @@ class MainActivity : ComponentActivity() {
                                     onNavigateBack = { navController.navigateUp() }
                                 )
                             }
+
                             composable(
                                 "savings?walletId={walletId}",
                                 arguments = listOf(

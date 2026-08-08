@@ -41,6 +41,7 @@ import com.sinxn.mymoney.core.util.MoneyFormatter
 @Composable
 fun DebtDetailsScreen(
     onNavigateBack: () -> Unit,
+    onRecordPayment: (debtId: String, walletId: String, debtAction: String) -> Unit = { _, _, _ -> },
     viewModel: DebtDetailsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -52,8 +53,6 @@ fun DebtDetailsScreen(
             showPlusMinus = false
         )
     }
-
-    var showPaymentSheet by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -136,28 +135,17 @@ fun DebtDetailsScreen(
                         transactions = uiState.transactions,
                         formatterConfig = formatterConfig,
                         currencyCode = uiState.currencyCode,
-                        onRecordPaymentClick = { showPaymentSheet = true }
+                        onRecordPaymentClick = {
+                            onRecordPayment(
+                                debtDetails.debt.id,
+                                debtDetails.debt.walletId,
+                                if (debtDetails.debt.type == 0) "PAY" else "COLLECT"
+                            )
+                        }
                     )
                 }
             }
         }
-    }
-
-    if (showPaymentSheet && uiState.debtDetails != null) {
-        DebtPaymentBottomSheet(
-            debtDetails = uiState.debtDetails!!,
-            formatterConfig = formatterConfig,
-            currencyCode = uiState.currencyCode,
-            onDismiss = { showPaymentSheet = false },
-            onConfirmPayment = { amount, walletId, note ->
-                viewModel.addPayment(
-                    amount = amount,
-                    walletId = walletId,
-                    note = note,
-                    onSuccess = { showPaymentSheet = false }
-                )
-            }
-        )
     }
 }
 
@@ -630,76 +618,6 @@ private fun DebtFormContent(
                 } else {
                     Text("Save Debt")
                 }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DebtPaymentBottomSheet(
-    debtDetails: com.sinxn.mymoney.core.data.local.model.DebtWithDetails,
-    formatterConfig: MoneyFormatter.Config,
-    currencyCode: String,
-    onDismiss: () -> Unit,
-    onConfirmPayment: (amount: Double, walletId: String, note: String?) -> Unit
-) {
-    val debt = debtDetails.debt
-    val remaining = debtDetails.remainingMoney
-
-    var amountText by remember { mutableStateOf("") }
-    var noteText by remember { mutableStateOf("") }
-
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp)
-        ) {
-            Text(
-                text = if (debt.type == 0) "Record Debt Payment" else "Record Credit Collection",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Remaining: ${MoneyFormatter.format(amount = remaining, currencyCode = debtDetails.walletCurrency, decimals = debtDetails.walletDecimals, config = formatterConfig)}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedTextField(
-                value = amountText,
-                onValueChange = { amountText = it },
-                label = { Text("Payment Amount") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                prefix = { Text(debtDetails.walletCurrency + " ") }
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedTextField(
-                value = noteText,
-                onValueChange = { noteText = it },
-                label = { Text("Note (Optional)") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = {
-                    val amt = amountText.toDoubleOrNull() ?: 0.0
-                    if (amt > 0) {
-                        onConfirmPayment(amt, debt.walletId, noteText.ifBlank { null })
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = amountText.toDoubleOrNull() != null && amountText.toDouble() > 0
-            ) {
-                Text("Confirm Payment")
             }
         }
     }

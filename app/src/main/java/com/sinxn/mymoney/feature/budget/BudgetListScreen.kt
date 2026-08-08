@@ -43,6 +43,7 @@ fun BudgetListScreen(
     onNavigateUp: () -> Unit,
     onBudgetClick: (String) -> Unit,
     onAddBudget: () -> Unit,
+    onEditBudget: (String) -> Unit = onBudgetClick,
     onNavigateMenuItem: (String) -> Unit = {},
     onNavigateToWallet: (String) -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
@@ -107,6 +108,7 @@ fun BudgetListScreen(
                 },
                 onBudgetClick = onBudgetClick,
                 onAddBudget = onAddBudget,
+                onEditBudget = onEditBudget,
                 onDeleteBudget = viewModel::deleteBudget
             )
         }
@@ -121,6 +123,7 @@ fun BudgetListContent(
     onOpenDrawer: () -> Unit,
     onBudgetClick: (String) -> Unit,
     onAddBudget: () -> Unit,
+    onEditBudget: (String) -> Unit = onBudgetClick,
     onDeleteBudget: (String) -> Unit
 ) {
     Scaffold(
@@ -168,6 +171,7 @@ fun BudgetListContent(
                         BudgetItemCard(
                             item = item,
                             onClick = { onBudgetClick(item.budget.id) },
+                            onEdit = { onEditBudget(item.budget.id) },
                             onDelete = { onDeleteBudget(item.budget.id) }
                         )
                     }
@@ -181,6 +185,7 @@ fun BudgetListContent(
 fun BudgetItemCard(
     item: BudgetWithDetails,
     onClick: () -> Unit,
+    onEdit: () -> Unit = onClick,
     onDelete: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -258,7 +263,7 @@ fun BudgetItemCard(
                             leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
                             onClick = {
                                 showMenu = false
-                                onClick()
+                                onEdit()
                             }
                         )
                         DropdownMenuItem(
@@ -272,6 +277,7 @@ fun BudgetItemCard(
                     }
                 }
             }
+
 
             // Progress bar
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {

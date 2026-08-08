@@ -5,6 +5,7 @@ import com.sinxn.mymoney.core.data.local.entity.BudgetEntity
 import com.sinxn.mymoney.core.data.local.entity.BudgetWalletEntity
 import com.sinxn.mymoney.core.data.local.entity.WalletEntity
 import com.sinxn.mymoney.core.data.local.model.BudgetWithDetails
+import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.util.DateUtils
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -43,6 +44,15 @@ class BudgetRepository @Inject constructor(
             }
         }
     }
+
+    /**
+     * Get transactions contributing to a budget.
+     */
+    fun getTransactionsForBudget(budgetId: String): Flow<List<TransactionWithCategory>> {
+        val maxDate = DateUtils.getSQLDateTimeString(Date())
+        return moneyDao.getTransactionsForBudget(budgetId, maxDate)
+    }
+
 
     /**
      * Validate that all selected wallets have identical currency codes.

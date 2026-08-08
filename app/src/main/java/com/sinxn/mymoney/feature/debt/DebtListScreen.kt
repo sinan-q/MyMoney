@@ -142,8 +142,6 @@ fun DebtListBodyContent(
     onToggleArchived: (String, Boolean) -> Unit,
     onDeleteDebt: (String) -> Unit
 ) {
-    var quickPaymentDebt by remember { mutableStateOf<DebtWithDetails?>(null) }
-
     val formatterConfig = remember(uiState) {
         MoneyFormatter.Config(
             showCurrency = true,
@@ -230,23 +228,13 @@ fun DebtListBodyContent(
                         formatterConfig = formatterConfig,
                         currencyCode = uiState.currencyCode,
                         onClick = { onDebtClick(debtItem.debt.id) },
-                        onQuickPayment = { quickPaymentDebt = debtItem },
+                        onQuickPayment = { onDebtClick(debtItem.debt.id) },
                         onToggleArchive = { onToggleArchived(debtItem.debt.id, debtItem.debt.isArchived) },
                         onDelete = { onDeleteDebt(debtItem.debt.id) }
                     )
                 }
             }
         }
-    }
-
-    // Quick Payment Dialog
-    quickPaymentDebt?.let { debt ->
-        QuickPaymentSheet(
-            debtWithDetails = debt,
-            formatterConfig = formatterConfig,
-            currencyCode = uiState.currencyCode,
-            onDismiss = { quickPaymentDebt = null }
-        )
     }
 }
 
@@ -698,85 +686,6 @@ private fun EmptyDebtState(selectedTab: Int) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun QuickPaymentSheet(
-    debtWithDetails: DebtWithDetails,
-    formatterConfig: MoneyFormatter.Config,
-    currencyCode: String,
-    onDismiss: () -> Unit,
-    viewModel: DebtDetailsViewModel = hiltViewModel()
-) {
-    val debt = debtWithDetails.debt
-    val remaining = debtWithDetails.remainingMoney
-
-    var paymentAmount by remember { mutableStateOf("") }
-    var note by remember { mutableStateOf("") }
-    var selectedWalletId by remember { mutableStateOf(debt.walletId) }
-
-    val wallets by viewModel.uiState.collectAsState()
-
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp)
-        ) {
-            Text(
-                text = if (debt.type == 0) "Record Debt Payment" else "Record Credit Collection",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Remaining: ${MoneyFormatter.format(amount = remaining, currencyCode = debtWithDetails.walletCurrency, decimals = debtWithDetails.walletDecimals, config = formatterConfig)}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedTextField(
-                value = paymentAmount,
-                onValueChange = { paymentAmount = it },
-                label = { Text("Payment Amount") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                prefix = { Text(debtWithDetails.walletCurrency + " ") }
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedTextField(
-                value = note,
-                onValueChange = { note = it },
-                label = { Text("Note (Optional)") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = {
-                    val amountDouble = paymentAmount.toDoubleOrNull() ?: 0.0
-                    if (amountDouble > 0) {
-                        viewModel.addPayment(
-                            amount = amountDouble,
-                            walletId = selectedWalletId,
-                            note = note.ifBlank { null },
-                            onSuccess = onDismiss
-                        )
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = paymentAmount.toDoubleOrNull() != null && paymentAmount.toDouble() > 0
-            ) {
-                Text("Confirm Payment")
-            }
         }
     }
 }

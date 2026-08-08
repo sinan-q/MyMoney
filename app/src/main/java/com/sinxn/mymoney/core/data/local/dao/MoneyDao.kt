@@ -518,7 +518,7 @@ interface MoneyDao {
                    WHERE t.debtId = d.id 
                      AND t.isDeleted = 0 
                      AND t.confirmed = 1 
-                     AND (c.tag = 'system::paid_debt' OR c.tag = 'system::paid_credit')
+                     AND (c.tag IS NULL OR c.tag NOT IN ('system::debt', 'system::credit'))
                      AND t.date <= :maxDate
                ), 0) as progress
         FROM debts d
@@ -554,7 +554,7 @@ interface MoneyDao {
                    WHERE t.debtId = d.id 
                      AND t.isDeleted = 0 
                      AND t.confirmed = 1 
-                     AND (c.tag = 'system::paid_debt' OR c.tag = 'system::paid_credit')
+                     AND (c.tag IS NULL OR c.tag NOT IN ('system::debt', 'system::credit'))
                      AND t.date <= :maxDate
                ), 0) as progress
         FROM debts d
@@ -728,6 +728,32 @@ interface MoneyDao {
         GROUP BY b.id
     """)
     fun getBudgetWithDetailsById(budgetId: String, maxDate: String): Flow<BudgetWithDetails?>
+
+    @androidx.room.Transaction
+    @Query("""
+        SELECT DISTINCT t.*, c.name as categoryName, c.icon as categoryIcon,
+               COALESCE(curr.decimals, 2) as decimals, curr.symbol as currencySymbol,
+               w.currency as currencyCode
+        FROM transactions t
+        INNER JOIN budget_wallets bw ON t.walletId = bw.walletId AND bw.isDeleted = 0
+        INNER JOIN budgets b ON bw.budgetId = b.id AND b.isDeleted = 0
+        LEFT JOIN categories c ON t.categoryId = c.id
+        INNER JOIN wallets w ON t.walletId = w.id AND w.isDeleted = 0
+        LEFT JOIN currencies curr ON w.currency = curr.iso
+        WHERE b.id = :budgetId
+          AND t.isDeleted = 0
+          AND t.date <= :maxDate
+          AND DATE(t.date) >= DATE(b.startDate)
+          AND DATE(t.date) <= DATE(b.endDate)
+          AND (
+              (b.type = 0 AND t.direction = 0) OR
+              (b.type = 1 AND t.direction = 1) OR
+              (b.type = 2 AND (b.categoryId IS NULL OR b.categoryId = t.categoryId OR b.categoryId = c.parentId))
+          )
+        ORDER BY t.date DESC
+    """)
+    fun getTransactionsForBudget(budgetId: String, maxDate: String): Flow<List<TransactionWithCategory>>
+
 
     // --- Savings Queries & Operations ---
     @Insert(onConflict = OnConflictStrategy.REPLACE)
