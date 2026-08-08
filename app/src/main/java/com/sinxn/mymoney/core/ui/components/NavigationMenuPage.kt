@@ -474,3 +474,121 @@ private fun NavigationDrawerItemRow(
         }
     }
 }
+
+fun handleSidebarNavigation(
+    context: android.content.Context,
+    navController: androidx.navigation.NavController,
+    itemId: String,
+    currentRoute: String? = null,
+    onLocalSectionSelect: ((String) -> Unit)? = null
+) {
+    when (itemId) {
+        "transactions" -> {
+            if (onLocalSectionSelect != null && (currentRoute == "home" || currentRoute?.startsWith("wallet_details") == true)) {
+                onLocalSectionSelect("transactions")
+            } else {
+                navController.navigate("home") {
+                    popUpTo(navController.graph.startDestinationId) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
+        }
+        "debts" -> {
+            if (onLocalSectionSelect != null && (currentRoute == "home" || currentRoute?.startsWith("wallet_details") == true)) {
+                onLocalSectionSelect("debts")
+            } else {
+                navController.navigate("debts") { launchSingleTop = true }
+            }
+        }
+        "categories" -> navController.navigate("categories") { launchSingleTop = true }
+        "overview" -> navController.navigate("recap") { launchSingleTop = true }
+        "budgets" -> navController.navigate("budgets") { launchSingleTop = true }
+        "savings" -> navController.navigate("savings") { launchSingleTop = true }
+        "events" -> navController.navigate("events") { launchSingleTop = true }
+        "recurrences" -> navController.navigate("recurrences") { launchSingleTop = true }
+        "models" -> navController.navigate("templates") { launchSingleTop = true }
+        "places" -> navController.navigate("places") { launchSingleTop = true }
+        "people" -> navController.navigate("people") { launchSingleTop = true }
+        "calculator" -> launchCalculatorIntent(context)
+        "converter" -> launchConverterIntent(context)
+        "search_atm" -> launchSearchIntent(context, "ATM")
+        "search_bank" -> launchSearchIntent(context, "Bank")
+        "settings" -> navController.navigate("settings") { launchSingleTop = true }
+        "support_developer" -> launchSupportIntent(context)
+        "about" -> navController.navigate("settings") { launchSingleTop = true }
+        else -> {
+            try {
+                navController.navigate(itemId) { launchSingleTop = true }
+            } catch (e: Exception) {
+                // Ignore invalid route
+            }
+        }
+    }
+}
+
+private fun launchCalculatorIntent(context: android.content.Context) {
+    try {
+        val intent = android.content.Intent(android.content.Intent.ACTION_MAIN).apply {
+            addCategory(android.content.Intent.CATEGORY_APP_CALCULATOR)
+            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        try {
+            val calcIntent = context.packageManager.getLaunchIntentForPackage("com.google.android.calculator")
+                ?: context.packageManager.getLaunchIntentForPackage("com.sec.android.app.popupcalculator")
+            if (calcIntent != null) {
+                calcIntent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                context.startActivity(calcIntent)
+            } else {
+                android.widget.Toast.makeText(context, "Calculator app not found", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        } catch (e2: Exception) {
+            android.widget.Toast.makeText(context, "Calculator app not found", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+}
+
+private fun launchConverterIntent(context: android.content.Context) {
+    try {
+        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://www.google.com/search?q=currency+converter")).apply {
+            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        android.widget.Toast.makeText(context, "Unable to open browser", android.widget.Toast.LENGTH_SHORT).show()
+    }
+}
+
+private fun launchSearchIntent(context: android.content.Context, query: String) {
+    val geoUri = android.net.Uri.parse("geo:0,0?q=$query")
+    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, geoUri).apply {
+        flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+    }
+    try {
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        try {
+            val webUri = android.net.Uri.parse("https://www.google.com/maps/search/$query")
+            val webIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, webUri).apply {
+                flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(webIntent)
+        } catch (e2: Exception) {
+            android.widget.Toast.makeText(context, "Unable to open maps", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+}
+
+private fun launchSupportIntent(context: android.content.Context) {
+    try {
+        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com")).apply {
+            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        android.widget.Toast.makeText(context, "Unable to open browser", android.widget.Toast.LENGTH_SHORT).show()
+    }
+}
+

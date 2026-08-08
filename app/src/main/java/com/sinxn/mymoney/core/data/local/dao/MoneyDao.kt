@@ -94,8 +94,60 @@ interface MoneyDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTransactionModels(items: List<com.sinxn.mymoney.core.data.local.entity.TransactionModelEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTransactionModel(item: com.sinxn.mymoney.core.data.local.entity.TransactionModelEntity)
+
+    @Update
+    suspend fun updateTransactionModel(item: com.sinxn.mymoney.core.data.local.entity.TransactionModelEntity)
+
+    @Query("UPDATE transaction_models SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :id")
+    suspend fun softDeleteTransactionModel(id: String, lastEdit: Long)
+
+    @Query("SELECT * FROM transaction_models WHERE id = :id AND isDeleted = 0")
+    suspend fun getTransactionModelById(id: String): com.sinxn.mymoney.core.data.local.entity.TransactionModelEntity?
+
+    @androidx.room.Transaction
+    @Query("""
+        SELECT tm.*, c.name as categoryName, c.icon as categoryIcon,
+               w.name as walletName, w.currency as walletCurrency,
+               COALESCE(curr.decimals, 2) as walletDecimals, curr.symbol as currencySymbol
+        FROM transaction_models tm
+        LEFT JOIN categories c ON tm.categoryId = c.id
+        INNER JOIN wallets w ON tm.walletId = w.id
+        LEFT JOIN currencies curr ON w.currency = curr.iso
+        WHERE tm.isDeleted = 0
+        ORDER BY tm.id DESC
+    """)
+    fun getTransactionModelsWithDetails(): Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionModelWithDetails>>
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTransferModels(items: List<com.sinxn.mymoney.core.data.local.entity.TransferModelEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTransferModel(item: com.sinxn.mymoney.core.data.local.entity.TransferModelEntity)
+
+    @Update
+    suspend fun updateTransferModel(item: com.sinxn.mymoney.core.data.local.entity.TransferModelEntity)
+
+    @Query("UPDATE transfer_models SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :id")
+    suspend fun softDeleteTransferModel(id: String, lastEdit: Long)
+
+    @Query("SELECT * FROM transfer_models WHERE id = :id AND isDeleted = 0")
+    suspend fun getTransferModelById(id: String): com.sinxn.mymoney.core.data.local.entity.TransferModelEntity?
+
+    @androidx.room.Transaction
+    @Query("""
+        SELECT tm.*, wf.name as walletFromName, wf.currency as walletFromCurrency,
+               wt.name as walletToName, wt.currency as walletToCurrency,
+               COALESCE(curr.symbol, '$') as currencySymbol
+        FROM transfer_models tm
+        INNER JOIN wallets wf ON tm.walletFromId = wf.id
+        INNER JOIN wallets wt ON tm.walletToId = wt.id
+        LEFT JOIN currencies curr ON wf.currency = curr.iso
+        WHERE tm.isDeleted = 0
+        ORDER BY tm.id DESC
+    """)
+    fun getTransferModelsWithDetails(): Flow<List<com.sinxn.mymoney.core.data.local.model.TransferModelWithDetails>>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertEventPeople(items: List<com.sinxn.mymoney.core.data.local.entity.EventPeopleEntity>)
@@ -166,6 +218,9 @@ interface MoneyDao {
     fun getWalletWithBalance(walletId: String, maxDate: String): Flow<WalletWithBalance?>
 
     // Categories
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCategory(category: CategoryEntity)
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertCategories(categories: List<CategoryEntity>)
 
@@ -178,8 +233,14 @@ interface MoneyDao {
     @Query("UPDATE categories SET showReport = :showReport, lastEdit = :lastEdit WHERE id = :categoryId")
     suspend fun updateCategoryShowReport(categoryId: String, showReport: Boolean, lastEdit: Long)
 
+    @Query("UPDATE categories SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :categoryId")
+    suspend fun softDeleteCategory(categoryId: String, lastEdit: Long)
+
     @Query("SELECT * FROM categories WHERE isDeleted = 0 ORDER BY `index` ASC")
     fun getCategories(): Flow<List<CategoryEntity>>
+
+    @Query("SELECT * FROM categories WHERE id = :id AND isDeleted = 0")
+    suspend fun getCategoryById(id: String): CategoryEntity?
 
     @Query("SELECT * FROM categories WHERE isDeleted = 0 ORDER BY `index` ASC")
     suspend fun getCategoriesList(): List<CategoryEntity>
@@ -287,6 +348,15 @@ interface MoneyDao {
     }
 
     // Places
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPlace(place: com.sinxn.mymoney.core.data.local.entity.PlaceEntity)
+
+    @Update
+    suspend fun updatePlace(place: com.sinxn.mymoney.core.data.local.entity.PlaceEntity)
+
+    @Query("UPDATE places SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :placeId")
+    suspend fun softDeletePlace(placeId: String, lastEdit: Long)
+
     @Query("SELECT * FROM places WHERE isDeleted = 0")
     fun getPlaces(): Flow<List<com.sinxn.mymoney.core.data.local.entity.PlaceEntity>>
 
@@ -296,7 +366,30 @@ interface MoneyDao {
     @Query("SELECT * FROM places WHERE id = :id")
     suspend fun getPlaceById(id: String): com.sinxn.mymoney.core.data.local.entity.PlaceEntity?
 
+    @androidx.room.Transaction
+    @Query("""
+        SELECT t.*, c.name as categoryName, c.icon as categoryIcon,
+               COALESCE(curr.decimals, 2) as decimals, curr.symbol as currencySymbol,
+               w.currency as currencyCode
+        FROM transactions t
+        LEFT JOIN categories c ON t.categoryId = c.id
+        INNER JOIN wallets w ON t.walletId = w.id
+        LEFT JOIN currencies curr ON w.currency = curr.iso
+        WHERE t.placeId = :placeId AND t.isDeleted = 0
+        ORDER BY t.date DESC
+    """)
+    fun getTransactionsForPlace(placeId: String): Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory>>
+
     // Events
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertEvent(event: com.sinxn.mymoney.core.data.local.entity.EventEntity)
+
+    @Update
+    suspend fun updateEvent(event: com.sinxn.mymoney.core.data.local.entity.EventEntity)
+
+    @Query("UPDATE events SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :eventId")
+    suspend fun softDeleteEvent(eventId: String, lastEdit: Long)
+
     @Query("SELECT * FROM events WHERE isDeleted = 0")
     fun getEvents(): Flow<List<com.sinxn.mymoney.core.data.local.entity.EventEntity>>
 
@@ -306,9 +399,35 @@ interface MoneyDao {
     @Query("SELECT * FROM events WHERE id = :id")
     suspend fun getEventById(id: String): com.sinxn.mymoney.core.data.local.entity.EventEntity?
 
+    @androidx.room.Transaction
+    @Query("""
+        SELECT t.*, c.name as categoryName, c.icon as categoryIcon,
+               COALESCE(curr.decimals, 2) as decimals, curr.symbol as currencySymbol,
+               w.currency as currencyCode
+        FROM transactions t
+        LEFT JOIN categories c ON t.categoryId = c.id
+        INNER JOIN wallets w ON t.walletId = w.id
+        LEFT JOIN currencies curr ON w.currency = curr.iso
+        WHERE t.eventId = :eventId AND t.isDeleted = 0
+        ORDER BY t.date DESC
+    """)
+    fun getTransactionsForEvent(eventId: String): Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory>>
+
     // People
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPerson(person: com.sinxn.mymoney.core.data.local.entity.PersonEntity)
+
+    @Update
+    suspend fun updatePerson(person: com.sinxn.mymoney.core.data.local.entity.PersonEntity)
+
+    @Query("UPDATE people SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :personId")
+    suspend fun softDeletePerson(personId: String, lastEdit: Long)
+
     @Query("SELECT * FROM people WHERE isDeleted = 0")
     fun getPeople(): Flow<List<com.sinxn.mymoney.core.data.local.entity.PersonEntity>>
+
+    @Query("SELECT * FROM people WHERE id = :id AND isDeleted = 0")
+    suspend fun getPersonById(id: String): com.sinxn.mymoney.core.data.local.entity.PersonEntity?
 
     @Query("""
         SELECT p.* 
@@ -317,6 +436,21 @@ interface MoneyDao {
         WHERE tp.transactionId = :transactionId AND p.isDeleted = 0
     """)
     fun getPeopleForTransaction(transactionId: String): Flow<List<com.sinxn.mymoney.core.data.local.entity.PersonEntity>>
+
+    @androidx.room.Transaction
+    @Query("""
+        SELECT t.*, c.name as categoryName, c.icon as categoryIcon,
+               COALESCE(curr.decimals, 2) as decimals, curr.symbol as currencySymbol,
+               w.currency as currencyCode
+        FROM transactions t
+        INNER JOIN transaction_people tp ON t.id = tp.transactionId
+        LEFT JOIN categories c ON t.categoryId = c.id
+        INNER JOIN wallets w ON t.walletId = w.id
+        LEFT JOIN currencies curr ON w.currency = curr.iso
+        WHERE tp.personId = :personId AND t.isDeleted = 0 AND tp.isDeleted = 0
+        ORDER BY t.date DESC
+    """)
+    fun getTransactionsForPerson(personId: String): Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory>>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTransactionPeople(links: List<com.sinxn.mymoney.core.data.local.entity.TransactionPeopleEntity>)

@@ -66,6 +66,7 @@ fun HomeScreen(
     onNavigateToBudgets: () -> Unit = {},
     onNavigateToSavings: () -> Unit = {},
     onNavigateToRecurrences: () -> Unit = {},
+    onNavigateMenuItem: (String) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -256,12 +257,13 @@ fun HomeScreen(
                                 coroutineScope.launch {
                                     pagerState.animateScrollToPage(0)
                                 }
-                                onAddTransaction()
+                                onNavigateToWallet("new")
                             },
                             onManageWallets = {
                                 coroutineScope.launch {
                                     pagerState.animateScrollToPage(0)
                                 }
+                                onNavigateToSettings()
                             },
                             onItemClick = { item ->
                                 coroutineScope.launch {
@@ -270,11 +272,7 @@ fun HomeScreen(
                                 when (item.id) {
                                     "debts" -> activeSection = "debts"
                                     "transactions" -> activeSection = "transactions"
-                                    "budgets" -> onNavigateToBudgets()
-                                    "savings" -> onNavigateToSavings()
-                                    "recurrences" -> onNavigateToRecurrences()
-                                    "settings" -> onNavigateToSettings()
-                                    else -> {}
+                                    else -> onNavigateMenuItem(item.id)
                                 }
                             }
                         )

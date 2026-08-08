@@ -72,9 +72,13 @@ fun WalletDetailsScreen(
     onNavigateToSavings: (String?) -> Unit = {},
     onAddDebt: (walletId: String?, type: Int) -> Unit = { _, _ -> },
     onDebtClick: (String) -> Unit = {},
+    onNavigateToWallet: (String) -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
+    onNavigateMenuItem: (String) -> Unit = {},
     viewModel: WalletDetailsViewModel = hiltViewModel()
 ) {
     val wallet by viewModel.wallet.collectAsState(initial = null)
+    val allWallets by viewModel.allWallets.collectAsState(initial = emptyList())
     val transactions by viewModel.transactions.collectAsState(initial = emptyList())
     val settings by viewModel.formattingSettings.collectAsState()
     
@@ -234,8 +238,29 @@ fun WalletDetailsScreen(
                         }
                         1 -> {
                             com.sinxn.mymoney.core.ui.components.NavigationMenuContent(
+                                wallets = allWallets,
                                 selectedWallet = wallet,
                                 selectedItemId = activeSection,
+                                onWalletSelect = { selectedW ->
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(0)
+                                    }
+                                    if (selectedW.wallet.id != wallet?.wallet?.id) {
+                                        onNavigateToWallet(selectedW.wallet.id)
+                                    }
+                                },
+                                onAddWallet = {
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(0)
+                                    }
+                                    onNavigateToWallet("new")
+                                },
+                                onManageWallets = {
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(0)
+                                    }
+                                    onNavigateToSettings()
+                                },
                                 onItemClick = { item ->
                                     coroutineScope.launch {
                                         pagerState.animateScrollToPage(0)
@@ -243,9 +268,7 @@ fun WalletDetailsScreen(
                                     when (item.id) {
                                         "debts" -> activeSection = "debts"
                                         "transactions" -> activeSection = "transactions"
-                                        "budgets" -> onNavigateToBudgets(wallet?.wallet?.id)
-                                        "savings" -> onNavigateToSavings(wallet?.wallet?.id)
-                                        else -> {}
+                                        else -> onNavigateMenuItem(item.id)
                                     }
                                 }
                             )

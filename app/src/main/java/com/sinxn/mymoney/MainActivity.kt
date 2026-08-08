@@ -79,6 +79,14 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onNavigateToRecurrences = {
                                         navController.navigate("recurrences")
+                                    },
+                                    onNavigateMenuItem = { itemId ->
+                                        com.sinxn.mymoney.core.ui.components.handleSidebarNavigation(
+                                            context = this@MainActivity,
+                                            navController = navController,
+                                            itemId = itemId,
+                                            currentRoute = "home"
+                                        )
                                     }
                                 )
                             }
@@ -140,9 +148,18 @@ class MainActivity : ComponentActivity() {
                                         navController.navigate(addRoute)
                                     },
                                     onNavigateMenuItem = { itemId ->
-                                        if (itemId != "debts") {
-                                            try { navController.navigate(itemId) } catch (e: Exception) {}
-                                        }
+                                        com.sinxn.mymoney.core.ui.components.handleSidebarNavigation(
+                                            context = this@MainActivity,
+                                            navController = navController,
+                                            itemId = itemId,
+                                            currentRoute = "debts"
+                                        )
+                                    },
+                                    onNavigateToWallet = { walletId ->
+                                        navController.navigate("wallet_details/$walletId")
+                                    },
+                                    onNavigateToSettings = {
+                                        navController.navigate("settings")
                                     }
                                 )
                             }
@@ -220,6 +237,20 @@ class MainActivity : ComponentActivity() {
                                     onNavigateToSavings = { walletId ->
                                         val route = if (!walletId.isNullOrBlank()) "savings?walletId=$walletId" else "savings"
                                         navController.navigate(route)
+                                    },
+                                    onNavigateToWallet = { walletId ->
+                                        navController.navigate("wallet_details/$walletId")
+                                    },
+                                    onNavigateToSettings = {
+                                        navController.navigate("settings")
+                                    },
+                                    onNavigateMenuItem = { itemId ->
+                                        com.sinxn.mymoney.core.ui.components.handleSidebarNavigation(
+                                            context = this@MainActivity,
+                                            navController = navController,
+                                            itemId = itemId,
+                                            currentRoute = "wallet_details"
+                                        )
                                     }
                                 )
                             }
@@ -265,9 +296,18 @@ class MainActivity : ComponentActivity() {
                                         navController.navigate("budget_details/new")
                                     },
                                     onNavigateMenuItem = { itemId ->
-                                        if (itemId != "budgets") {
-                                            try { navController.navigate(itemId) } catch (e: Exception) {}
-                                        }
+                                        com.sinxn.mymoney.core.ui.components.handleSidebarNavigation(
+                                            context = this@MainActivity,
+                                            navController = navController,
+                                            itemId = itemId,
+                                            currentRoute = "budgets"
+                                        )
+                                    },
+                                    onNavigateToWallet = { walletId ->
+                                        navController.navigate("wallet_details/$walletId")
+                                    },
+                                    onNavigateToSettings = {
+                                        navController.navigate("settings")
                                     }
                                 )
                             }
@@ -309,9 +349,18 @@ class MainActivity : ComponentActivity() {
                                         navController.navigate("transaction_details/new?savingId=$savingId&action=withdraw_everything")
                                     },
                                     onNavigateMenuItem = { itemId ->
-                                        if (itemId != "savings") {
-                                            try { navController.navigate(itemId) } catch (e: Exception) {}
-                                        }
+                                        com.sinxn.mymoney.core.ui.components.handleSidebarNavigation(
+                                            context = this@MainActivity,
+                                            navController = navController,
+                                            itemId = itemId,
+                                            currentRoute = "savings"
+                                        )
+                                    },
+                                    onNavigateToWallet = { walletId ->
+                                        navController.navigate("wallet_details/$walletId")
+                                    },
+                                    onNavigateToSettings = {
+                                        navController.navigate("settings")
                                     }
                                 )
                             }
@@ -328,6 +377,31 @@ class MainActivity : ComponentActivity() {
                             composable("recap") {
                                 com.sinxn.mymoney.feature.recap.YearRecapScreen(
                                     onClose = { navController.popBackStack() }
+                                )
+                            }
+                            composable("categories") {
+                                com.sinxn.mymoney.feature.category.CategoryListScreen(
+                                    onNavigateBack = { navController.navigateUp() }
+                                )
+                            }
+                            composable("people") {
+                                com.sinxn.mymoney.feature.people.PeopleListScreen(
+                                    onNavigateBack = { navController.navigateUp() }
+                                )
+                            }
+                            composable("places") {
+                                com.sinxn.mymoney.feature.place.PlaceListScreen(
+                                    onNavigateBack = { navController.navigateUp() }
+                                )
+                            }
+                            composable("events") {
+                                com.sinxn.mymoney.feature.event.EventListScreen(
+                                    onNavigateBack = { navController.navigateUp() }
+                                )
+                            }
+                            composable("templates") {
+                                com.sinxn.mymoney.feature.template.TemplateListScreen(
+                                    onNavigateBack = { navController.navigateUp() }
                                 )
                             }
                         }

@@ -53,8 +53,14 @@ class WalletDetailsViewModel @Inject constructor(
             }
         }
     }
-    
-    // ... rest of the code
+
+    val allWallets: StateFlow<List<WalletWithBalance>> = moneyDao.getWalletsWithBalance(DateUtils.getSQLDateTimeString(java.util.Date()))
+        .map { list -> list.filter { !it.wallet.isArchived } }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val wallet: StateFlow<WalletWithBalance?> = combine(

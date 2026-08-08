@@ -44,6 +44,8 @@ fun BudgetListScreen(
     onBudgetClick: (String) -> Unit,
     onAddBudget: () -> Unit,
     onNavigateMenuItem: (String) -> Unit = {},
+    onNavigateToWallet: (String) -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     viewModel: BudgetListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -68,6 +70,24 @@ fun BudgetListScreen(
                     coroutineScope.launch {
                         pagerState.animateScrollToPage(0)
                     }
+                },
+                onWalletSelect = { wallet ->
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(0)
+                    }
+                    onNavigateToWallet(wallet.wallet.id)
+                },
+                onAddWallet = {
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(0)
+                    }
+                    onNavigateToWallet("new")
+                },
+                onManageWallets = {
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(0)
+                    }
+                    onNavigateToSettings()
                 },
                 onItemClick = { item ->
                     coroutineScope.launch {
