@@ -597,6 +597,13 @@ class TransactionDetailsViewModel @Inject constructor(
                     if (siblingTx != null) {
                         moneyDao.updateTransaction(siblingTx.copy(isDeleted = true, lastEdit = System.currentTimeMillis()))
                     }
+                    val taxTxId = transfer.transactionTaxId
+                    if (taxTxId != null) {
+                        val taxTx = moneyDao.getTransactionById(taxTxId)
+                        if (taxTx != null) {
+                            moneyDao.updateTransaction(taxTx.copy(isDeleted = true, lastEdit = System.currentTimeMillis()))
+                        }
+                    }
                 }
             }
             onComplete()
@@ -857,12 +864,32 @@ class TransactionDetailsViewModel @Inject constructor(
                             placeId = _editPlaceId.value,
                             eventId = _editEventId.value,
                             direction = updatedDirection,
+                            type = if (_debtId.value != null) 2 else 0,
                             confirmed = _editConfirmed.value,
                             countInTotal = _editCountInTotal.value,
                             debtId = _debtId.value ?: current.debtId,
                             lastEdit = System.currentTimeMillis()
                         )
                         moneyDao.updateTransaction(updated)
+                        
+                        // If it WAS a transfer and now it's not, delete the sibling, transfer entity, and tax
+                        val existingTransfer = _transferEntity.value
+                        if (existingTransfer != null) {
+                            moneyDao.updateTransfer(existingTransfer.copy(isDeleted = true, lastEdit = System.currentTimeMillis()))
+                            val siblingTxId = if (existingTransfer.transactionFromId == transactionId) existingTransfer.transactionToId else existingTransfer.transactionFromId
+                            val siblingTx = moneyDao.getTransactionById(siblingTxId)
+                            if (siblingTx != null) {
+                                moneyDao.updateTransaction(siblingTx.copy(isDeleted = true, lastEdit = System.currentTimeMillis()))
+                            }
+                            val taxTxId = existingTransfer.transactionTaxId
+                            if (taxTxId != null) {
+                                val taxTx = moneyDao.getTransactionById(taxTxId)
+                                if (taxTx != null) {
+                                    moneyDao.updateTransaction(taxTx.copy(isDeleted = true, lastEdit = System.currentTimeMillis()))
+                                }
+                            }
+                            _transferEntity.value = null
+                        }
                     }
                     
                     // Update People

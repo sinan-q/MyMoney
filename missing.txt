@@ -1,0 +1,200 @@
+ Missing Components, Pages & Navigation
+Feature Area	Legacy moneywallet	MyMoney (Current State)
+Receipts & Attachments	Photo/PDF attachments on transactions (attachments table, SAF picker, camera capture, cache manager, viewer).	❌ Missing entity, DAO, and UI.
+Security & App Lock	PIN, Password, and Biometric / Fingerprint authentication with configurable timeout delays (Immediate, 1 min, 5 min).	❌ Missing.
+Batch Operations & Multi-Select	Multi-select mode on transaction lists to batch delete, batch change category, move wallet, or toggle confirmed.	❌ Only single-item click/delete.
+Comprehensive Search & Filters	Filter transactions by date range, hierarchical category tree, min/max amount, persons, places, events, and confirmation status.	⚠️ Basic text search only.
+Import / Export Options	CSV Export & Import with custom column mapping engine, QIF Export/Import, JSON DB backup/restore, Drive & WebDAV sync.	⚠️ Basic JSON backup and SQLite raw console only.
+Analytics & Flow Visuals	Period detail with Summary, Net Flow bar/line timeline charts, Category Donut with sub-category drill-down.	⚠️ Year recap screen only.
+Widgets & Quick Actions	Home screen widgets for Wallet Balance, Budget Progress, and 1-tap quick transaction add.	❌ Missing
+--------------------------
+
+1. Core Data Models, Enums & Constant Values
+1.1 Category Type vs. Transaction Direction (Resolved)
+Legacy (moneywallet):
+Category Type: 0 = INCOME, 1 = EXPENSE, 2 = SYSTEM.
+Transaction Direction: 0 = EXPENSE (decrease), 1 = INCOME (increase), 2 = TRANSFER.
+In legacy, category type 0 (Income) corresponded to transaction direction 1 (Income), and category type 1 (Expense) corresponded to direction 0 (Expense).
+MyMoney (Status: Fixed & Centralized):
+Centralized in 
+
+Constants.kt
+ using 
+
+CategoryType
+, 
+
+Direction
+, 
+
+TransactionType
+, and 
+
+BudgetType
+ to prevent inversion mismatches.
+1.2 Multi-Currency Money Value Scale & Decimals
+Legacy (moneywallet):
+Money is stored as long where the number of decimal positions is determined per wallet (decimals column, e.g., standard 2 for USD, 0 for JPY, 3 for BHD).
+In multi-wallet transfers (TransferEntity), legacy stores two distinct money amounts: moneyFrom and moneyTo, allowing transfers between different currencies with a specific conversion rate at that moment.
+MyMoney:
+In MyMoney, TransferEntity contains foreign keys transactionFromId and transactionToId, but in some dialogs and quick operations, money is assumed to be identical for both legs without factoring in exchange rates if the wallets have different currencies.
+2. Transaction & Transfer Logic Deviations
+2.1 Transfer Leg Linking & Tax / Fee Handling
+Legacy (moneywallet):
+A transfer in legacy creates/links up to three transactions:
+Outflow transaction (transactionFromId, Direction 0 Expense).
+Inflow transaction (transactionToId, Direction 1 Income).
+Optional Transfer Fee/Tax transaction (transactionTaxId).
+If a transfer has a transfer fee/tax, deleting or updating the transfer automatically adjusts or deletes the fee transaction.
+MyMoney:
+TransferEntity has transactionTaxId column, but UI and ViewModel currently do not support adding or editing transfer tax/fees.
+In TransactionDetailsViewModel, deleting a transfer cleans up fromTx and toTx, but skips tax transactions if present.
+2.2 Sibling Transfer Transaction Auto-Pairing
+Legacy (moneywallet):
+Legacy maintains a strict relational constraint: every Transfer record references transaction_from and transaction_to. Transactions created as transfers cannot exist as standalone single records.
+MyMoney:
+When editing an existing transaction where type == 1 or direction == 2, TransactionDetailsViewModel tries to dynamically query moneyDao.findSiblingTransferTransaction(...) by matching exact amount and date.
+If a user edits the date or amount of one leg in isolation, the auto-pairing can fail to find the sibling and create an orphaned transaction.
+3. Debt & Credit Lifecycle & Calculations
+3.1 Debt Status (ACTIVE, PARTIAL, ARCHIVED)
+Legacy (moneywallet):
+Debt computation in SQLDatabase.java (getDebt(...)):
+Total borrowed / lent is tracked against all child transactions linked via transaction.debt_id.
+If remaining_amount == 0, debt is marked as ARCHIVED / COMPLETED.
+Supports partial payments: recording a payment creates a transaction linked to the debt and recalculates the balance in real-time.
+Allows multiple people to be tagged to a single debt.
+MyMoney:
+DebtRepository.kt and DebtViewModel.kt:
+Has DebtDetailsScreen where clicking "Record Repayment" or "Record Collection" routes to TransactionDetailsScreen with debtId and debtAction.
+Deviation: When creating a new Debt, legacy automatically seeds the initial transaction (the loan or credit creation) into the database if opted by the user. In MyMoney, the initial debt creation creates the DebtEntity directly without prompt to record the initial transaction against wallet balance.
+4. Savings & Goals Parity
+4.1 "Needed Money" vs "Current Money" & Completion Flow
+Legacy (moneywallet):
+Has two distinct saving types:
+Target Goal: Save up to $X by a given deadline.
+Periodic Contribution: Save $X per month/week.
+Saving detail screen includes a quick "Deposit" and "Withdraw" floating action with calculation of progress percentage: (currentMoney / endMoney) * 100.
+Allows "Withdraw Everything & Complete", which creates an Income transaction back to the chosen wallet and marks the saving as completed.
+MyMoney:
+SavingRepository.kt supports deposit and withdraw_everything navigation parameters.
+Deviation: In SavingDetailsScreen.kt, the progress bar does not cap at 1.0f, potentially causing UI clipping if the user saves more than 100% of their target.
+5. Budget Calculation & Period Rollovers
+5.1 Budget Types & Period Bounds
+Legacy (moneywallet):
+Budget Types:
+0 = ALL_EXPENSES: Sum of all expenses across selected wallets.
+1 = ALL_INCOMES: Target income tracker across selected wallets.
+2 = CATEGORY: Expense budget for a specific category (and its subcategories).
+Recurring Budget Periods:
+WEEKLY: Starts on user's configured "First Day of the Week" (e.g. Sunday/Monday).
+MONTHLY: Starts on user's configured "First Day of the Month" (e.g. 1st, 15th).
+ANNUAL: Starts on Jan 1st.
+CUSTOM: Specified fixed date range (startDate to endDate).
+MyMoney:
+BudgetOverviewScreen.kt and BudgetDetailsViewModel.kt:
+Categorical, Income, and Expense budgets are properly supported with BudgetType.
+Deviation: Subcategories are not recursively summed up when evaluating a Parent Category budget unless explicitly linked in BudgetCategoriesEntity.
+6. Recurrence Engine & Auto-Execution
+6.1 RFC5545 Recurrence Rule Parsing & Generation
+Legacy (moneywallet):
+Uses AlarmManager and BroadcastReceiver / JobIntentService to check due recurrent transactions daily/on boot and auto-insert occurrences up to the current date.
+MyMoney:
+Uses WorkManager (
+
+RecurrenceWorker.kt
+) with RFC5545 recurrence rule parsing (org.dmfs.rfc5545.recur.RecurrenceRule).
+Calculates nextOccurrence accurately based on startDate and lastOccurrence.
+7. Missing Components & UI Feature Gaps
+Component / Screen	Legacy moneywallet	MyMoney	Status / Deviation
+Category Sorting	Drag-and-drop manual ordering (CategorySortActivity)	Alphabetical / DB index sort	Missing manual drag-and-drop sort
+Wallet Sorting	Drag-and-drop manual ordering (WalletSortActivity)	Sorted by creation / DB index	Missing manual reorder
+Parent Category Picker	Deep nested category hierarchies with child counts	Flat / 1-level indented dropdown	Simplified hierarchy
+Math Input Numpad	Custom keypad with inline calculator (+, -, ×, ÷, =)	Compose custom NumpadView with immediate result parsing	Fully functional in TransactionDetailsScreen
+Export Formats	CSV, JSON, and SQLite database dump (SQLDatabaseExporter)	CSV export supported	JSON/Full Backup in progress
+Security Lock	PIN / Fingerprint biometric lock screen (LockActivity)	Biometric prompt integration	Partial
+Transfer Fees	Supports Tax / Commission transaction linking	Not exposed in transfer UI	Fee transaction ignored
+
+
+-----------------
+
+
+. Behavioral & Business Logic Deviations
+2.1 Debt & Credit Management
+Master Transaction Date:
+Legacy (
+
+SQLDatabase.java
+): Inserts the master transaction matching the user-selected debt date.
+MyMoney (
+
+DebtRepository.kt
+): Generates master transaction with DateUtils.getSQLDateTimeString(Date()) (current system timestamp), ignoring the date chosen by the user.
+Master Transaction Updates on Edit:
+Legacy (
+
+SQLDatabase.java
+): Whenever a debt is edited (amount, description, date, wallet), it queries and updates the corresponding master transaction.
+MyMoney (
+
+DebtRepository.kt
+): Updates the debts table only; linked master transaction remains unchanged with stale amount and wallet ID.
+Debt Deletion Strategy:
+Legacy (
+
+DebtItemFragment.java
+): Prompts user: "Do you want to delete associated transactions or keep them?"
+MyMoney (
+
+DebtRepository.kt
+): Cascades/sets null on transactions without user choice.
+2.2 Saving Goals
+Initial Starting Money (startMoney):
+Legacy (
+
+NewEditSavingActivity.java
+): When startMoney > 0, it prompts to create an initial deposit transaction from the selected wallet or adjusts initial funds.
+MyMoney (
+
+SavingDetailsViewModel.kt
+): Saves startMoney as static metadata in the database without adjusting wallet balances or registering the initial deposit.
+Goal Deletion Handling:
+Legacy (
+
+SavingItemFragment.java
+): Allows user to keep or delete linked deposit/withdraw transactions.
+MyMoney (
+
+SavingRepository.kt
+): Sets savingId = NULL silently.
+2.3 Recurrences (Transactions & Transfers)
+Pending Unconfirmed Occurrences:
+Legacy (
+
+Contract.java
+): If recurrence was marked confirmed = false, generated transactions landed in an Inbox / Pending Confirmation state and did not affect wallet balances until explicitly confirmed by the user.
+MyMoney (
+
+RecurrenceRepository.kt
+): Directly commits transactions without user review notifications.
+Recurrence Rule Options (RRule Dialog):
+Legacy (
+
+RecurrencePickerDialog.java
+): Supported custom intervals (e.g. every 2 weeks), specific days of week selection, monthly by day of month vs. day of week (e.g. 3rd Friday), and end conditions (Never, By Date, After N Occurrences).
+MyMoney (
+
+RecurrencePickerDialog.kt
+): Implements a subset of rule building; occurrences count and specific monthly day-of-week recurrence are omitted.
+2.4 Budgets & Calculation
+Inter-Wallet Transfer Exclusions:
+Legacy (
+
+SQLDatabase.java
+): In multi-wallet budgets, transfers between wallets included in the same budget are excluded from spent expenses / incomes to avoid artificial double-counting.
+MyMoney (
+
+MoneyDao.kt
+): Contains partial transfer exclusions, but for BudgetType.CATEGORY, transfer exclusions are missing from the subquery.
+Budget Cycle & Carryover:
+Legacy: Handled automated recurring budget windows (Monthly, Weekly, Custom period auto-renew).
+MyMoney: Budgets are fixed between explicit startDate and endDate without automated cycle progression.
