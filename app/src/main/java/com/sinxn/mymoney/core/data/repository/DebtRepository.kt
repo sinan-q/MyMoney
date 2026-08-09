@@ -174,7 +174,7 @@ class DebtRepository @Inject constructor(
             val masterTx = TransactionEntity(
                 id = UUID.randomUUID().toString(),
                 money = money,
-                date = DateUtils.getSQLDateTimeString(Date()),
+                date = date,
                 description = description,
                 categoryId = systemCat.id,
                 walletId = walletId,
@@ -270,6 +270,7 @@ class DebtRepository @Inject constructor(
 
             val updatedTx = masterTx.copy(
                 money = money,
+                date = date,
                 description = description,
                 categoryId = systemCat.id,
                 walletId = walletId,
@@ -300,9 +301,13 @@ class DebtRepository @Inject constructor(
     /**
      * Soft delete debt and all related transactions & people links.
      */
-    suspend fun deleteDebt(debtId: String) {
+    suspend fun deleteDebt(debtId: String, deleteTransactions: Boolean = true) {
         val now = System.currentTimeMillis()
-        moneyDao.softDeleteTransactionsForDebt(debtId, now)
+        if (deleteTransactions) {
+            moneyDao.softDeleteTransactionsForDebt(debtId, now)
+        } else {
+            moneyDao.unlinkTransactionsForDebt(debtId, now)
+        }
         moneyDao.softDeletePeopleForDebt(debtId, now)
         moneyDao.softDeleteDebt(debtId, now)
     }

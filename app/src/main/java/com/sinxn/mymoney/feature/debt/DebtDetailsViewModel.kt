@@ -279,10 +279,10 @@ class DebtDetailsViewModel @Inject constructor(
         }
     }
 
-    fun deleteDebt(onSuccess: () -> Unit) {
+    fun deleteDebt(deleteTransactions: Boolean = true, onSuccess: () -> Unit) {
         if (isNewDebt) return
         viewModelScope.launch {
-            debtRepository.deleteDebt(debtId)
+            debtRepository.deleteDebt(debtId, deleteTransactions)
             onSuccess()
         }
     }

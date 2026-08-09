@@ -136,8 +136,40 @@ fun SavingListContent(
     onWithdraw: (String) -> Unit,
     onWithdrawEverything: (String) -> Unit,
     onToggleComplete: (String, Boolean) -> Unit,
-    onDeleteSaving: (String) -> Unit
+    onDeleteSaving: (savingId: String, deleteTransactions: Boolean) -> Unit
 ) {
+    var pendingDeleteSavingId by remember { mutableStateOf<String?>(null) }
+
+    if (pendingDeleteSavingId != null) {
+        val targetId = pendingDeleteSavingId!!
+        AlertDialog(
+            onDismissRequest = { pendingDeleteSavingId = null },
+            title = { Text("Delete Saving Goal") },
+            text = { Text("Do you want to delete all associated transactions or keep them in history?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteSaving(targetId, true)
+                    pendingDeleteSavingId = null
+                }) {
+                    Text("Delete All", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        onDeleteSaving(targetId, false)
+                        pendingDeleteSavingId = null
+                    }) {
+                        Text("Keep Transactions")
+                    }
+                    TextButton(onClick = { pendingDeleteSavingId = null }) {
+                        Text("Cancel")
+                    }
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             Column {
@@ -201,7 +233,7 @@ fun SavingListContent(
                             onWithdraw = { onWithdraw(item.saving.id) },
                             onWithdrawEverything = { onWithdrawEverything(item.saving.id) },
                             onToggleComplete = { onToggleComplete(item.saving.id, item.saving.isComplete) },
-                            onDelete = { onDeleteSaving(item.saving.id) }
+                            onDelete = { pendingDeleteSavingId = item.saving.id }
                         )
                     }
                 }

@@ -111,6 +111,31 @@ class SavingRepository @Inject constructor(
 
         if (id == null) {
             moneyDao.insertSaving(savingEntity)
+            if (startMoney > 0) {
+                val systemCat = getOrCreateSystemCategory(TAG_SAVING_DEPOSIT)
+                val depositTx = TransactionEntity(
+                    id = UUID.randomUUID().toString(),
+                    money = startMoney,
+                    date = DateUtils.getSQLDateTimeString(Date()),
+                    description = "Initial deposit for ${description ?: "Saving Goal"}",
+                    categoryId = systemCat.id,
+                    walletId = walletId,
+                    direction = 0, // EXPENSE (moves funds into savings)
+                    type = 0,
+                    note = note,
+                    confirmed = true,
+                    countInTotal = true,
+                    isDeleted = false,
+                    placeId = null,
+                    eventId = null,
+                    debtId = null,
+                    savingId = savingId,
+                    recurrenceId = null,
+                    lastEdit = now,
+                    tag = null
+                )
+                moneyDao.insertTransaction(depositTx)
+            }
         } else {
             moneyDao.updateSaving(savingEntity)
         }
@@ -129,9 +154,13 @@ class SavingRepository @Inject constructor(
     /**
      * Soft delete a saving goal.
      */
-    suspend fun deleteSaving(savingId: String) {
+    suspend fun deleteSaving(savingId: String, deleteTransactions: Boolean = true) {
         val now = System.currentTimeMillis()
-        moneyDao.softDeleteTransactionsForSaving(savingId, now)
+        if (deleteTransactions) {
+            moneyDao.softDeleteTransactionsForSaving(savingId, now)
+        } else {
+            moneyDao.unlinkTransactionsForSaving(savingId, now)
+        }
         moneyDao.softDeleteSaving(savingId, now)
     }
 }

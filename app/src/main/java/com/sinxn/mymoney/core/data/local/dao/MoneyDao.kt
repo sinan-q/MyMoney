@@ -91,6 +91,9 @@ interface MoneyDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertCurrencies(items: List<com.sinxn.mymoney.core.data.local.entity.CurrencyEntity>)
 
+    @Query("SELECT * FROM currencies WHERE iso = :iso LIMIT 1")
+    suspend fun getCurrencyByIso(iso: String): com.sinxn.mymoney.core.data.local.entity.CurrencyEntity?
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTransactionModels(items: List<com.sinxn.mymoney.core.data.local.entity.TransactionModelEntity>)
 
@@ -594,6 +597,9 @@ interface MoneyDao {
     @Query("UPDATE transactions SET isDeleted = 1, lastEdit = :lastEdit WHERE debtId = :debtId")
     suspend fun softDeleteTransactionsForDebt(debtId: String, lastEdit: Long)
 
+    @Query("UPDATE transactions SET debtId = NULL, lastEdit = :lastEdit WHERE debtId = :debtId")
+    suspend fun unlinkTransactionsForDebt(debtId: String, lastEdit: Long)
+
     @Query("UPDATE debt_people SET isDeleted = 1, lastEdit = :lastEdit WHERE debtId = :debtId")
     suspend fun softDeletePeopleForDebt(debtId: String, lastEdit: Long)
 
@@ -664,6 +670,20 @@ interface MoneyDao {
                              AND t.date <= :maxDate
                              AND DATE(t.date) >= DATE(b.startDate) AND DATE(t.date) <= DATE(b.endDate)
                              AND (b.categoryId = t.categoryId OR b.categoryId = tc.parentId)
+                             AND t.id NOT IN (
+                                 SELECT tf.transactionFromId
+                                 FROM transfers tf
+                                 INNER JOIN transactions t2 ON tf.transactionToId = t2.id
+                                 INNER JOIN budget_wallets bw3 ON t2.walletId = bw3.walletId
+                                 WHERE bw3.budgetId = b.id AND bw3.walletId != t.walletId
+                             )
+                             AND t.id NOT IN (
+                                 SELECT tf.transactionToId
+                                 FROM transfers tf
+                                 INNER JOIN transactions t2 ON tf.transactionFromId = t2.id
+                                 INNER JOIN budget_wallets bw3 ON t2.walletId = bw3.walletId
+                                 WHERE bw3.budgetId = b.id AND bw3.walletId != t.walletId
+                             )
                        )
                        ELSE 0
                    END
@@ -698,6 +718,13 @@ interface MoneyDao {
                            WHERE bw2.budgetId = b.id AND bw2.isDeleted = 0 AND t.isDeleted = 0
                              AND t.direction = 0 AND t.date <= :maxDate
                              AND DATE(t.date) >= DATE(b.startDate) AND DATE(t.date) <= DATE(b.endDate)
+                             AND t.id NOT IN (
+                                 SELECT tf.transactionFromId
+                                 FROM transfers tf
+                                 INNER JOIN transactions t2 ON tf.transactionToId = t2.id
+                                 INNER JOIN budget_wallets bw3 ON t2.walletId = bw3.walletId
+                                 WHERE bw3.budgetId = b.id AND bw3.walletId != t.walletId
+                             )
                        )
                        WHEN 1 THEN (
                            SELECT SUM(t.money)
@@ -706,6 +733,13 @@ interface MoneyDao {
                            WHERE bw2.budgetId = b.id AND bw2.isDeleted = 0 AND t.isDeleted = 0
                              AND t.direction = 1 AND t.date <= :maxDate
                              AND DATE(t.date) >= DATE(b.startDate) AND DATE(t.date) <= DATE(b.endDate)
+                             AND t.id NOT IN (
+                                 SELECT tf.transactionToId
+                                 FROM transfers tf
+                                 INNER JOIN transactions t2 ON tf.transactionFromId = t2.id
+                                 INNER JOIN budget_wallets bw3 ON t2.walletId = bw3.walletId
+                                 WHERE bw3.budgetId = b.id AND bw3.walletId != t.walletId
+                             )
                        )
                        WHEN 2 THEN (
                            SELECT SUM(((t.direction * 2) - 1) * t.money)
@@ -716,6 +750,20 @@ interface MoneyDao {
                              AND t.date <= :maxDate
                              AND DATE(t.date) >= DATE(b.startDate) AND DATE(t.date) <= DATE(b.endDate)
                              AND (b.categoryId = t.categoryId OR b.categoryId = tc.parentId)
+                             AND t.id NOT IN (
+                                 SELECT tf.transactionFromId
+                                 FROM transfers tf
+                                 INNER JOIN transactions t2 ON tf.transactionToId = t2.id
+                                 INNER JOIN budget_wallets bw3 ON t2.walletId = bw3.walletId
+                                 WHERE bw3.budgetId = b.id AND bw3.walletId != t.walletId
+                             )
+                             AND t.id NOT IN (
+                                 SELECT tf.transactionToId
+                                 FROM transfers tf
+                                 INNER JOIN transactions t2 ON tf.transactionFromId = t2.id
+                                 INNER JOIN budget_wallets bw3 ON t2.walletId = bw3.walletId
+                                 WHERE bw3.budgetId = b.id AND bw3.walletId != t.walletId
+                             )
                        )
                        ELSE 0
                    END
@@ -767,6 +815,9 @@ interface MoneyDao {
 
     @Query("UPDATE transactions SET isDeleted = 1, lastEdit = :lastEdit WHERE savingId = :savingId")
     suspend fun softDeleteTransactionsForSaving(savingId: String, lastEdit: Long)
+
+    @Query("UPDATE transactions SET savingId = NULL, lastEdit = :lastEdit WHERE savingId = :savingId")
+    suspend fun unlinkTransactionsForSaving(savingId: String, lastEdit: Long)
 
     @Query("UPDATE savings SET isComplete = :isComplete, lastEdit = :lastEdit WHERE id = :savingId")
     suspend fun updateSavingComplete(savingId: String, isComplete: Boolean, lastEdit: Long)

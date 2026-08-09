@@ -53,6 +53,7 @@ fun DebtDetailsScreen(
             showPlusMinus = false
         )
     }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -86,7 +87,7 @@ fun DebtDetailsScreen(
                                     contentDescription = "Archive"
                                 )
                             }
-                            IconButton(onClick = { viewModel.deleteDebt(onNavigateBack) }) {
+                            IconButton(onClick = { showDeleteDialog = true }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
                             }
                         }
@@ -98,6 +99,34 @@ fun DebtDetailsScreen(
             )
         }
     ) { paddingValues ->
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("Delete Debt") },
+                text = { Text("Do you want to delete all associated transactions or keep them in history?") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showDeleteDialog = false
+                        viewModel.deleteDebt(deleteTransactions = true, onSuccess = onNavigateBack)
+                    }) {
+                        Text("Delete All", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    Row {
+                        TextButton(onClick = {
+                            showDeleteDialog = false
+                            viewModel.deleteDebt(deleteTransactions = false, onSuccess = onNavigateBack)
+                        }) {
+                            Text("Keep Transactions")
+                        }
+                        TextButton(onClick = { showDeleteDialog = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                }
+            )
+        }
         Box(
             modifier = Modifier
                 .fillMaxSize()

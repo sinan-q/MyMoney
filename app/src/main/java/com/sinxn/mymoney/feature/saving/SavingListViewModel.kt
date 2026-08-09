@@ -71,9 +71,9 @@ class SavingListViewModel @Inject constructor(
         }
     }
 
-    fun deleteSaving(savingId: String) {
+    fun deleteSaving(savingId: String, deleteTransactions: Boolean = true) {
         viewModelScope.launch {
-            savingRepository.deleteSaving(savingId)
+            savingRepository.deleteSaving(savingId, deleteTransactions)
         }
     }
 }

@@ -1005,6 +1005,60 @@ fun UltraCleanTransactionContent(
                     )
                 }
 
+                // If wallets have different currencies, show Destination Amount field
+                if (activeFromWallet != null && activeToWallet != null && !activeFromWallet.currency.equals(activeToWallet.currency, ignoreCase = true)) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                    ) {
+                        Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
+                            OutlinedTextField(
+                                value = uiState.editTargetAmount,
+                                onValueChange = viewModel::onTargetAmountChange,
+                                label = { Text("Destination Amount (${uiState.targetWalletCurrency})") },
+                                placeholder = { Text("Received in ${uiState.targetWalletCurrency}") },
+                                leadingIcon = { Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal)
+                            )
+                        }
+                    }
+                }
+
+                // Transfer Fee / Tax Field
+                Spacer(modifier = Modifier.height(10.dp))
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
+                        OutlinedTextField(
+                            value = uiState.editTransferFee,
+                            onValueChange = viewModel::onTransferFeeChange,
+                            label = { Text("Transfer Fee / Tax (${uiState.currencyCode})") },
+                            placeholder = { Text("0.00") },
+                            leadingIcon = { Icon(Icons.Default.Tune, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal)
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(10.dp))
             }
 

@@ -92,9 +92,9 @@ class DebtListViewModel @Inject constructor(
         }
     }
 
-    fun deleteDebt(debtId: String) {
+    fun deleteDebt(debtId: String, deleteTransactions: Boolean = true) {
         viewModelScope.launch {
-            debtRepository.deleteDebt(debtId)
+            debtRepository.deleteDebt(debtId, deleteTransactions)
         }
     }
 }

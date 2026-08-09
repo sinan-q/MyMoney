@@ -36,6 +36,8 @@ fun SavingDetailsScreen(
         }
     }
 
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -47,7 +49,7 @@ fun SavingDetailsScreen(
                 },
                 actions = {
                     if (uiState.isEditing) {
-                        IconButton(onClick = viewModel::deleteSaving) {
+                        IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete Goal", tint = MaterialTheme.colorScheme.error)
                         }
                     }
@@ -58,6 +60,34 @@ fun SavingDetailsScreen(
             )
         }
     ) { paddingValues ->
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("Delete Saving Goal") },
+                text = { Text("Do you want to delete all associated transactions or keep them in history?") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showDeleteDialog = false
+                        viewModel.deleteSaving(deleteTransactions = true)
+                    }) {
+                        Text("Delete All", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    Row {
+                        TextButton(onClick = {
+                            showDeleteDialog = false
+                            viewModel.deleteSaving(deleteTransactions = false)
+                        }) {
+                            Text("Keep Transactions")
+                        }
+                        TextButton(onClick = { showDeleteDialog = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                }
+            )
+        }
         Box(
             modifier = Modifier
                 .fillMaxSize()

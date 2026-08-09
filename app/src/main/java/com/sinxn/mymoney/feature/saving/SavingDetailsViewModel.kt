@@ -163,10 +163,10 @@ class SavingDetailsViewModel @Inject constructor(
         }
     }
 
-    fun deleteSaving() {
+    fun deleteSaving(deleteTransactions: Boolean = true) {
         viewModelScope.launch {
             if (savingId != "new") {
-                savingRepository.deleteSaving(savingId)
+                savingRepository.deleteSaving(savingId, deleteTransactions)
                 _eventFlow.emit(SavingDetailsEvent.Deleted)
             }
         }

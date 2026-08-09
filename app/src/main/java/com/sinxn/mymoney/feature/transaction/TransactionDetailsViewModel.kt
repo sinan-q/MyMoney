@@ -75,6 +75,10 @@ data class TransactionDetailsUiState(
     val isTransfer: Boolean = false,
     val targetWalletId: String? = null,
     val targetWalletName: String = "",
+    val editTargetAmount: String = "",
+    val editTransferFee: String = "",
+    val targetWalletCurrency: String = "",
+    val targetWalletDecimals: Int = 2,
     val transferEntity: com.sinxn.mymoney.core.data.local.entity.TransferEntity? = null
 )
 
@@ -116,6 +120,8 @@ class TransactionDetailsViewModel @Inject constructor(
     // Transfer State Flows
     private val _isTransfer = MutableStateFlow(false)
     private val _targetWalletId = MutableStateFlow<String?>(null)
+    private val _editTargetAmount = MutableStateFlow("")
+    private val _editTransferFee = MutableStateFlow("")
     private val _transferEntity = MutableStateFlow<com.sinxn.mymoney.core.data.local.entity.TransferEntity?>(null)
 
     init {
@@ -283,15 +289,19 @@ class TransactionDetailsViewModel @Inject constructor(
     private data class TransferState(
         val isTransfer: Boolean,
         val targetWalletId: String?,
+        val targetAmount: String,
+        val transferFee: String,
         val transferEntity: com.sinxn.mymoney.core.data.local.entity.TransferEntity?
     )
 
     private val transferState = combine(
         _isTransfer,
         _targetWalletId,
+        _editTargetAmount,
+        _editTransferFee,
         _transferEntity
-    ) { isTransfer, targetId, entity ->
-        TransferState(isTransfer, targetId, entity)
+    ) { isTransfer, targetId, targetAmt, fee, entity ->
+        TransferState(isTransfer, targetId, targetAmt, fee, entity)
     }
 
     val uiState: StateFlow<TransactionDetailsUiState> = combine(
@@ -375,6 +385,10 @@ class TransactionDetailsViewModel @Inject constructor(
             isTransfer = isTransfer,
             targetWalletId = targetWalletId,
             targetWalletName = targetWallet?.wallet?.name ?: "",
+            editTargetAmount = transferInfo.targetAmount,
+            editTransferFee = transferInfo.transferFee,
+            targetWalletCurrency = targetWallet?.wallet?.currency ?: "",
+            targetWalletDecimals = targetWallet?.decimals ?: 2,
             transferEntity = transferEntity
         )
     }.stateIn(
@@ -636,6 +650,8 @@ class TransactionDetailsViewModel @Inject constructor(
         }
     }
 
+    fun onTargetAmountChange(value: String) { _editTargetAmount.value = value }
+    fun onTransferFeeChange(value: String) { _editTransferFee.value = value }
     fun onNoteChange(value: String) { _editNote.value = value }
     fun onDescriptionChange(value: String) { _editDescription.value = value }
     fun onConfirmedChange(value: Boolean) { _editConfirmed.value = value }
@@ -727,8 +743,33 @@ class TransactionDetailsViewModel @Inject constructor(
                 if (_isTransfer.value) {
                     val walletFromId = _editWalletId.value
                     val walletToId = _targetWalletId.value ?: _editWalletId.value
+                    val walletFrom = moneyDao.getWalletById(walletFromId)
+                    val walletTo = moneyDao.getWalletById(walletToId)
+                    val fromDecimals = walletFrom?.currency?.let { moneyDao.getCurrencyByIso(it)?.decimals } ?: decimals
+                    val toDecimals = walletTo?.currency?.let { moneyDao.getCurrencyByIso(it)?.decimals } ?: decimals
+
+                    val fromMoneyValue = try {
+                        val multiplier = 10.0.pow(fromDecimals.toDouble())
+                        (getImmediateResult(_editAmount.value).replace(",", ".").toDouble() * multiplier).toLong()
+                    } catch (e: Exception) { 0L }
+
+                    val toMoneyValue = if (walletFrom?.currency != null && walletTo?.currency != null && !walletFrom.currency.equals(walletTo.currency, ignoreCase = true) && _editTargetAmount.value.isNotBlank()) {
+                        try {
+                            val multiplier = 10.0.pow(toDecimals.toDouble())
+                            (getImmediateResult(_editTargetAmount.value).replace(",", ".").toDouble() * multiplier).toLong()
+                        } catch (e: Exception) { fromMoneyValue }
+                    } else {
+                        fromMoneyValue
+                    }
+
+                    val feeValue = try {
+                        if (_editTransferFee.value.isNotBlank()) {
+                            val multiplier = 10.0.pow(fromDecimals.toDouble())
+                            (getImmediateResult(_editTransferFee.value).replace(",", ".").toDouble() * multiplier).toLong()
+                        } else 0L
+                    } catch (e: Exception) { 0L }
+
                     val existingTransfer = _transferEntity.value
-                    
                     val transferId = existingTransfer?.id ?: UUID.randomUUID().toString()
                     val fromTxId = existingTransfer?.transactionFromId ?: if (isNewTransaction) UUID.randomUUID().toString() else transactionId
                     val toTxId = existingTransfer?.transactionToId ?: UUID.randomUUID().toString()
@@ -739,7 +780,7 @@ class TransactionDetailsViewModel @Inject constructor(
 
                     val fromTx = com.sinxn.mymoney.core.data.local.entity.TransactionEntity(
                         id = fromTxId,
-                        money = moneyValue,
+                        money = fromMoneyValue,
                         date = _editDate.value,
                         categoryId = transferCategory,
                         walletId = walletFromId,
@@ -761,7 +802,7 @@ class TransactionDetailsViewModel @Inject constructor(
 
                     val toTx = com.sinxn.mymoney.core.data.local.entity.TransactionEntity(
                         id = toTxId,
-                        money = moneyValue,
+                        money = toMoneyValue,
                         date = _editDate.value,
                         categoryId = transferCategory,
                         walletId = walletToId,
@@ -781,13 +822,53 @@ class TransactionDetailsViewModel @Inject constructor(
                         lastEdit = System.currentTimeMillis()
                     )
 
+                    val taxTxId = if (feeValue > 0) {
+                        val existingTaxId = existingTransfer?.transactionTaxId ?: UUID.randomUUID().toString()
+                        val taxCategory = uiState.value.availableCategories.find {
+                            it.tag == "system::transfer_tax" || it.tag == "transfer_tax" || it.name.contains("Tax", ignoreCase = true) || it.name.contains("Fee", ignoreCase = true)
+                        }?.id ?: transferCategory
+
+                        val taxTx = com.sinxn.mymoney.core.data.local.entity.TransactionEntity(
+                            id = existingTaxId,
+                            money = feeValue,
+                            date = _editDate.value,
+                            categoryId = taxCategory,
+                            walletId = walletFromId,
+                            note = "Transfer fee",
+                            description = _editDescription.value.takeIf { it.isNotEmpty() } ?: "Transfer Fee",
+                            placeId = _editPlaceId.value,
+                            eventId = _editEventId.value,
+                            direction = Direction.EXPENSE,
+                            confirmed = _editConfirmed.value,
+                            countInTotal = _editCountInTotal.value,
+                            type = TransactionType.TRANSFER,
+                            isDeleted = false,
+                            debtId = null,
+                            savingId = null,
+                            recurrenceId = null,
+                            tag = null,
+                            lastEdit = System.currentTimeMillis()
+                        )
+                        moneyDao.insertTransaction(taxTx)
+                        existingTaxId
+                    } else {
+                        val existingTaxId = existingTransfer?.transactionTaxId
+                        if (existingTaxId != null) {
+                            val oldTax = moneyDao.getTransactionById(existingTaxId)
+                            if (oldTax != null) {
+                                moneyDao.updateTransaction(oldTax.copy(isDeleted = true, lastEdit = System.currentTimeMillis()))
+                            }
+                        }
+                        null
+                    }
+
                     val newTransfer = com.sinxn.mymoney.core.data.local.entity.TransferEntity(
                         id = transferId,
                         description = _editDescription.value.takeIf { it.isNotEmpty() },
                         date = _editDate.value,
                         transactionFromId = fromTxId,
                         transactionToId = toTxId,
-                        transactionTaxId = null,
+                        transactionTaxId = taxTxId,
                         note = _editNote.value.takeIf { it.isNotEmpty() },
                         placeId = _editPlaceId.value,
                         eventId = _editEventId.value,
