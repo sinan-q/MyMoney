@@ -34,13 +34,13 @@ object DatabaseModule {
                 val systemCategories = listOf(
                     arrayOf("system-category-system::transfer", "Transfer", "ic_transfer", "2", "0", "0", "0", now.toString(), "system::transfer"),
                     arrayOf("system-category-system::transfer_tax", "Transfer fee", "ic_transfer_tax", "2", "0", "0", "0", now.toString(), "system::transfer_tax"),
-                    arrayOf("system-category-system::debt", "Debt", "ic_debt", "1", "0", "0", "0", now.toString(), "system::debt"),
-                    arrayOf("system-category-system::credit", "Credit", "ic_credit", "0", "0", "0", "0", now.toString(), "system::credit"),
-                    arrayOf("system-category-system::paid_debt", "Paid debt", "ic_debt_paid", "0", "0", "0", "0", now.toString(), "system::paid_debt"),
-                    arrayOf("system-category-system::paid_credit", "Paid credit", "ic_credit_paid", "1", "0", "0", "0", now.toString(), "system::paid_credit"),
+                    arrayOf("system-category-system::debt", "Debt", "ic_debt", "2", "0", "0", "0", now.toString(), "system::debt"),
+                    arrayOf("system-category-system::credit", "Credit", "ic_credit", "2", "0", "0", "0", now.toString(), "system::credit"),
+                    arrayOf("system-category-system::paid_debt", "Paid debt", "ic_debt_paid", "2", "0", "0", "0", now.toString(), "system::paid_debt"),
+                    arrayOf("system-category-system::paid_credit", "Paid credit", "ic_credit_paid", "2", "0", "0", "0", now.toString(), "system::paid_credit"),
                     arrayOf("system-category-system::tax", "Tax", "ic_tax", "2", "0", "0", "0", now.toString(), "system::tax"),
-                    arrayOf("system-category-system::deposit", "Deposit", "ic_saving_deposit", "0", "0", "0", "0", now.toString(), "system::deposit"),
-                    arrayOf("system-category-system::withdraw", "Withdraw", "ic_saving_withdraw", "1", "0", "0", "0", now.toString(), "system::withdraw")
+                    arrayOf("system-category-system::deposit", "Deposit", "ic_saving_deposit", "2", "0", "0", "0", now.toString(), "system::deposit"),
+                    arrayOf("system-category-system::withdraw", "Withdraw", "ic_saving_withdraw", "2", "0", "0", "0", now.toString(), "system::withdraw")
                 )
 
                 for (cat in systemCategories) {

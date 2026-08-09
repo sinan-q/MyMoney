@@ -16,7 +16,10 @@ import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.DebtRepository
 import com.sinxn.mymoney.core.data.repository.SavingRepository
+import com.sinxn.mymoney.core.util.CategoryType
 import com.sinxn.mymoney.core.util.DateUtils
+import com.sinxn.mymoney.core.util.Direction
+import com.sinxn.mymoney.core.util.TransactionType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -105,7 +108,7 @@ class TransactionDetailsViewModel @Inject constructor(
     private val _editWalletId = MutableStateFlow("")
     private val _editPlaceId = MutableStateFlow<String?>(null)
     private val _editEventId = MutableStateFlow<String?>(null)
-    private val _editDirection = MutableStateFlow(0)
+    private val _editDirection = MutableStateFlow(Direction.EXPENSE)
     private val _editPeopleIds = MutableStateFlow<Set<String>>(emptySet())
     private val _editConfirmed = MutableStateFlow(true)
     private val _editCountInTotal = MutableStateFlow(true)
@@ -138,7 +141,7 @@ class TransactionDetailsViewModel @Inject constructor(
                         val tag = if (isDeposit) SavingRepository.TAG_SAVING_DEPOSIT else SavingRepository.TAG_SAVING_WITHDRAW
                         val cat = savingRepository.getOrCreateSystemCategory(tag)
                         _editCategoryId.value = cat.id
-                        _editDirection.value = if (isDeposit) 0 else 1
+                        _editDirection.value = if (isDeposit) Direction.EXPENSE else Direction.INCOME
 
                         if (savingActionArg == "withdraw_everything") {
                             val targetOrCurrent = if (savingDetails.neededMoney == 0L) savingDetails.saving.endMoney else savingDetails.currentMoney
@@ -158,7 +161,7 @@ class TransactionDetailsViewModel @Inject constructor(
                         
                         val isPay = debtActionArg.equals("PAY", ignoreCase = true) || (debtActionArg == null && debt.type == 0)
 
-                        val direction = if (isPay) 0 else 1 // Expense for paying debt, Income for collecting credit
+                        val direction = if (isPay) Direction.EXPENSE else Direction.INCOME // Expense for paying debt, Income for collecting credit
                         val catTag = if (isPay) DebtRepository.TAG_PAID_DEBT else DebtRepository.TAG_PAID_CREDIT
                         val systemCat = debtRepository.getOrCreateSystemCategory(catTag)
 
@@ -195,11 +198,11 @@ class TransactionDetailsViewModel @Inject constructor(
                     }
                 } else if (tx != null && tx.debtId == null && (tx.type == 1 || tx.type == 2 || tx.direction == 2)) {
                     _isTransfer.value = true
-                    _editDirection.value = 2
+                    _editDirection.value = Direction.TRANSFER
                     val siblingTx = moneyDao.findSiblingTransferTransaction(tx.money, tx.date, tx.id)
                     if (siblingTx != null) {
-                        val fromTx = if (tx.direction == 0) tx else siblingTx
-                        val toTx = if (tx.direction == 1) tx else siblingTx
+                        val fromTx = if (tx.direction == Direction.EXPENSE) tx else siblingTx
+                        val toTx = if (tx.direction == Direction.INCOME) tx else siblingTx
                         _editWalletId.value = fromTx.walletId
                         _targetWalletId.value = toTx.walletId
 
@@ -340,8 +343,8 @@ class TransactionDetailsViewModel @Inject constructor(
                 .filter { !it.wallet.isArchived || it.wallet.id == transaction?.transaction?.walletId }
                 .map { it.wallet },
             availableCategories = lists.categories,
-            availableIncomeCategories = lists.categories.filter { it.type == 0 },
-            availableExpenseCategories = lists.categories.filter { it.type == 1 },
+            availableIncomeCategories = lists.categories.filter { it.type == CategoryType.INCOME },
+            availableExpenseCategories = lists.categories.filter { it.type == CategoryType.EXPENSE },
             availablePlaces = lists.places,
             availableEvents = lists.events,
             availablePeople = lists.people,
@@ -405,8 +408,8 @@ class TransactionDetailsViewModel @Inject constructor(
         val people: List<PersonEntity>
     )
     private fun flattenCategories(categories: List<com.sinxn.mymoney.core.data.local.entity.CategoryEntity>): List<com.sinxn.mymoney.core.data.local.entity.CategoryEntity> {
-        // Filter out system categories (Type 2+) - Only show Expense (0) and Income (1)
-        val validCategories = categories.filter { it.type == 0 || it.type == 1 }
+        // Filter out system categories (CategoryType.SYSTEM) - Only show Income and Expense
+        val validCategories = categories.filter { it.type == CategoryType.INCOME || it.type == CategoryType.EXPENSE }
         
         val parents = validCategories.filter { it.parentId == null }.sortedBy { it.index }
         val result = mutableListOf<com.sinxn.mymoney.core.data.local.entity.CategoryEntity>()
@@ -459,7 +462,7 @@ class TransactionDetailsViewModel @Inject constructor(
             val transfer = _transferEntity.value
             if (transfer != null || current.transaction.type == 1 || current.transaction.type == 2) {
                 _isTransfer.value = true
-                _editDirection.value = 2
+                _editDirection.value = Direction.TRANSFER
             } else {
                 _editWalletId.value = current.transaction.walletId
                 _editDirection.value = current.transaction.direction
@@ -603,13 +606,13 @@ class TransactionDetailsViewModel @Inject constructor(
     fun onTransferToggle(isTransfer: Boolean) {
         _isTransfer.value = isTransfer
         if (isTransfer) {
-            _editDirection.value = 2 // Transfer Blue
+            _editDirection.value = Direction.TRANSFER // Transfer Blue
             if (_targetWalletId.value.isNullOrEmpty()) {
                 val altWallet = uiState.value.availableWallets.firstOrNull { it.id != _editWalletId.value }
                 _targetWalletId.value = altWallet?.id
             }
         } else {
-            _editDirection.value = 0 // Expense
+            _editDirection.value = Direction.EXPENSE // Expense
         }
     }
 
@@ -635,7 +638,7 @@ class TransactionDetailsViewModel @Inject constructor(
         // Update direction based on category if found
         value?.let { id ->
             uiState.value.availableCategories.find { it.id == id }?.let { category ->
-                _editDirection.value = if (category.type == 0) 1 else 0
+                _editDirection.value = if (category.type == CategoryType.INCOME) Direction.INCOME else Direction.EXPENSE
             }
         }
     }
@@ -737,10 +740,10 @@ class TransactionDetailsViewModel @Inject constructor(
                         description = _editDescription.value.takeIf { it.isNotEmpty() },
                         placeId = _editPlaceId.value,
                         eventId = _editEventId.value,
-                        direction = 0, // Expense from Source Wallet
+                        direction = Direction.EXPENSE, // Expense from Source Wallet
                         confirmed = _editConfirmed.value,
                         countInTotal = _editCountInTotal.value,
-                        type = 1, // Contract.TransactionType.TRANSFER = 1
+                        type = TransactionType.TRANSFER, // Contract.TransactionType.TRANSFER = 1
                         isDeleted = false,
                         debtId = null,
                         savingId = null,
@@ -759,10 +762,10 @@ class TransactionDetailsViewModel @Inject constructor(
                         description = _editDescription.value.takeIf { it.isNotEmpty() },
                         placeId = _editPlaceId.value,
                         eventId = _editEventId.value,
-                        direction = 1, // Income into Destination Wallet
+                        direction = Direction.INCOME, // Income into Destination Wallet
                         confirmed = _editConfirmed.value,
                         countInTotal = _editCountInTotal.value,
-                        type = 1, // Contract.TransactionType.TRANSFER = 1
+                        type = TransactionType.TRANSFER, // Contract.TransactionType.TRANSFER = 1
                         isDeleted = false,
                         debtId = null,
                         savingId = null,

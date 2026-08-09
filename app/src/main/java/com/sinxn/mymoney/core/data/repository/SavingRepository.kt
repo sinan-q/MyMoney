@@ -6,6 +6,7 @@ import com.sinxn.mymoney.core.data.local.entity.SavingEntity
 import com.sinxn.mymoney.core.data.local.entity.TransactionEntity
 import com.sinxn.mymoney.core.data.local.model.SavingWithDetails
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
+import com.sinxn.mymoney.core.util.CategoryType
 import com.sinxn.mymoney.core.util.DateUtils
 import kotlinx.coroutines.flow.Flow
 import java.util.Date
@@ -30,17 +31,17 @@ class SavingRepository @Inject constructor(
         if (existing != null) return existing
 
         val now = System.currentTimeMillis()
-        val (name, icon, type) = when (tag) {
-            TAG_SAVING_DEPOSIT -> Triple("Deposit", "ic_saving_deposit", 0) // Expense from wallet to saving
-            TAG_SAVING_WITHDRAW -> Triple("Withdraw", "ic_saving_withdraw", 1) // Income to wallet from saving
-            else -> Triple("System", "ic_settings", 2)
+        val (name, icon) = when (tag) {
+            TAG_SAVING_DEPOSIT -> Pair("Deposit", "ic_saving_deposit")
+            TAG_SAVING_WITHDRAW -> Pair("Withdraw", "ic_saving_withdraw")
+            else -> Pair("System", "ic_settings")
         }
 
         val newCategory = CategoryEntity(
             id = "system-category-$tag",
             name = name,
             icon = icon,
-            type = type,
+            type = CategoryType.SYSTEM,
             parentId = null,
             showReport = false,
             index = 0,

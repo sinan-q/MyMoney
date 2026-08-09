@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
 import com.sinxn.mymoney.core.data.repository.CategoryRepository
+import com.sinxn.mymoney.core.util.CategoryType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,7 +19,7 @@ data class CategoryFormState(
     val editingCategory: CategoryEntity? = null,
     val name: String = "",
     val icon: String = "ic_category",
-    val type: Int = 0, // 0: Expense, 1: Income
+    val type: Int = CategoryType.EXPENSE,
     val parentId: String? = null
 )
 
@@ -31,7 +32,7 @@ data class CategoryUiState(
     val editingCategory: CategoryEntity? = null,
     val editName: String = "",
     val editIcon: String = "ic_category",
-    val editType: Int = 0,
+    val editType: Int = CategoryType.EXPENSE,
     val editParentId: String? = null
 )
 
@@ -48,8 +49,8 @@ class CategoryViewModel @Inject constructor(
     ) { categories, form ->
         CategoryUiState(
             categories = categories,
-            expenseCategories = categories.filter { it.type == 0 },
-            incomeCategories = categories.filter { it.type == 1 },
+            expenseCategories = categories.filter { it.type == CategoryType.EXPENSE },
+            incomeCategories = categories.filter { it.type == CategoryType.INCOME },
             isLoading = false,
             isEditDialogOpen = form.isOpen,
             editingCategory = form.editingCategory,
@@ -64,12 +65,12 @@ class CategoryViewModel @Inject constructor(
         initialValue = CategoryUiState()
     )
 
-    fun openCreateCategoryDialog(type: Int = 0) {
+    fun openCreateCategoryDialog(type: Int = CategoryType.EXPENSE) {
         _formState.value = CategoryFormState(
             isOpen = true,
             editingCategory = null,
             name = "",
-            icon = if (type == 1) "ic_income" else "ic_expense",
+            icon = if (type == CategoryType.INCOME) "ic_income" else "ic_expense",
             type = type,
             parentId = null
         )

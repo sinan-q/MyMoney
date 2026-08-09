@@ -8,6 +8,7 @@ import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
 import com.sinxn.mymoney.core.data.local.entity.WalletEntity
 import com.sinxn.mymoney.core.data.local.model.BudgetWithDetails
 import com.sinxn.mymoney.core.data.repository.BudgetRepository
+import com.sinxn.mymoney.core.util.BudgetType
 import com.sinxn.mymoney.core.util.DateUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -156,7 +157,7 @@ class BudgetDetailsViewModel @Inject constructor(
                 return@launch
             }
 
-            if (currentState.type == 2 && currentState.categoryId.isNullOrBlank()) {
+            if (currentState.type == BudgetType.CATEGORY && currentState.categoryId.isNullOrBlank()) {
                 _uiState.update { it.copy(errorMessage = "Please select a category for Category Budget.") }
                 return@launch
             }

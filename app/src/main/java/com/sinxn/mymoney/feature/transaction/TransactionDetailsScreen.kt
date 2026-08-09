@@ -105,6 +105,7 @@ import com.sinxn.mymoney.core.ui.components.NumpadView
 import com.sinxn.mymoney.core.ui.components.SelectionDialog
 import com.sinxn.mymoney.core.ui.components.WalletSelectionDialog
 import com.sinxn.mymoney.core.util.DateUtils
+import com.sinxn.mymoney.core.util.Direction
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -750,8 +751,8 @@ fun UltraCleanTransactionContent(
 
     // Minimal Direction Accent
     val accentColor = when {
-        uiState.isTransfer || uiState.editDirection == 2 -> Color(0xFF0284C7) // Transfer Blue
-        uiState.editDirection == 1 -> Color(0xFF10B981) // Income Mint
+        uiState.isTransfer || uiState.editDirection == Direction.TRANSFER -> Color(0xFF0284C7) // Transfer Blue
+        uiState.editDirection == Direction.INCOME -> Color(0xFF10B981) // Income Mint
         else -> Color(0xFFE11D48) // Expense Rose
     }
 
@@ -770,7 +771,7 @@ fun UltraCleanTransactionContent(
     val isSaveEnabled = !uiState.isSaving && isCategorySelected && isWalletSelected && isAmountNonNegative
 
     val actionBtnText = if (uiState.isNewTransaction) {
-        val dirName = if (uiState.isTransfer || uiState.editDirection == 2) "Transfer" else if (uiState.editDirection == 1) "Income" else "Expense"
+        val dirName = if (uiState.isTransfer || uiState.editDirection == Direction.TRANSFER) "Transfer" else if (uiState.editDirection == Direction.INCOME) "Income" else "Expense"
         "Add $dirName"
     } else {
         "Save Changes"
@@ -1278,7 +1279,7 @@ fun UltraCleanTransactionContent(
     // Modal Dialog Pickers
     if (showCategoryPicker) {
         CategorySelectionDialog(
-            showIncome = uiState.editDirection == 1,
+            showIncome = uiState.editDirection == Direction.INCOME,
             incomeCategories = uiState.availableIncomeCategories,
             expenseCategories = uiState.availableExpenseCategories,
             selectedCategoryId = uiState.editCategoryId,

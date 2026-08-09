@@ -10,7 +10,9 @@ import com.sinxn.mymoney.core.data.local.entity.PlaceEntity
 import com.sinxn.mymoney.core.data.local.entity.RecurrentTransactionEntity
 import com.sinxn.mymoney.core.data.local.entity.WalletEntity
 import com.sinxn.mymoney.core.data.repository.RecurrenceRepository
+import com.sinxn.mymoney.core.util.CategoryType
 import com.sinxn.mymoney.core.util.DateUtils
+import com.sinxn.mymoney.core.util.Direction
 import com.sinxn.mymoney.core.util.RecurrenceSetting
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -63,7 +65,8 @@ class RecurrentTransactionDetailsViewModel @Inject constructor(
             val events = moneyDao.getEventsList()
 
             val defaultWalletId = wallets.firstOrNull()?.id ?: ""
-            val defaultCategoryId = categories.firstOrNull { it.type == _uiState.value.direction }?.id
+            val targetCatType = if (_uiState.value.direction == Direction.INCOME) CategoryType.INCOME else CategoryType.EXPENSE
+            val defaultCategoryId = categories.firstOrNull { it.type == targetCatType }?.id
                 ?: categories.firstOrNull()?.id ?: ""
 
             _uiState.update {
@@ -122,7 +125,8 @@ class RecurrentTransactionDetailsViewModel @Inject constructor(
 
     fun onDirectionChanged(value: Int) {
         _uiState.update { current ->
-            val matchingCat = current.availableCategories.firstOrNull { it.type == value }?.id ?: current.categoryId
+            val targetCatType = if (value == Direction.INCOME) CategoryType.INCOME else CategoryType.EXPENSE
+            val matchingCat = current.availableCategories.firstOrNull { it.type == targetCatType }?.id ?: current.categoryId
             current.copy(direction = value, categoryId = matchingCat)
         }
     }

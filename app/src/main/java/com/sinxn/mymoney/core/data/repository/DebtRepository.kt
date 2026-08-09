@@ -8,6 +8,7 @@ import com.sinxn.mymoney.core.data.local.entity.TransactionEntity
 import com.sinxn.mymoney.core.data.local.entity.TransactionPeopleEntity
 import com.sinxn.mymoney.core.data.local.model.DebtWithDetails
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
+import com.sinxn.mymoney.core.util.CategoryType
 import com.sinxn.mymoney.core.util.DateUtils
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -37,19 +38,19 @@ class DebtRepository @Inject constructor(
         if (existing != null) return existing
 
         val now = System.currentTimeMillis()
-        val (name, icon, type) = when (tag) {
-            TAG_DEBT -> Triple("Debt", "ic_debt", 1) // Income when borrowed
-            TAG_CREDIT -> Triple("Credit", "ic_credit", 0) // Expense when lent
-            TAG_PAID_DEBT -> Triple("Paid debt", "ic_debt_paid", 0) // Expense when paid
-            TAG_PAID_CREDIT -> Triple("Paid credit", "ic_credit_paid", 1) // Income when collected
-            else -> Triple("System", "ic_settings", 2)
+        val (name, icon) = when (tag) {
+            TAG_DEBT -> Pair("Debt", "ic_debt")
+            TAG_CREDIT -> Pair("Credit", "ic_credit")
+            TAG_PAID_DEBT -> Pair("Paid debt", "ic_debt_paid")
+            TAG_PAID_CREDIT -> Pair("Paid credit", "ic_credit_paid")
+            else -> Pair("System", "ic_settings")
         }
 
         val newCategory = CategoryEntity(
             id = "system-category-$tag",
             name = name,
             icon = icon,
-            type = type,
+            type = CategoryType.SYSTEM,
             parentId = null,
             showReport = false,
             index = 0,

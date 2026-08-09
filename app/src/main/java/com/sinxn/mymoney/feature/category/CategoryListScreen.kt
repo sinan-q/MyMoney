@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
+import com.sinxn.mymoney.core.util.CategoryType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,7 +40,10 @@ fun CategoryListScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { viewModel.openCreateCategoryDialog(selectedTab) }
+                onClick = {
+                    val targetType = if (selectedTab == 0) CategoryType.EXPENSE else CategoryType.INCOME
+                    viewModel.openCreateCategoryDialog(targetType)
+                }
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Category")
             }

@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 import com.sinxn.mymoney.core.data.local.dao.MoneyDao
+import com.sinxn.mymoney.core.util.Direction
 import kotlin.math.pow
 
 data class TemplateFormState(
@@ -32,7 +33,7 @@ data class TemplateFormState(
     val categoryId: String = "",
     val walletId: String = "",
     val targetWalletId: String = "",
-    val direction: Int = 0
+    val direction: Int = Direction.EXPENSE
 )
 
 data class TemplateUiState(
@@ -101,7 +102,7 @@ class TemplateViewModel @Inject constructor(
             categoryId = firstCat,
             walletId = firstWallet,
             targetWalletId = secondWallet,
-            direction = if (isTransfer) 2 else 0
+            direction = if (isTransfer) Direction.TRANSFER else Direction.EXPENSE
         )
     }
 
@@ -132,7 +133,7 @@ class TemplateViewModel @Inject constructor(
             description = item.model.description ?: "",
             walletId = item.model.walletFromId,
             targetWalletId = item.model.walletToId,
-            direction = 2
+            direction = Direction.TRANSFER
         )
     }
 

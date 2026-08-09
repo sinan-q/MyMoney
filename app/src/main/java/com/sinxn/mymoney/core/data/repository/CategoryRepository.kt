@@ -23,7 +23,7 @@ class CategoryRepository @Inject constructor(
         id: String?,
         name: String,
         icon: String,
-        type: Int, // 0: Expense, 1: Income, 2: System
+        type: Int, // 0: Income, 1: Expense, 2: System (CategoryType)
         parentId: String? = null,
         showReport: Boolean = true,
         index: Int = 0,

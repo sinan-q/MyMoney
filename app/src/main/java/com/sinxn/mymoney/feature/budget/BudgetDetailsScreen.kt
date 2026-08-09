@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.sinxn.mymoney.core.util.BudgetType
 import com.sinxn.mymoney.core.util.DateUtils
 import kotlinx.coroutines.flow.collectLatest
 
@@ -89,30 +90,30 @@ fun BudgetDetailsScreen(
                     Text("Budget Type", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                         SegmentedButton(
-                            selected = uiState.type == 0,
-                            onClick = { viewModel.setType(0) },
+                            selected = uiState.type == BudgetType.EXPENSES,
+                            onClick = { viewModel.setType(BudgetType.EXPENSES) },
                             shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3)
                         ) {
                             Text("Expenses")
                         }
                         SegmentedButton(
-                            selected = uiState.type == 1,
-                            onClick = { viewModel.setType(1) },
+                            selected = uiState.type == BudgetType.INCOMES,
+                            onClick = { viewModel.setType(BudgetType.INCOMES) },
                             shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3)
                         ) {
                             Text("Incomes")
                         }
                         SegmentedButton(
-                            selected = uiState.type == 2,
-                            onClick = { viewModel.setType(2) },
+                            selected = uiState.type == BudgetType.CATEGORY,
+                            onClick = { viewModel.setType(BudgetType.CATEGORY) },
                             shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3)
                         ) {
                             Text("Category")
                         }
                     }
 
-                    // Category Selection (if type == 2)
-                    if (uiState.type == 2) {
+                    // Category Selection (if type == BudgetType.CATEGORY)
+                    if (uiState.type == BudgetType.CATEGORY) {
                         var categoryExpanded by remember { mutableStateOf(false) }
                         val selectedCategory = uiState.availableCategories.firstOrNull { it.id == uiState.categoryId }
 

@@ -20,6 +20,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.R
+import com.sinxn.mymoney.core.util.CategoryType
+import com.sinxn.mymoney.core.util.Direction
 import com.sinxn.mymoney.core.util.RecurrenceSetting
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,16 +30,15 @@ fun RecurrentTransactionDetailsScreen(
     onNavigateBack: () -> Unit,
     viewModel: RecurrentTransactionDetailsViewModel = hiltViewModel()
 ) {
-    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
+    val scrollState = rememberScrollState()
+    val context = LocalContext.current
     var showRecurrencePicker by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(if (uiState.isNew) "New Recurrent Transaction" else "Edit Recurrent Transaction")
-                },
+                title = { Text(if (uiState.isNew) "New Recurrence" else "Edit Recurrence") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -50,32 +51,32 @@ fun RecurrentTransactionDetailsScreen(
                 }
             )
         }
-    ) { padding ->
+    ) { innerPadding ->
         if (uiState.isLoading) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         } else {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .verticalScroll(rememberScrollState())
+                    .padding(innerPadding)
+                    .verticalScroll(scrollState)
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Direction Segmented Button (Expense / Income)
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                     SegmentedButton(
-                        selected = uiState.direction == 0,
-                        onClick = { viewModel.onDirectionChanged(0) },
+                        selected = uiState.direction == Direction.EXPENSE,
+                        onClick = { viewModel.onDirectionChanged(Direction.EXPENSE) },
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
                     ) {
                         Text("Expense")
                     }
                     SegmentedButton(
-                        selected = uiState.direction == 1,
-                        onClick = { viewModel.onDirectionChanged(1) },
+                        selected = uiState.direction == Direction.INCOME,
+                        onClick = { viewModel.onDirectionChanged(Direction.INCOME) },
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
                     ) {
                         Text("Income")
@@ -102,7 +103,8 @@ fun RecurrentTransactionDetailsScreen(
                 // Category Dropdown
                 var catExpanded by remember { mutableStateOf(false) }
                 val filteredCategories = remember(uiState.direction, uiState.availableCategories) {
-                    uiState.availableCategories.filter { it.type == uiState.direction }
+                    val targetType = if (uiState.direction == Direction.INCOME) CategoryType.INCOME else CategoryType.EXPENSE
+                    uiState.availableCategories.filter { it.type == targetType }
                 }
                 val selectedCategoryName = uiState.availableCategories.find { it.id == uiState.categoryId }?.name ?: ""
 
