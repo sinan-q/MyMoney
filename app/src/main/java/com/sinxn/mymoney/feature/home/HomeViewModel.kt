@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.dao.MoneyDao
 import com.sinxn.mymoney.core.data.local.entity.WalletEntity
+import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.util.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,12 +18,14 @@ import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.launch
 
 data class HomeUiState(
     val activeWallets: List<WalletWithBalance> = emptyList(),
     val archivedWallets: List<WalletWithBalance> = emptyList(),
     val isTotalValid: Boolean = true,
-    val balanceBreakdown: String? = null
+    val balanceBreakdown: String? = null,
+    val pendingTransactions: List<TransactionWithCategory> = emptyList() // REG-03: Unconfirmed recurrence inbox
 )
 
 @HiltViewModel
@@ -33,9 +36,10 @@ class HomeViewModel @Inject constructor(
 
     val uiState = combine(
         moneyDao.getWalletsWithBalance(DateUtils.getSQLDateTimeString(java.util.Date())),
-        settingsRepository.formattingSettings
-    ) { list, settings ->
-        Log.d("HomeViewModel", "Wallets emitted: ${list.size}")
+        settingsRepository.formattingSettings,
+        moneyDao.getPendingUnconfirmedTransactions() // REG-03
+    ) { list, settings, pendingTx ->
+        Log.d("HomeViewModel", "Wallets emitted: ${list.size}, Pending: ${pendingTx.size}")
         
         // Calculate Total
         val walletsInTotal = list.filter { 
@@ -91,7 +95,8 @@ class HomeViewModel @Inject constructor(
             activeWallets = listOf(totalWallet) + list.filter { !it.wallet.isArchived },
             archivedWallets = list.filter { it.wallet.isArchived },
             isTotalValid = isTotalValid,
-            balanceBreakdown = balanceBreakdown
+            balanceBreakdown = balanceBreakdown,
+            pendingTransactions = pendingTx
         )
     }
         .stateIn(
@@ -99,4 +104,24 @@ class HomeViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = HomeUiState()
         )
+
+    /**
+     * REG-03: Confirm a pending (unconfirmed) transaction.
+     * Once confirmed, it will affect wallet balances.
+     */
+    fun confirmTransaction(transactionId: String) {
+        viewModelScope.launch {
+            moneyDao.confirmTransaction(transactionId, System.currentTimeMillis())
+        }
+    }
+
+    /**
+     * REG-03: Dismiss (soft-delete) a pending transaction.
+     */
+    fun dismissTransaction(transactionId: String) {
+        viewModelScope.launch {
+            moneyDao.softDeleteTransaction(transactionId, System.currentTimeMillis())
+        }
+    }
 }
+

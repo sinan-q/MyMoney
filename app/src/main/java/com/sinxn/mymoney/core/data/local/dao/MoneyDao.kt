@@ -248,6 +248,35 @@ interface MoneyDao {
     @Query("SELECT * FROM categories WHERE isDeleted = 0 ORDER BY `index` ASC")
     suspend fun getCategoriesList(): List<CategoryEntity>
 
+    /**
+     * Get all descendant category IDs for a given parent category.
+     * Since Room does not support WITH RECURSIVE, we query all categories
+     * and compute the descendant tree in Kotlin.
+     */
+    @Query("SELECT id FROM categories WHERE parentId = :parentId AND isDeleted = 0")
+    suspend fun getDirectChildCategoryIds(parentId: String): List<String>
+
+    // --- Pending (Unconfirmed) Transactions for Recurrence Inbox (REG-03) ---
+    @androidx.room.Transaction
+    @Query("""
+        SELECT t.*, c.name as categoryName, c.icon as categoryIcon,
+               COALESCE(curr.decimals, 2) as decimals, curr.symbol as currencySymbol,
+               w.currency as currencyCode
+        FROM transactions t
+        LEFT JOIN categories c ON t.categoryId = c.id
+        INNER JOIN wallets w ON t.walletId = w.id
+        LEFT JOIN currencies curr ON w.currency = curr.iso
+        WHERE t.confirmed = 0 AND t.isDeleted = 0
+        ORDER BY t.date DESC
+    """)
+    fun getPendingUnconfirmedTransactions(): Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory>>
+
+    @Query("UPDATE transactions SET confirmed = 1, lastEdit = :lastEdit WHERE id = :transactionId")
+    suspend fun confirmTransaction(transactionId: String, lastEdit: Long)
+
+    @Query("UPDATE transactions SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :transactionId")
+    suspend fun softDeleteTransaction(transactionId: String, lastEdit: Long)
+
     // Transactions
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTransactions(transactions: List<TransactionEntity>)

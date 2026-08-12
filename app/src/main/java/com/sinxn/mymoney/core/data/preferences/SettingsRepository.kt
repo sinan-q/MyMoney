@@ -28,7 +28,8 @@ data class FormattingSettings(
     val includeFutureTransactions: Boolean = false,
     val excludeArchivedFromTotal: Boolean = false,
     val hideStatusAndImpact: Boolean = false,
-    val globalCurrency: String = "USD"
+    val globalCurrency: String = "USD",
+    val dailyReminderHour: Int = -1 // -1 = disabled, 0-23 = hour of day (matching legacy DAILY_REMINDER_DISABLED)
 )
 
 @Singleton
@@ -52,6 +53,7 @@ class SettingsRepository @Inject constructor(
         val EXCLUDE_ARCHIVED_FROM_TOTAL = booleanPreferencesKey("exclude_archived_from_total")
         val HIDE_STATUS_AND_IMPACT = booleanPreferencesKey("hide_status_and_impact")
         val GLOBAL_CURRENCY = stringPreferencesKey("global_currency")
+        val DAILY_REMINDER_HOUR = intPreferencesKey("daily_reminder_hour")
     }
 
     val currentWalletId: Flow<String> = dataStore.data
@@ -73,7 +75,8 @@ class SettingsRepository @Inject constructor(
                 includeFutureTransactions = preferences[INCLUDE_FUTURE_TRANSACTIONS] ?: false,
                 excludeArchivedFromTotal = preferences[EXCLUDE_ARCHIVED_FROM_TOTAL] ?: false,
                 hideStatusAndImpact = preferences[HIDE_STATUS_AND_IMPACT] ?: false,
-                globalCurrency = preferences[GLOBAL_CURRENCY] ?: "USD"
+                globalCurrency = preferences[GLOBAL_CURRENCY] ?: "USD",
+                dailyReminderHour = preferences[DAILY_REMINDER_HOUR] ?: -1
             )
         }
 
@@ -152,6 +155,12 @@ class SettingsRepository @Inject constructor(
     suspend fun setGlobalCurrency(currency: String) {
         dataStore.edit { preferences ->
             preferences[GLOBAL_CURRENCY] = currency
+        }
+    }
+
+    suspend fun setDailyReminderHour(hour: Int) {
+        dataStore.edit { preferences ->
+            preferences[DAILY_REMINDER_HOUR] = hour
         }
     }
 }

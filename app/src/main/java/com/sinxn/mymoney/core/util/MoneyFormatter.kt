@@ -1,5 +1,10 @@
 package com.sinxn.mymoney.core.util
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.util.Currency
@@ -12,6 +17,50 @@ object MoneyFormatter {
         val roundDecimals: Boolean = false,
         val showPlusMinus: Boolean = false
     )
+
+    /**
+     * Flow mode controls the sign display.
+     * Matches legacy MoneyFormatter.FlowMode.
+     */
+    enum class FlowMode {
+        FORCE_POSITIVE,
+        FORCE_NEGATIVE,
+        AUTO_DETECT
+    }
+
+    /**
+     * Tint mode for income/expense coloring.
+     * Matches legacy MoneyFormatter.TintMode.
+     */
+    enum class TintMode {
+        AUTO_DETECT,
+        INCOME,
+        EXPENSE
+    }
+
+    // Default colors matching legacy behavior
+    private val DEFAULT_INCOME_COLOR = Color(0xFF4CAF50)   // Green
+    private val DEFAULT_EXPENSE_COLOR = Color(0xFFF44336)  // Red
+    private val DEFAULT_NEUTRAL_COLOR = Color.Unspecified   // Use theme default
+
+    /**
+     * REG-07: Normalize money amounts across different decimal systems.
+     * Example: JPY stores 100 as 100 (0 decimals), USD stores $1.00 as 100 (2 decimals).
+     * To display JPY in a USD context, normalize(100, 0, 2) -> 10000.
+     */
+    fun normalize(money: Long, fromDecimals: Int, toDecimals: Int): Long {
+        val offset = toDecimals - fromDecimals
+        val exponential = 10.0.pow(offset.toDouble())
+        return (money * exponential).toLong()
+    }
+
+    /**
+     * Normalize using a decimal offset directly.
+     */
+    fun normalize(money: Long, decimalOffset: Int): Long {
+        val exponential = 10.0.pow(decimalOffset.toDouble())
+        return (money * exponential).toLong()
+    }
 
     fun format(
         amount: Long, 
@@ -48,4 +97,42 @@ object MoneyFormatter {
         
         return formattedValue
     }
+
+    /**
+     * REG-08: Format money with income/expense coloring for Compose.
+     * Returns an AnnotatedString with appropriate ForegroundColorSpan equivalent.
+     */
+    fun formatColored(
+        amount: Long,
+        currencyCode: String,
+        decimals: Int = 2,
+        config: Config = Config(),
+        tintMode: TintMode = TintMode.AUTO_DETECT,
+        incomeColor: Color = DEFAULT_INCOME_COLOR,
+        expenseColor: Color = DEFAULT_EXPENSE_COLOR,
+        neutralColor: Color = DEFAULT_NEUTRAL_COLOR
+    ): AnnotatedString {
+        val text = format(amount, currencyCode, decimals, config)
+        
+        val color = when (tintMode) {
+            TintMode.INCOME -> incomeColor
+            TintMode.EXPENSE -> expenseColor
+            TintMode.AUTO_DETECT -> when {
+                amount > 0 -> incomeColor
+                amount < 0 -> expenseColor
+                else -> neutralColor
+            }
+        }
+
+        return buildAnnotatedString {
+            if (color != Color.Unspecified) {
+                withStyle(SpanStyle(color = color)) {
+                    append(text)
+                }
+            } else {
+                append(text)
+            }
+        }
+    }
 }
+
