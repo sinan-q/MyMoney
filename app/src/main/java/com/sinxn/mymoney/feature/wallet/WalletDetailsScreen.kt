@@ -1,21 +1,15 @@
 package com.sinxn.mymoney.feature.wallet
 
-import android.graphics.Color.HSVToColor
-import android.graphics.Color.colorToHSV
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Archive
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -27,37 +21,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.rounded.CardGiftcard
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.sinxn.mymoney.core.data.local.entity.TransactionEntity
 import com.sinxn.mymoney.core.data.local.model.TransactionListItem
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.core.util.DateUtils
-import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.TransactionHeader
 import com.sinxn.mymoney.core.ui.components.TransactionItem
 import com.sinxn.mymoney.core.ui.components.WalletHeader
-import com.sinxn.mymoney.core.ui.components.generateColor
-import com.sinxn.mymoney.feature.recap.YearRecapScreen
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.lazy.LazyListState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -144,15 +129,13 @@ fun WalletDetailsScreen(
             } else {
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     TransactionList(
-                        wallet = wallet!!,
                         items = transactions,
                         decimals = wallet!!.decimals,
                         currencyCode = wallet!!.wallet.currency,
                         formatterConfig = formatterConfig,
                         dateFormat = settings.dateFormat,
                         listState = listState,
-                        onTransactionClick = onTransactionClick,
-                        onRecapClick = onNavigateToRecap
+                        onTransactionClick = onTransactionClick
                     )
 
                     FloatingActionButton(
@@ -344,15 +327,13 @@ fun WalletSettingsBottomSheet(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TransactionList(
-    wallet: WalletWithBalance,
     items: List<TransactionListItem>,
     decimals: Int,
     currencyCode: String,
     formatterConfig: MoneyFormatter.Config,
     dateFormat: Int,
-    listState: androidx.compose.foundation.lazy.LazyListState,
-    onTransactionClick: (String) -> Unit,
-    onRecapClick: () -> Unit
+    listState: LazyListState,
+    onTransactionClick: (String) -> Unit
 ) {
     var collapsedGroups by remember { mutableStateOf(setOf<String>()) }
     
@@ -390,7 +371,6 @@ fun TransactionList(
                          customGrouped.lastOrNull()?.second?.add(item)
                     }
                 }
-                else -> {}
             }
         }
 

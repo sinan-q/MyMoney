@@ -41,8 +41,10 @@ fun TransactionItem(
     val categoryIconData = if (isTransferItem) "{\"type\":\"color\",\"color\":\"#0284C7\",\"name\":\"⇄\"}" else item.categoryIcon
     
     val hasDescription = !transaction.description.isNullOrBlank()
-    val primaryTitle = if (hasDescription) transaction.description!! else categoryDisplayName
+    val primaryTitle = if (hasDescription) transaction.description else categoryDisplayName
     val subtitleText = if (hasDescription) categoryDisplayName else null
+
+
 
     val dateObj = DateUtils.parseDate(transaction.date)
     val formattedDate = DateUtils.formatDate(dateObj, dateFormat)
@@ -66,15 +68,9 @@ fun TransactionItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 3.dp)
+            .clickable(onClick = onClick)
     ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick),
-            shape = RoundedCornerShape(14.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            tonalElevation = 1.dp
-        ) {
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -84,20 +80,13 @@ fun TransactionItem(
                 Box(
                     modifier = Modifier
                         .size(44.dp)
-                        .clip(CircleShape)
-                        .background(
-                            when {
-                                isTransferItem -> Color(0xFF0284C7).copy(alpha = 0.12f)
-                                isIncome -> Color(0xFF43A047).copy(alpha = 0.12f)
-                                else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                            }
-                        ),
+                        .clip(CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     CategoryIcon(
                         iconString = categoryIconData,
                         categoryName = categoryDisplayName,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(44.dp)
                     )
                 }
                 
@@ -144,6 +133,6 @@ fun TransactionItem(
                     }
                 }
             }
-        }
+
     }
 }
