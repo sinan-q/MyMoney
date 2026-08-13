@@ -139,11 +139,16 @@ fun AppNavHost(
             )
         }
         composable(Screen.Backup.routePattern) {
-            BackupScreen()
+            BackupScreen(
+                onNavigateUp = { navController.navigateUp() }
+            )
         }
         composable(Screen.Settings.routePattern) {
             SettingsScreen(
                 onNavigateUp = { navController.navigateUp() },
+                onNavigateToImport = {
+                    navController.navigate(Screen.Backup.routePattern)
+                },
                 onNavigateToSqlConsole = {
                     navController.navigate(Screen.SqlConsole.routePattern)
                 }
