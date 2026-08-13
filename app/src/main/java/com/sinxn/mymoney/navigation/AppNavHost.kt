@@ -16,6 +16,7 @@ import com.sinxn.mymoney.feature.about.AboutScreen
 import com.sinxn.mymoney.feature.budget.BudgetDetailsScreen
 import com.sinxn.mymoney.feature.budget.BudgetListScreen
 import com.sinxn.mymoney.feature.budget.BudgetOverviewScreen
+import com.sinxn.mymoney.feature.category.CategoryAddEditScreen
 import com.sinxn.mymoney.feature.category.CategoryDetailsScreen
 import com.sinxn.mymoney.feature.category.CategoryListScreen
 import com.sinxn.mymoney.feature.debt.DebtListScreen
@@ -354,6 +355,9 @@ fun AppNavHost(
                 onNavigateBack = { navController.navigateUp() },
                 onCategoryClick = { categoryId ->
                     navController.navigate(Screen.CategoryDetails.createRoute(categoryId))
+                },
+                onAddCategoryClick = { type ->
+                    navController.navigate(Screen.CategoryAddEdit.createRoute(type = type))
                 }
             )
         }
@@ -370,7 +374,25 @@ fun AppNavHost(
                 },
                 onSubcategoryClick = { subcategoryId ->
                     navController.navigate(Screen.CategoryDetails.createRoute(subcategoryId))
+                },
+                onEditCategoryClick = { categoryId ->
+                    navController.navigate(Screen.CategoryAddEdit.createRoute(categoryId = categoryId))
+                },
+                onAddSubcategoryClick = { parentId, type ->
+                    navController.navigate(Screen.CategoryAddEdit.createRoute(parentId = parentId, type = type))
                 }
+            )
+        }
+        composable(
+            Screen.CategoryAddEdit.routePattern,
+            arguments = listOf(
+                navArgument("categoryId") { type = NavType.StringType; nullable = true; defaultValue = null },
+                navArgument("type") { type = NavType.StringType; nullable = true; defaultValue = null },
+                navArgument("parentId") { type = NavType.StringType; nullable = true; defaultValue = null }
+            )
+        ) {
+            CategoryAddEditScreen(
+                onNavigateBack = { navController.navigateUp() }
             )
         }
         composable(Screen.People.routePattern) {

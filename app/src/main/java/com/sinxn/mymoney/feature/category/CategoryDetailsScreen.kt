@@ -43,6 +43,8 @@ fun CategoryDetailsScreen(
     onNavigateBack: () -> Unit,
     onTransactionClick: (String) -> Unit,
     onSubcategoryClick: (String) -> Unit = {},
+    onEditCategoryClick: (String) -> Unit = {},
+    onAddSubcategoryClick: (String, Int) -> Unit = { _, _ -> },
     viewModel: CategoryDetailsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -116,7 +118,7 @@ fun CategoryDetailsScreen(
         floatingActionButton = {
             if (uiState.category != null) {
                 FloatingActionButton(
-                    onClick = viewModel::openEditDialog,
+                    onClick = { onEditCategoryClick(uiState.categoryId) },
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ) {
@@ -334,19 +336,6 @@ fun CategoryDetailsScreen(
                 }
             }
         }
-
-        if (uiState.isEditDialogOpen) {
-            CategoryDetailEditDialog(
-                uiState = uiState,
-                onNameChange = viewModel::onNameChange,
-                onDismiss = viewModel::closeEditDialog,
-                onSave = viewModel::saveCategory,
-                onDelete = {
-                    viewModel.closeEditDialog()
-                    showDeleteDialog = true
-                }
-            )
-        }
     }
 }
 
@@ -462,53 +451,6 @@ private fun CategoryTransactionItemCard(
             )
         }
     }
-}
-
-@Composable
-private fun CategoryDetailEditDialog(
-    uiState: CategoryDetailsUiState,
-    onNameChange: (String) -> Unit,
-    onDismiss: () -> Unit,
-    onSave: () -> Unit,
-    onDelete: () -> Unit
-) {
-    val canDelete = uiState.category?.tag == null
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Edit Category") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = uiState.editName,
-                    onValueChange = onNameChange,
-                    label = { Text("Category Name") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = onSave,
-                enabled = uiState.editName.isNotBlank()
-            ) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            Row {
-                if (canDelete) {
-                    TextButton(onClick = onDelete) {
-                        Text("Delete", color = MaterialTheme.colorScheme.error)
-                    }
-                }
-                TextButton(onClick = onDismiss) {
-                    Text("Cancel")
-                }
-            }
-        }
-    )
 }
 
 private fun String?.isNullOrEmpty(): Boolean = this == null || this.trim().isEmpty()

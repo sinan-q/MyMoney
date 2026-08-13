@@ -85,6 +85,20 @@ sealed class Screen(
         fun createRoute(categoryId: String): String = "category_details/$categoryId"
     }
 
+    object CategoryAddEdit : Screen("category_edit?categoryId={categoryId}&type={type}&parentId={parentId}", "categories", "Category Edit", isTopLevel = false) {
+        fun createRoute(
+            categoryId: String? = null,
+            type: Int? = null,
+            parentId: String? = null
+        ): String {
+            val params = mutableListOf<String>()
+            if (categoryId != null) params.add("categoryId=$categoryId")
+            if (type != null) params.add("type=$type")
+            if (parentId != null) params.add("parentId=$parentId")
+            return if (params.isEmpty()) "category_edit" else "category_edit?${params.joinToString("&")}"
+        }
+    }
+
     object SqlConsole : Screen("sql_console", "settings", "SQL Console", isTopLevel = false)
     object Backup : Screen("backup", "settings", "Backup", isTopLevel = false)
     object Recap : Screen("recap", "overview", "Year Recap", isTopLevel = false)
