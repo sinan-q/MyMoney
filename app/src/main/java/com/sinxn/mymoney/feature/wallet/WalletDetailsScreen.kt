@@ -57,6 +57,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.text.style.TextOverflow
 import com.sinxn.mymoney.core.ui.components.NavigationMenuPage
 import kotlinx.coroutines.launch
 
@@ -626,7 +627,6 @@ fun TransactionList(
     onTransactionClick: (String) -> Unit,
     onRecapClick: () -> Unit
 ) {
-    // State to track collapsed keys (using formatted date string as key)
     var collapsedGroups by remember { mutableStateOf(setOf<String>()) }
     
     LazyColumn(
@@ -641,12 +641,15 @@ fun TransactionList(
                         .padding(top = 100.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = "No transactions found", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        text = "No transactions found",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
         var currentHeader: TransactionListItem.Header? = null
-        // We group items under the Month Header. The list can contain DateHeader or Transaction.
         val customGrouped = mutableListOf<Pair<TransactionListItem.Header, MutableList<TransactionListItem>>>()
 
         items.forEach { item ->
@@ -695,30 +698,28 @@ fun TransactionList(
                         }
                     }
                 ) { index, item ->
+                    val isLastItem = index == groupItems.lastIndex
 
-                     val isLastItem = index == groupItems.lastIndex
-
-                     Box(
-                         modifier = Modifier.animateItem()
-                     ) {
-                         when (item) {
-                             is TransactionListItem.Transaction -> {
-                                 val trans = item.transaction
-                                 TransactionItem(
-                                     item = trans,
-                                     decimals = trans.decimals,
-                                     // Priority: DB Symbol -> DB ISO Code -> Wallet ISO Code
-                                     currencyCode = trans.currencySymbol ?: trans.currencyCode ?: currencyCode,
-                                     formatterConfig = formatterConfig,
-                                     dateFormat = dateFormat,
-                                     isLastItem = isLastItem,
-                                     showDate = true,
-                                     onClick = { onTransactionClick(trans.transaction.id) }
-                                 )
-                             }
-                             else -> {}
-                         }
-                     }
+                    Box(
+                        modifier = Modifier.animateItem()
+                    ) {
+                        when (item) {
+                            is TransactionListItem.Transaction -> {
+                                val trans = item.transaction
+                                TransactionItem(
+                                    item = trans,
+                                    decimals = trans.decimals,
+                                    currencyCode = trans.currencySymbol ?: trans.currencyCode ?: currencyCode,
+                                    formatterConfig = formatterConfig,
+                                    dateFormat = dateFormat,
+                                    isLastItem = isLastItem,
+                                    showDate = true,
+                                    onClick = { onTransactionClick(trans.transaction.id) }
+                                )
+                            }
+                            else -> {}
+                        }
+                    }
                 }
             }
         }
@@ -754,90 +755,94 @@ fun TransactionHeader(
         config = formatterConfig
     )
     
-    // Animate arrow rotation
     val rotation by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isCollapsed) 180f else 0f,
         label = "ArrowRotation"
     )
     
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface) // Opaque for sticky
-            .clickable(onClick = onToggle)
-            .padding(horizontal = 16.dp, vertical = 12.dp), // Increased vertical padding for touch target
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-             Icon(
-                imageVector = Icons.Default.KeyboardArrowUp,
-                contentDescription = if (isCollapsed) "Expand" else "Collapse",
-                modifier = Modifier
-                    .padding(end = 8.dp)
-                    .rotate(rotation),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            
-            Text(
-                text = formattedDate,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        
-        Column(horizontalAlignment = Alignment.End) {
-            Text(
-                text = if (header.isTotalValid) formattedTotal else "Multi-Currency",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = if (!header.isTotalValid) {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                } else if (header.totalAmount >= 0) {
-                    Color(0xFF4CAF50)
-                } else {
-                    Color(0xFFE53935)
-                }
-            )
-            
-            if (header.isTotalValid) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                     if (header.income > 0) {
-                         Text(
-                            text = "+$formattedIncome",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFF4CAF50),
-                            modifier = Modifier.padding(end = 6.dp)
-                        )
-                     }
-                     if (header.expense > 0) {
-                         Text(
-                            text = "-$formattedExpense",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFFE53935)
-                        )
-                     }
-                }
-            } else {
-                if (!header.balanceBreakdown.isNullOrEmpty()) {
-                     Text(
-                        text = header.balanceBreakdown,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.End
-                    )
-                }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onToggle)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowUp,
+                    contentDescription = if (isCollapsed) "Expand" else "Collapse",
+                    modifier = Modifier
+                        .padding(end = 8.dp)
+                        .rotate(rotation),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                
                 Text(
-                    text = "Mixed currencies",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    text = formattedDate,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold
                 )
             }
+            
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = if (header.isTotalValid) formattedTotal else "Multi-Currency",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (!header.isTotalValid) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else if (header.totalAmount >= 0) {
+                        Color(0xFF4CAF50)
+                    } else {
+                        Color(0xFFE53935)
+                    }
+                )
+                
+                if (header.isTotalValid) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (header.income > 0) {
+                            Text(
+                                text = "+$formattedIncome",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFF4CAF50),
+                                modifier = Modifier.padding(end = 6.dp)
+                            )
+                        }
+                        if (header.expense > 0) {
+                            Text(
+                                text = "-$formattedExpense",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFFE53935)
+                            )
+                        }
+                    }
+                } else {
+                    if (!header.balanceBreakdown.isNullOrEmpty()) {
+                        Text(
+                            text = header.balanceBreakdown,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.End
+                        )
+                    }
+                    Text(
+                        text = "Mixed currencies",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
+            }
         }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     }
-    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 }
 
 @Composable
@@ -860,124 +865,94 @@ fun TransactionItem(
     }
     val categoryIconData = if (isTransferItem) "{\"type\":\"color\",\"color\":\"#0284C7\",\"name\":\"⇄\"}" else item.categoryIcon
     
-    Row(
+    val hasDescription = !transaction.description.isNullOrBlank()
+    val primaryTitle = if (hasDescription) transaction.description!! else categoryDisplayName
+    val subtitleText = if (hasDescription) categoryDisplayName else null
+
+    val dateObj = DateUtils.parseDate(transaction.date)
+    val formattedDate = DateUtils.formatDate(dateObj, dateFormat)
+
+    val isIncome = transaction.direction == 1
+    val amountColor = when {
+        isTransferItem -> Color(0xFF0284C7)
+        isIncome -> Color(0xFF4CAF50)
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+
+    val amount = if (isIncome || isTransferItem) transaction.money else -transaction.money
+    val formattedMoney = MoneyFormatter.format(
+        amount = amount,
+        currencyCode = currencyCode,
+        decimals = decimals,
+        config = formatterConfig
+    )
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min) // Important for full height line
+            .clickable(onClick = onClick)
     ) {
-        // Timeline Column
-        Box(
+        Row(
             modifier = Modifier
-                .width(56.dp)
-                .fillMaxHeight(),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Vertical Line
-            Box(
-                modifier = Modifier
-                    .width(2.dp)
-                    .then(
-                        if (isLastItem) {
-                            Modifier
-                                .fillMaxHeight(0.5f)
-                                .align(Alignment.TopCenter)
-                        } else {
-                            Modifier
-                                .fillMaxHeight()
-                                .align(Alignment.Center)
-                        }
-                    )
-                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-            )
-            
-            // Icon
             CategoryIcon(
                 iconString = categoryIconData,
                 categoryName = categoryDisplayName,
-                modifier = Modifier
-                    .size(40.dp)
-                    .zIndex(1f) // Ensure icon is on top of line
+                modifier = Modifier.size(42.dp)
             )
-        }
-        
-        // Content Card
-        Card(
-            modifier = Modifier
-                .padding(top = 8.dp, bottom = 8.dp, end = 16.dp)
-                .fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            onClick = onClick
-        ) {
-            Row(
-                modifier = Modifier
-                    .padding(12.dp)
-                    .fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Removed Icon from here
+            
+            Spacer(modifier = Modifier.width(14.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = primaryTitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
                 
-                // Middle: Category & Description
-                Column(modifier = Modifier.weight(1f)) {
-                    // Category Name
+                if (!subtitleText.isNullOrEmpty()) {
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = categoryDisplayName,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    // Description
-                    val descriptionText = if (!transaction.description.isNullOrEmpty()) {
-                        transaction.description
-                    } else {
-                        "Transaction" 
-                    }
-                    
-                    Text(
-                        text = descriptionText,
+                        text = subtitleText,
                         style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = formattedMoney,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = amountColor,
+                    fontWeight = FontWeight.Bold
+                )
+                if (showDate) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = formattedDate,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                
-                // Right Side: Amount & Date
-                Column(horizontalAlignment = Alignment.End) {
-                    val isIncome = transaction.direction == 1
-                    val isTransfer = transaction.direction == 2 || transaction.type == 1 || transaction.type == 2 || item.categoryName.equals("Transfer", ignoreCase = true)
-                    val amountColor = when {
-                        isTransfer -> Color(0xFF0284C7)
-                        isIncome -> Color(0xFF4CAF50)
-                        else -> Color(0xFFE53935)
-                    }
-        
-                    val amount = if (isIncome || isTransfer) transaction.money else -transaction.money
-                    val formattedMoney = MoneyFormatter.format(
-                        amount = amount, // Send signed amount
-                        currencyCode = currencyCode,
-                        decimals = decimals,
-                        config = formatterConfig
-                    )
-                    
-                    Text(
-                        text = formattedMoney,
-                        style = MaterialTheme.typography.bodyLarge, // Slightly larger for emphasis
-                        color = amountColor,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    if (showDate) {
-                        val dateObj = DateUtils.parseDate(transaction.date)
-                        val formattedDate = DateUtils.formatDate(dateObj, dateFormat)
-                        
-                        Text(
-                            text = formattedDate,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline
-                        )
-                    }
-                }
             }
+        }
+        
+        if (!isLastItem) {
+            HorizontalDivider(
+                modifier = Modifier.padding(start = 72.dp),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+            )
         }
     }
 }

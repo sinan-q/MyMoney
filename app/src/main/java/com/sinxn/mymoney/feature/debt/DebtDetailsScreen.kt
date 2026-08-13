@@ -395,41 +395,80 @@ private fun TransactionRowItem(
     currencyCode: String
 ) {
     val tx = txWithCat.transaction
+    val isIncome = tx.direction == 1
+    val isTransfer = tx.direction == 2 || tx.type == 1 || tx.type == 2 || txWithCat.categoryName.equals("Transfer", ignoreCase = true)
+
+    val categoryDisplayName = when {
+        isTransfer -> "Transfer"
+        !txWithCat.categoryName.isNullOrBlank() -> txWithCat.categoryName!!
+        else -> "Transaction"
+    }
+
+    val amountColor = when {
+        isTransfer -> Color(0xFF0284C7)
+        isIncome -> Color(0xFF4CAF50)
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+
+    val hasDescription = !tx.description.isNullOrBlank()
+    val primaryTitle = if (hasDescription) tx.description!! else categoryDisplayName
+    val subtitleText = if (hasDescription) categoryDisplayName else null
+    val dateText = tx.date.take(10)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             CategoryIcon(
                 iconString = txWithCat.categoryIcon,
-                categoryName = txWithCat.categoryName ?: "Transaction",
-                modifier = Modifier.size(36.dp)
+                categoryName = categoryDisplayName,
+                modifier = Modifier.size(42.dp)
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = tx.description?.ifBlank { txWithCat.categoryName ?: "Transaction" } ?: "Transaction",
+                    text = primaryTitle,
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
+                if (!subtitleText.isNullOrEmpty()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = subtitleText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            val signedAmount = if (isIncome || isTransfer) tx.money else -tx.money
+            Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = tx.date,
+                    text = MoneyFormatter.format(amount = signedAmount, currencyCode = currencyCode, decimals = 2, config = formatterConfig),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = amountColor
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = dateText,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Text(
-                text = (if (tx.direction == 1) "+" else "-") + MoneyFormatter.format(amount = tx.money, currencyCode = currencyCode, decimals = 2, config = formatterConfig),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = if (tx.direction == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-            )
         }
     }
 }

@@ -382,60 +382,73 @@ fun BudgetTransactionItemCard(
     val amountColor = when {
         isTransfer -> Color(0xFF0284C7)
         isIncome -> Color(0xFF4CAF50)
-        else -> Color(0xFFE53935)
+        else -> MaterialTheme.colorScheme.onSurface
     }
 
     val currencyCode = item.currencyCode ?: "USD"
     val decimals = item.decimals
     val signedAmount = if (isIncome || isTransfer) transaction.money else -transaction.money
 
+    val hasDescription = !transaction.description.isNullOrBlank()
+    val primaryTitle = if (hasDescription) transaction.description!! else categoryDisplayName
+    val subtitleText = if (hasDescription) categoryDisplayName else null
+    val dateText = transaction.date.take(10)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             CategoryIcon(
                 iconString = item.categoryIcon,
                 categoryName = categoryDisplayName,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(42.dp)
             )
+
+            Spacer(modifier = Modifier.width(14.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = categoryDisplayName,
+                    text = primaryTitle,
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    text = if (!transaction.description.isNullOrBlank()) transaction.description else transaction.date.take(10),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                if (!subtitleText.isNullOrEmpty()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = subtitleText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
+
+            Spacer(modifier = Modifier.width(12.dp))
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = MoneyFormatter.format(signedAmount, currencyCode, decimals),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = amountColor
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = transaction.date.take(10),
+                    text = dateText,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
