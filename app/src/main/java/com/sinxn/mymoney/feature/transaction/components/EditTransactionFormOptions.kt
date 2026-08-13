@@ -123,7 +123,17 @@ fun EditTransactionFormOptions(
             // Place Row
             val activePlace = uiState.availablePlaces.find { it.id == uiState.editPlaceId }
             CleanListRow(
-                icon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
+                icon = {
+                    if (activePlace != null && activePlace.icon.isNotBlank()) {
+                        CategoryIcon(
+                            iconString = activePlace.icon,
+                            categoryName = activePlace.name,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    } else {
+                        Icon(Icons.Default.LocationOn, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp))
+                    }
+                },
                 label = "Place",
                 value = activePlace?.name ?: "None",
                 onClick = onPlaceClick
@@ -134,7 +144,17 @@ fun EditTransactionFormOptions(
             // Event Row
             val activeEvent = uiState.availableEvents.find { it.id == uiState.editEventId }
             CleanListRow(
-                icon = { Icon(Icons.Default.Event, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
+                icon = {
+                    if (activeEvent != null && activeEvent.icon.isNotBlank()) {
+                        CategoryIcon(
+                            iconString = activeEvent.icon,
+                            categoryName = activeEvent.name,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    } else {
+                        Icon(Icons.Default.Event, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp))
+                    }
+                },
                 label = "Event",
                 value = activeEvent?.name ?: "None",
                 onClick = onEventClick

@@ -10,8 +10,9 @@ import androidx.compose.runtime.Composable
 import com.sinxn.mymoney.core.data.local.entity.EventEntity
 import com.sinxn.mymoney.core.data.local.entity.PlaceEntity
 import com.sinxn.mymoney.core.ui.components.CategorySelectionDialog
+import com.sinxn.mymoney.core.ui.components.EventSelectionDialog
 import com.sinxn.mymoney.core.ui.components.PeopleSelectionDialog
-import com.sinxn.mymoney.core.ui.components.SelectionDialog
+import com.sinxn.mymoney.core.ui.components.PlaceSelectionDialog
 import com.sinxn.mymoney.core.ui.components.WalletSelectionDialog
 import com.sinxn.mymoney.core.util.Direction
 import com.sinxn.mymoney.feature.transaction.TransactionDetailsUiState
@@ -78,28 +79,28 @@ fun EditTransactionDialogs(
     }
 
     if (showPlacePicker) {
-        SelectionDialog(
+        PlaceSelectionDialog(
             title = "Select Place",
-            options = uiState.availablePlaces + PlaceEntity("null", "None", "", null, null, null, false, 0, null),
-            onOptionSelected = {
-                viewModel.onPlaceIdChange(if (it.id == "null") null else it.id)
+            places = uiState.availablePlaces,
+            selectedPlaceId = uiState.editPlaceId,
+            onPlaceSelected = { place ->
+                viewModel.onPlaceIdChange(place?.id)
                 onDismissPlacePicker()
             },
-            onDismissRequest = onDismissPlacePicker,
-            labelProvider = { it.name }
+            onDismissRequest = onDismissPlacePicker
         )
     }
 
     if (showEventPicker) {
-        SelectionDialog(
+        EventSelectionDialog(
             title = "Select Event",
-            options = uiState.availableEvents + EventEntity("null", "None", "", null, "", "", false, 0, null),
-            onOptionSelected = {
-                viewModel.onEventIdChange(if (it.id == "null") null else it.id)
+            events = uiState.availableEvents,
+            selectedEventId = uiState.editEventId,
+            onEventSelected = { event ->
+                viewModel.onEventIdChange(event?.id)
                 onDismissEventPicker()
             },
-            onDismissRequest = onDismissEventPicker,
-            labelProvider = { it.name }
+            onDismissRequest = onDismissEventPicker
         )
     }
 
