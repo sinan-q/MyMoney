@@ -63,21 +63,21 @@ fun AppNavHost(
             RecurrenceScreen(
                 onNavigateUp = { navController.navigateUp() },
                 onAddRecurrentTransaction = {
-                    navController.navigate("recurrent_transaction_details/new")
+                    navController.navigate(Screen.RecurrentTransactionDetails.createRoute("new"))
                 },
                 onAddRecurrentTransfer = {
-                    navController.navigate("recurrent_transfer_details/new")
+                    navController.navigate(Screen.RecurrentTransferDetails.createRoute("new"))
                 },
                 onRecurrentTransactionClick = { id ->
-                    navController.navigate("recurrent_transaction_details/$id")
+                    navController.navigate(Screen.RecurrentTransactionDetails.createRoute(id))
                 },
                 onRecurrentTransferClick = { id ->
-                    navController.navigate("recurrent_transfer_details/$id")
+                    navController.navigate(Screen.RecurrentTransferDetails.createRoute(id))
                 }
             )
         }
         composable(
-            "recurrent_transaction_details/{id}",
+            Screen.RecurrentTransactionDetails.routePattern,
             arguments = listOf(
                 navArgument("id") { type = NavType.StringType }
             )
@@ -87,7 +87,7 @@ fun AppNavHost(
             )
         }
         composable(
-            "recurrent_transfer_details/{id}",
+            Screen.RecurrentTransferDetails.routePattern,
             arguments = listOf(
                 navArgument("id") { type = NavType.StringType }
             )
@@ -100,10 +100,10 @@ fun AppNavHost(
             DebtListScreen(
                 onNavigateUp = { navController.navigateUp() },
                 onDebtClick = { debtId ->
-                    navController.navigate("debt_details/$debtId")
+                    navController.navigate(Screen.DebtDetails.createRoute(debtId))
                 },
                 onAddDebt = { type ->
-                    navController.navigate("debt_details/new?type=$type")
+                    navController.navigate(Screen.DebtDetails.createRoute("new", type))
                 },
                 onNavigateMenuItem = { itemId ->
                     handleSidebarNavigation(
@@ -111,19 +111,19 @@ fun AppNavHost(
                         navController = navController,
                         itemId = itemId,
                         currentWalletId = currentWalletId,
-                        currentRoute = "debts"
+                        currentRoute = Screen.Debts.routePattern
                     )
                 },
                 onNavigateToWallet = { walletId ->
-                    navController.navigate("wallet_details/$walletId")
+                    navController.navigate(Screen.Transactions.createRoute(walletId))
                 },
                 onNavigateToSettings = {
-                    navController.navigate("settings")
+                    navController.navigate(Screen.Settings.routePattern)
                 }
             )
         }
         composable(
-            "debt_details/{debtId}?type={type}",
+            Screen.DebtDetails.routePattern,
             arguments = listOf(
                 navArgument("debtId") { type = NavType.StringType },
                 navArgument("type") {
@@ -135,22 +135,22 @@ fun AppNavHost(
             com.sinxn.mymoney.feature.debt.DebtDetailsScreen(
                 onNavigateBack = { navController.navigateUp() },
                 onRecordPayment = { debtId, _, debtAction ->
-                    navController.navigate("transaction_details/new?debtId=$debtId&debtAction=$debtAction")
+                    navController.navigate(Screen.TransactionDetails.createRoute("new", debtId = debtId, debtAction = debtAction))
                 }
             )
         }
-        composable("backup") {
+        composable(Screen.Backup.routePattern) {
             BackupScreen()
         }
         composable(Screen.Settings.routePattern) {
             SettingsScreen(
                 onNavigateUp = { navController.navigateUp() },
                 onNavigateToSqlConsole = {
-                    navController.navigate("sql_console")
+                    navController.navigate(Screen.SqlConsole.routePattern)
                 }
             )
         }
-        composable("sql_console") {
+        composable(Screen.SqlConsole.routePattern) {
             SqlConsoleScreen(
                 onNavigateUp = { navController.navigateUp() }
             )
@@ -168,34 +168,34 @@ fun AppNavHost(
                     }
                 },
                 onTransactionClick = { transactionId ->
-                    navController.navigate("transaction_details/$transactionId")
+                    navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
                 },
                 onNavigateToRecap = {
-                    navController.navigate("recap")
+                    navController.navigate(Screen.Recap.routePattern)
                 },
                 onAddTransaction = {
-                    navController.navigate("transaction_details/new")
+                    navController.navigate(Screen.TransactionDetails.createRoute("new"))
                 },
                 onNavigateToDebts = { _ ->
-                    navController.navigate("debts")
+                    navController.navigate(Screen.Debts.routePattern)
                 },
                 onAddDebt = { _, type ->
-                    navController.navigate("debt_details/new?type=$type")
+                    navController.navigate(Screen.DebtDetails.createRoute("new", type))
                 },
                 onDebtClick = { debtId ->
-                    navController.navigate("debt_details/$debtId")
+                    navController.navigate(Screen.DebtDetails.createRoute(debtId))
                 },
                 onNavigateToBudgets = { _ ->
-                    navController.navigate("budgets")
+                    navController.navigate(Screen.Budgets.routePattern)
                 },
                 onNavigateToSavings = { _ ->
-                    navController.navigate("savings")
+                    navController.navigate(Screen.Savings.routePattern)
                 },
                 onNavigateToWallet = { walletId ->
-                    navController.navigate("wallet_details/$walletId")
+                    navController.navigate(Screen.Transactions.createRoute(walletId))
                 },
                 onNavigateToSettings = {
-                    navController.navigate("settings")
+                    navController.navigate(Screen.Settings.routePattern)
                 },
                 onNavigateMenuItem = { itemId ->
                     handleSidebarNavigation(
@@ -209,7 +209,7 @@ fun AppNavHost(
             )
         }
         composable(
-            "transaction_details/{transactionId}?savingId={savingId}&action={action}&debtId={debtId}&debtAction={debtAction}",
+            Screen.TransactionDetails.routePattern,
             arguments = listOf(
                 navArgument("transactionId") { type = NavType.StringType },
                 navArgument("savingId") {
@@ -245,13 +245,13 @@ fun AppNavHost(
             BudgetListScreen(
                 onNavigateUp = { navController.navigateUp() },
                 onBudgetClick = { budgetId ->
-                    navController.navigate("budget_overview/$budgetId")
+                    navController.navigate(Screen.BudgetOverview.createRoute(budgetId))
                 },
                 onEditBudget = { budgetId ->
-                    navController.navigate("budget_details/$budgetId")
+                    navController.navigate(Screen.BudgetDetails.createRoute(budgetId))
                 },
                 onAddBudget = {
-                    navController.navigate("budget_details/new")
+                    navController.navigate(Screen.BudgetDetails.createRoute("new"))
                 },
                 onNavigateMenuItem = { itemId ->
                     handleSidebarNavigation(
@@ -259,19 +259,19 @@ fun AppNavHost(
                         navController = navController,
                         itemId = itemId,
                         currentWalletId = currentWalletId,
-                        currentRoute = "budgets"
+                        currentRoute = Screen.Budgets.routePattern
                     )
                 },
                 onNavigateToWallet = { walletId ->
-                    navController.navigate("wallet_details/$walletId")
+                    navController.navigate(Screen.Transactions.createRoute(walletId))
                 },
                 onNavigateToSettings = {
-                    navController.navigate("settings")
+                    navController.navigate(Screen.Settings.routePattern)
                 }
             )
         }
         composable(
-            "budget_overview/{budgetId}",
+            Screen.BudgetOverview.routePattern,
             arguments = listOf(
                 navArgument("budgetId") { type = NavType.StringType }
             )
@@ -279,15 +279,15 @@ fun AppNavHost(
             BudgetOverviewScreen(
                 onNavigateBack = { navController.navigateUp() },
                 onNavigateToEdit = { budgetId ->
-                    navController.navigate("budget_details/$budgetId")
+                    navController.navigate(Screen.BudgetDetails.createRoute(budgetId))
                 },
                 onTransactionClick = { transactionId ->
-                    navController.navigate("transaction_details/$transactionId")
+                    navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
                 }
             )
         }
         composable(
-            "budget_details/{budgetId}",
+            Screen.BudgetDetails.routePattern,
             arguments = listOf(
                 navArgument("budgetId") { type = NavType.StringType }
             )
@@ -301,19 +301,19 @@ fun AppNavHost(
             SavingListScreen(
                 onNavigateUp = { navController.navigateUp() },
                 onSavingClick = { savingId ->
-                    navController.navigate("saving_details/$savingId")
+                    navController.navigate(Screen.SavingDetails.createRoute(savingId))
                 },
                 onAddSaving = {
-                    navController.navigate("saving_details/new")
+                    navController.navigate(Screen.SavingDetails.createRoute("new"))
                 },
                 onDeposit = { savingId ->
-                    navController.navigate("transaction_details/new?savingId=$savingId&action=deposit")
+                    navController.navigate(Screen.TransactionDetails.createRoute("new", savingId = savingId, action = "deposit"))
                 },
                 onWithdraw = { savingId ->
-                    navController.navigate("transaction_details/new?savingId=$savingId&action=withdraw")
+                    navController.navigate(Screen.TransactionDetails.createRoute("new", savingId = savingId, action = "withdraw"))
                 },
                 onWithdrawEverything = { savingId ->
-                    navController.navigate("transaction_details/new?savingId=$savingId&action=withdraw_everything")
+                    navController.navigate(Screen.TransactionDetails.createRoute("new", savingId = savingId, action = "withdraw_everything"))
                 },
                 onNavigateMenuItem = { itemId ->
                     handleSidebarNavigation(
@@ -321,19 +321,19 @@ fun AppNavHost(
                         navController = navController,
                         itemId = itemId,
                         currentWalletId = currentWalletId,
-                        currentRoute = "savings"
+                        currentRoute = Screen.Savings.routePattern
                     )
                 },
                 onNavigateToWallet = { walletId ->
-                    navController.navigate("wallet_details/$walletId")
+                    navController.navigate(Screen.Transactions.createRoute(walletId))
                 },
                 onNavigateToSettings = {
-                    navController.navigate("settings")
+                    navController.navigate(Screen.Settings.routePattern)
                 }
             )
         }
         composable(
-            "saving_details/{savingId}",
+            Screen.SavingDetails.routePattern,
             arguments = listOf(
                 navArgument("savingId") { type = NavType.StringType }
             )
@@ -342,7 +342,7 @@ fun AppNavHost(
                 onNavigateBack = { navController.navigateUp() }
             )
         }
-        composable("recap") {
+        composable(Screen.Recap.routePattern) {
             YearRecapScreen(
                 onClose = { navController.popBackStack() }
             )
@@ -375,7 +375,7 @@ fun AppNavHost(
         composable(Screen.Overview.routePattern) {
             OverviewScreen(
                 onNavigateBack = { navController.navigateUp() },
-                onNavigateToRecap = { navController.navigate("recap") }
+                onNavigateToRecap = { navController.navigate(Screen.Recap.routePattern) }
             )
         }
         composable(Screen.About.routePattern) {

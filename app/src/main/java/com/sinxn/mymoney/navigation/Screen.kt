@@ -32,11 +32,67 @@ sealed class Screen(
     object SupportDeveloper : Screen("support_developer", "support_developer", "Support Developer", isTopLevel = true)
     object Settings : Screen("settings", "settings", "Settings", isTopLevel = false)
 
+    // Sub-screens
+    object DebtDetails : Screen("debt_details/{debtId}?type={type}", "debts", "Debt Details", isTopLevel = false) {
+        fun createRoute(debtId: String, type: Int? = null): String {
+            return if (type != null) "debt_details/$debtId?type=$type" else "debt_details/$debtId"
+        }
+    }
+
+    object BudgetDetails : Screen("budget_details/{budgetId}", "budgets", "Budget Details", isTopLevel = false) {
+        fun createRoute(budgetId: String): String = "budget_details/$budgetId"
+    }
+
+    object BudgetOverview : Screen("budget_overview/{budgetId}", "budgets", "Budget Overview", isTopLevel = false) {
+        fun createRoute(budgetId: String): String = "budget_overview/$budgetId"
+    }
+
+    object SavingDetails : Screen("saving_details/{savingId}", "savings", "Savings Goal Details", isTopLevel = false) {
+        fun createRoute(savingId: String): String = "saving_details/$savingId"
+    }
+
+    object RecurrentTransactionDetails : Screen("recurrent_transaction_details/{id}", "recurrences", "Recurrent Transaction Details", isTopLevel = false) {
+        fun createRoute(id: String = "new"): String = "recurrent_transaction_details/$id"
+    }
+
+    object RecurrentTransferDetails : Screen("recurrent_transfer_details/{id}", "recurrences", "Recurrent Transfer Details", isTopLevel = false) {
+        fun createRoute(id: String = "new"): String = "recurrent_transfer_details/$id"
+    }
+
+    object TransactionDetails : Screen(
+        "transaction_details/{transactionId}?savingId={savingId}&action={action}&debtId={debtId}&debtAction={debtAction}",
+        "transactions",
+        "Transaction Details",
+        isTopLevel = false
+    ) {
+        fun createRoute(
+            transactionId: String = "new",
+            savingId: String? = null,
+            action: String? = null,
+            debtId: String? = null,
+            debtAction: String? = null
+        ): String {
+            val params = mutableListOf<String>()
+            if (savingId != null) params.add("savingId=$savingId")
+            if (action != null) params.add("action=$action")
+            if (debtId != null) params.add("debtId=$debtId")
+            if (debtAction != null) params.add("debtAction=$debtAction")
+            return if (params.isEmpty()) "transaction_details/$transactionId" else "transaction_details/$transactionId?${params.joinToString("&")}"
+        }
+    }
+
+    object SqlConsole : Screen("sql_console", "settings", "SQL Console", isTopLevel = false)
+    object Backup : Screen("backup", "settings", "Backup", isTopLevel = false)
+    object Recap : Screen("recap", "overview", "Year Recap", isTopLevel = false)
+
     companion object {
         private val ALL = listOf(
             Transactions, Categories, Debts, Budgets, Savings,
             Events, Recurrences, Templates, Places, People,
-            Overview, About, SupportDeveloper, Settings
+            Overview, About, SupportDeveloper, Settings,
+            DebtDetails, BudgetDetails, BudgetOverview, SavingDetails,
+            RecurrentTransactionDetails, RecurrentTransferDetails, TransactionDetails,
+            SqlConsole, Backup, Recap
         )
 
         fun fromSidebarId(id: String): Screen? = ALL.find { it.sidebarItemId == id }
@@ -79,7 +135,7 @@ sealed class Screen(
                 cleanRoute == "settings" -> ScreenMetadata(Settings.sidebarItemId, Settings.title, isTopLevel = false)
 
                 else -> {
-                    val match = ALL.find { cleanRoute == it.routePattern || cleanRoute.startsWith("${it.routePattern}/") }
+                    val match = ALL.find { cleanRoute == it.routePattern || cleanRoute.startsWith("${it.routePattern.substringBefore("/{")}/") }
                     if (match != null) {
                         ScreenMetadata(
                             selectedItemId = match.sidebarItemId,

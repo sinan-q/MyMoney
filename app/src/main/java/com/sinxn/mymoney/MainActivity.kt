@@ -131,15 +131,15 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onWalletSelect = { wallet ->
                                         coroutineScope.launch { pagerState.animateScrollToPage(1) }
-                                        navController.navigate("wallet_details/${wallet.wallet.id}")
+                                        navController.navigate(Screen.Transactions.createRoute(wallet.wallet.id))
                                     },
                                     onAddWallet = {
                                         coroutineScope.launch { pagerState.animateScrollToPage(1) }
-                                        navController.navigate("settings")
+                                        navController.navigate(Screen.Settings.routePattern)
                                     },
                                     onManageWallets = {
                                         coroutineScope.launch { pagerState.animateScrollToPage(1) }
-                                        navController.navigate("settings")
+                                        navController.navigate(Screen.Settings.routePattern)
                                     },
                                     onItemClick = { item ->
                                         coroutineScope.launch { pagerState.animateScrollToPage(1) }
