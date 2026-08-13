@@ -1,32 +1,22 @@
 package com.sinxn.mymoney.core.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import android.content.Context
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.ArrowDropUp
-import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.CreditCard
@@ -63,11 +53,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
-import com.sinxn.mymoney.core.util.MoneyFormatter
+import com.sinxn.mymoney.core.util.Constants
 import com.sinxn.mymoney.navigation.Screen
+import androidx.core.net.toUri
+import androidx.navigation.NavController
 
 data class NavigationMenuItem(
     val id: String,
@@ -282,16 +273,14 @@ private fun NavigationDrawerItemRow(
 }
 
 fun handleSidebarNavigation(
-    context: android.content.Context,
-    navController: androidx.navigation.NavController,
+    context: Context,
+    navController: NavController,
     itemId: String,
-    currentWalletId: String = com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID,
-    currentRoute: String? = null,
-    onLocalSectionSelect: ((String) -> Unit)? = null
+    currentWalletId: String = Constants.TOTAL_WALLET_ID
 ) {
     when (itemId) {
         Screen.Transactions.sidebarItemId -> {
-            val targetWallet = if (currentWalletId.isEmpty()) com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID else currentWalletId
+            val targetWallet = currentWalletId.ifEmpty { Constants.TOTAL_WALLET_ID }
             navController.navigate(Screen.Transactions.createRoute(targetWallet)) {
                 popUpTo(navController.graph.startDestinationId) { saveState = true }
                 launchSingleTop = true
@@ -360,7 +349,7 @@ private fun launchConverterIntent(context: android.content.Context) {
 }
 
 private fun launchSearchIntent(context: android.content.Context, query: String) {
-    val geoUri = android.net.Uri.parse("geo:0,0?q=$query")
+    val geoUri = "geo:0,0?q=$query".toUri()
     val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, geoUri).apply {
         flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
     }
@@ -368,7 +357,7 @@ private fun launchSearchIntent(context: android.content.Context, query: String) 
         context.startActivity(intent)
     } catch (e: Exception) {
         try {
-            val webUri = android.net.Uri.parse("https://www.google.com/maps/search/$query")
+            val webUri = "https://www.google.com/maps/search/$query".toUri()
             val webIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, webUri).apply {
                 flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
             }
@@ -381,7 +370,8 @@ private fun launchSearchIntent(context: android.content.Context, query: String) 
 
 private fun launchSupportIntent(context: android.content.Context) {
     try {
-        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com")).apply {
+        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW,
+            "https://github.com".toUri()).apply {
             flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
         }
         context.startActivity(intent)

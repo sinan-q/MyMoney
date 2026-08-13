@@ -147,8 +147,7 @@ class MainActivity : ComponentActivity() {
                                             context = this@MainActivity,
                                             navController = navController,
                                             itemId = item.id,
-                                            currentWalletId = currentWalletId,
-                                            currentRoute = currentRoute
+                                            currentWalletId = currentWalletId
                                         )
                                     }
                                 )

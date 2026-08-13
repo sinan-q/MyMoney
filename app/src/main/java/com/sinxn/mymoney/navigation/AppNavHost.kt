@@ -110,8 +110,7 @@ fun AppNavHost(
                         context = context,
                         navController = navController,
                         itemId = itemId,
-                        currentWalletId = currentWalletId,
-                        currentRoute = Screen.Debts.routePattern
+                        currentWalletId = currentWalletId
                     )
                 },
                 onNavigateToWallet = { walletId ->
@@ -202,8 +201,7 @@ fun AppNavHost(
                         context = context,
                         navController = navController,
                         itemId = itemId,
-                        currentWalletId = currentWalletId,
-                        currentRoute = "wallet_details"
+                        currentWalletId = currentWalletId
                     )
                 }
             )
@@ -258,8 +256,7 @@ fun AppNavHost(
                         context = context,
                         navController = navController,
                         itemId = itemId,
-                        currentWalletId = currentWalletId,
-                        currentRoute = Screen.Budgets.routePattern
+                        currentWalletId = currentWalletId
                     )
                 },
                 onNavigateToWallet = { walletId ->
@@ -320,8 +317,7 @@ fun AppNavHost(
                         context = context,
                         navController = navController,
                         itemId = itemId,
-                        currentWalletId = currentWalletId,
-                        currentRoute = Screen.Savings.routePattern
+                        currentWalletId = currentWalletId
                     )
                 },
                 onNavigateToWallet = { walletId ->

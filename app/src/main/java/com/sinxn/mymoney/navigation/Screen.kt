@@ -86,14 +86,15 @@ sealed class Screen(
     object Recap : Screen("recap", "overview", "Year Recap", isTopLevel = false)
 
     companion object {
-        private val ALL = listOf(
-            Transactions, Categories, Debts, Budgets, Savings,
-            Events, Recurrences, Templates, Places, People,
-            Overview, About, SupportDeveloper, Settings,
-            DebtDetails, BudgetDetails, BudgetOverview, SavingDetails,
-            RecurrentTransactionDetails, RecurrentTransferDetails, TransactionDetails,
-            SqlConsole, Backup, Recap
-        )
+        private val ALL: List<Screen>
+            get() = listOfNotNull(
+                Transactions, Categories, Debts, Budgets, Savings,
+                Events, Recurrences, Templates, Places, People,
+                Overview, About, SupportDeveloper, Settings,
+                DebtDetails, BudgetDetails, BudgetOverview, SavingDetails,
+                RecurrentTransactionDetails, RecurrentTransferDetails, TransactionDetails,
+                SqlConsole, Backup, Recap
+            )
 
         fun fromSidebarId(id: String): Screen? = ALL.find { it.sidebarItemId == id }
 
@@ -111,6 +112,9 @@ sealed class Screen(
             return when {
                 cleanRoute == "home" || cleanRoute.startsWith("wallet_details") ->
                     ScreenMetadata(Transactions.sidebarItemId, Transactions.title, isTopLevel = true)
+
+                cleanRoute.startsWith("transaction_details") ->
+                    ScreenMetadata(Transactions.sidebarItemId, TransactionDetails.title, isTopLevel = false)
 
                 cleanRoute.startsWith("debts") || cleanRoute.startsWith("debt_details") ->
                     ScreenMetadata(Debts.sidebarItemId, Debts.title, isTopLevel = cleanRoute == "debts")
@@ -135,7 +139,10 @@ sealed class Screen(
                 cleanRoute == "settings" -> ScreenMetadata(Settings.sidebarItemId, Settings.title, isTopLevel = false)
 
                 else -> {
-                    val match = ALL.find { cleanRoute == it.routePattern || cleanRoute.startsWith("${it.routePattern.substringBefore("/{")}/") }
+                    val match = ALL.find { screen ->
+                        val base = screen.routePattern.substringBefore("/{")
+                        cleanRoute == screen.routePattern || cleanRoute == base || cleanRoute.startsWith("$base/")
+                    }
                     if (match != null) {
                         ScreenMetadata(
                             selectedItemId = match.sidebarItemId,
