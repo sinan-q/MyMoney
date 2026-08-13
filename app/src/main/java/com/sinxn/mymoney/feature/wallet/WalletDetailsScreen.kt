@@ -151,6 +151,17 @@ fun WalletDetailsScreen(
                         onTransactionClick = onTransactionClick,
                         onRecapClick = onNavigateToRecap
                     )
+
+                    FloatingActionButton(
+                        onClick = onAddTransaction,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp),
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Add Transaction")
+                    }
                 }
             }
         }
