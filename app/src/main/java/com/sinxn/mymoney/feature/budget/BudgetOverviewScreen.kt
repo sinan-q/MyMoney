@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
+import com.sinxn.mymoney.core.ui.components.TransactionItem
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import kotlinx.coroutines.flow.collectLatest
 
@@ -313,7 +314,7 @@ fun BudgetOverviewScreen(
                         }
                     } else {
                         items(uiState.transactions, key = { it.transaction.id }) { item ->
-                            BudgetTransactionItemCard(
+                            TransactionItem(
                                 item = item,
                                 onClick = { onTransactionClick(item.transaction.id) }
                             )
@@ -360,99 +361,6 @@ fun MetricCard(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
-        }
-    }
-}
-
-@Composable
-fun BudgetTransactionItemCard(
-    item: TransactionWithCategory,
-    onClick: () -> Unit
-) {
-    val transaction = item.transaction
-    val isIncome = transaction.direction == 1
-    val isTransfer = transaction.direction == 2 || transaction.type == 1 || transaction.type == 2 || item.categoryName.equals("Transfer", ignoreCase = true)
-
-    val categoryDisplayName = when {
-        isTransfer -> "Transfer"
-        !item.categoryName.isNullOrBlank() -> item.categoryName
-        else -> "Uncategorized"
-    }
-
-    val amountColor = when {
-        isTransfer -> Color(0xFF0284C7)
-        isIncome -> Color(0xFF4CAF50)
-        else -> MaterialTheme.colorScheme.onSurface
-    }
-
-    val currencyCode = item.currencyCode ?: "USD"
-    val decimals = item.decimals
-    val signedAmount = if (isIncome || isTransfer) transaction.money else -transaction.money
-
-    val hasDescription = !transaction.description.isNullOrBlank()
-    val primaryTitle = if (hasDescription) transaction.description!! else categoryDisplayName
-    val subtitleText = if (hasDescription) categoryDisplayName else null
-    val dateText = transaction.date.take(10)
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            CategoryIcon(
-                iconString = item.categoryIcon,
-                categoryName = categoryDisplayName,
-                modifier = Modifier.size(42.dp)
-            )
-
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = primaryTitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (!subtitleText.isNullOrEmpty()) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = subtitleText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = MoneyFormatter.format(signedAmount, currencyCode, decimals),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = amountColor
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = dateText,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
     }
 }

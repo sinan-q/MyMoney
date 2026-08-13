@@ -259,6 +259,24 @@ interface MoneyDao {
     @Query("SELECT id FROM categories WHERE parentId = :parentId AND isDeleted = 0")
     suspend fun getDirectChildCategoryIds(parentId: String): List<String>
 
+    @Query("SELECT * FROM categories WHERE parentId = :parentId AND isDeleted = 0 ORDER BY `index` ASC")
+    fun getChildCategories(parentId: String): Flow<List<CategoryEntity>>
+
+    @androidx.room.Transaction
+    @Query("""
+        SELECT t.*, c.name as categoryName, c.icon as categoryIcon,
+               COALESCE(curr.decimals, 2) as decimals, curr.symbol as currencySymbol,
+               w.currency as currencyCode
+        FROM transactions t
+        LEFT JOIN categories c ON t.categoryId = c.id
+        INNER JOIN wallets w ON t.walletId = w.id
+        LEFT JOIN currencies curr ON w.currency = curr.iso
+        WHERE (t.categoryId = :categoryId OR t.categoryId IN (SELECT id FROM categories WHERE parentId = :categoryId AND isDeleted = 0))
+          AND t.isDeleted = 0
+        ORDER BY t.date DESC
+    """)
+    fun getTransactionsForCategory(categoryId: String): Flow<List<TransactionWithCategory>>
+
     // --- Pending (Unconfirmed) Transactions for Recurrence Inbox (REG-03) ---
     @androidx.room.Transaction
     @Query("""

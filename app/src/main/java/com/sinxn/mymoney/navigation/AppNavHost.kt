@@ -16,6 +16,7 @@ import com.sinxn.mymoney.feature.about.AboutScreen
 import com.sinxn.mymoney.feature.budget.BudgetDetailsScreen
 import com.sinxn.mymoney.feature.budget.BudgetListScreen
 import com.sinxn.mymoney.feature.budget.BudgetOverviewScreen
+import com.sinxn.mymoney.feature.category.CategoryDetailsScreen
 import com.sinxn.mymoney.feature.category.CategoryListScreen
 import com.sinxn.mymoney.feature.debt.DebtListScreen
 import com.sinxn.mymoney.feature.event.EventListScreen
@@ -350,7 +351,26 @@ fun AppNavHost(
         }
         composable(Screen.Categories.routePattern) {
             CategoryListScreen(
-                onNavigateBack = { navController.navigateUp() }
+                onNavigateBack = { navController.navigateUp() },
+                onCategoryClick = { categoryId ->
+                    navController.navigate(Screen.CategoryDetails.createRoute(categoryId))
+                }
+            )
+        }
+        composable(
+            Screen.CategoryDetails.routePattern,
+            arguments = listOf(
+                navArgument("categoryId") { type = NavType.StringType }
+            )
+        ) {
+            CategoryDetailsScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onTransactionClick = { transactionId ->
+                    navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
+                },
+                onSubcategoryClick = { subcategoryId ->
+                    navController.navigate(Screen.CategoryDetails.createRoute(subcategoryId))
+                }
             )
         }
         composable(Screen.People.routePattern) {

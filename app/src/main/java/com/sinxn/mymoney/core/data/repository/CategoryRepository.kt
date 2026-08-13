@@ -2,6 +2,7 @@ package com.sinxn.mymoney.core.data.repository
 
 import com.sinxn.mymoney.core.data.local.dao.MoneyDao
 import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
+import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 import javax.inject.Inject
@@ -13,6 +14,14 @@ class CategoryRepository @Inject constructor(
 ) {
     fun getCategories(): Flow<List<CategoryEntity>> {
         return moneyDao.getCategories()
+    }
+
+    fun getChildCategories(parentId: String): Flow<List<CategoryEntity>> {
+        return moneyDao.getChildCategories(parentId)
+    }
+
+    fun getTransactionsForCategory(categoryId: String): Flow<List<TransactionWithCategory>> {
+        return moneyDao.getTransactionsForCategory(categoryId)
     }
 
     suspend fun getCategoryById(id: String): CategoryEntity? {

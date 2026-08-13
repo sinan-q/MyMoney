@@ -81,6 +81,10 @@ sealed class Screen(
         }
     }
 
+    object CategoryDetails : Screen("category_details/{categoryId}", "categories", "Category Details", isTopLevel = false) {
+        fun createRoute(categoryId: String): String = "category_details/$categoryId"
+    }
+
     object SqlConsole : Screen("sql_console", "settings", "SQL Console", isTopLevel = false)
     object Backup : Screen("backup", "settings", "Backup", isTopLevel = false)
     object Recap : Screen("recap", "overview", "Year Recap", isTopLevel = false)
@@ -91,7 +95,7 @@ sealed class Screen(
                 Transactions, Categories, Debts, Budgets, Savings,
                 Events, Recurrences, Templates, Places, People,
                 Overview, About, SupportDeveloper, Settings,
-                DebtDetails, BudgetDetails, BudgetOverview, SavingDetails,
+                DebtDetails, CategoryDetails, BudgetDetails, BudgetOverview, SavingDetails,
                 RecurrentTransactionDetails, RecurrentTransferDetails, TransactionDetails,
                 SqlConsole, Backup, Recap
             )

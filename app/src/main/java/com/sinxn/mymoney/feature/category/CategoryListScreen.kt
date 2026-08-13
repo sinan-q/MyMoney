@@ -39,6 +39,7 @@ private sealed class CategoryRow {
 @Composable
 fun CategoryListScreen(
     onNavigateBack: () -> Unit,
+    onCategoryClick: (String) -> Unit = {},
     viewModel: CategoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -155,7 +156,7 @@ fun CategoryListScreen(
                                             hasSubcategories = row.subcategoryCount > 0,
                                             isExpanded = row.isExpanded,
                                             onRowClick = {
-                                                viewModel.openEditCategoryDialog(row.category)
+                                                onCategoryClick(row.category.id)
                                             },
                                             onExpandToggle = {
                                                 toggleParentExpanded(row.category.id)
@@ -166,7 +167,7 @@ fun CategoryListScreen(
                                         SubcategoryCategoryRow(
                                             category = row.category,
                                             onClick = {
-                                                viewModel.openEditCategoryDialog(row.category)
+                                                onCategoryClick(row.category.id)
                                             }
                                         )
                                     }
