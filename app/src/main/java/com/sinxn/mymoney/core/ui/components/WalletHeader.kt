@@ -10,7 +10,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -29,17 +31,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.util.MoneyFormatter
-import com.sinxn.mymoney.feature.debt.DebtListUiState
-
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.IconButton
 
 @Composable
 fun WalletHeader(
     wallet: WalletWithBalance,
     formatterConfig: MoneyFormatter.Config,
-    activeSection: String = "transactions",
-    debtUiState: DebtListUiState? = null,
     isExpanded: Boolean = false,
     onToggleExpand: () -> Unit = {},
     onMenuClick: (() -> Unit)? = null
@@ -103,25 +99,17 @@ fun WalletHeader(
                         }
                     }
                     Column {
-                    Text(
-                        text = if (activeSection == "debts") {
-                            if (debtUiState?.selectedTab == 0) "Total Unpaid Debts" else "Total Pending Credits"
-                        } else {
-                            wallet.wallet.name
-                        },
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = if (activeSection == "debts") {
-                            if (debtUiState?.selectedTab == 0) "I Owe" else "Owed to Me"
-                        } else {
-                            "Current Balance"
-                        },
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.7f)
-                    )
+                        Text(
+                            text = wallet.wallet.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Current Balance",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
                     }
                 }
 
@@ -137,7 +125,7 @@ fun WalletHeader(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = if (activeSection == "debts") "DEBT" else wallet.wallet.currency,
+                            text = wallet.wallet.currency,
                             style = MaterialTheme.typography.labelMedium,
                             color = Color.White,
                             fontWeight = FontWeight.Bold
@@ -154,27 +142,17 @@ fun WalletHeader(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            val formattedBalance = if (activeSection == "debts" && debtUiState != null) {
-                val summaryCurrency = if (debtUiState.debts.isNotEmpty()) debtUiState.debts.first().walletCurrency else debtUiState.currencyCode
-                val summaryDecimals = if (debtUiState.debts.isNotEmpty()) debtUiState.debts.first().walletDecimals else 2
-                MoneyFormatter.format(
-                    amount = debtUiState.totalRemainingMoney,
-                    currencyCode = summaryCurrency,
-                    decimals = summaryDecimals
-                )
-            } else {
-                MoneyFormatter.format(
-                    amount = wallet.currentBalance,
-                    currencyCode = wallet.wallet.currency,
-                    decimals = wallet.decimals,
-                    config = formatterConfig
-                )
-            }
+            val formattedBalance = MoneyFormatter.format(
+                amount = wallet.currentBalance,
+                currencyCode = wallet.wallet.currency,
+                decimals = wallet.decimals,
+                config = formatterConfig
+            )
             
             // Large Bold Balance
             Text(
-                text = if (activeSection == "debts" || wallet.isTotalValid) formattedBalance else "Multi-Currency",
-                style = if (activeSection == "debts" || wallet.isTotalValid) {
+                text = if (wallet.isTotalValid) formattedBalance else "Multi-Currency",
+                style = if (wallet.isTotalValid) {
                     MaterialTheme.typography.displayMedium.copy(
                         shadow = Shadow(
                             color = Color.Black.copy(alpha = 0.1f),
@@ -193,7 +171,7 @@ fun WalletHeader(
                 letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified
             )
 
-            if (activeSection != "debts" && !wallet.isTotalValid) {
+            if (!wallet.isTotalValid) {
                 if (!wallet.balanceBreakdown.isNullOrEmpty()) {
                     Text(
                         text = wallet.balanceBreakdown,
@@ -211,7 +189,7 @@ fun WalletHeader(
                 )
             }
             
-            if (activeSection != "debts" && !wallet.wallet.note.isNullOrEmpty()) {
+            if (!wallet.wallet.note.isNullOrEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = wallet.wallet.note!!,
@@ -223,3 +201,4 @@ fun WalletHeader(
         }
     }
 }
+

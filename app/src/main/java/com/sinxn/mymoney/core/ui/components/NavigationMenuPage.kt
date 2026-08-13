@@ -125,7 +125,6 @@ fun NavigationMenuContent(
                 WalletHeader(
                     wallet = headerWallet,
                     formatterConfig = formatterConfig,
-                    activeSection = selectedItemId ?: "transactions",
                     isExpanded = isHeaderExpanded,
                     onToggleExpand = { isHeaderExpanded = !isHeaderExpanded }
                 )

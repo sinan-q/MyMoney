@@ -113,8 +113,6 @@ fun WalletDetailsScreen(
             WalletHeader(
                 wallet = wallet!!,
                 formatterConfig = formatterConfig,
-                activeSection = "transactions",
-                debtUiState = null,
                 isExpanded = isWalletListExpanded,
                 onToggleExpand = { isWalletListExpanded = !isWalletListExpanded }
             )
