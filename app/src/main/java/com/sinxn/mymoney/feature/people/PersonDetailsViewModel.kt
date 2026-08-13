@@ -17,6 +17,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import com.sinxn.mymoney.core.data.preferences.SettingsRepository
+import com.sinxn.mymoney.core.util.MoneyFormatter
+
 sealed class PersonDetailsEvent {
     object Deleted : PersonDetailsEvent()
 }
@@ -27,6 +30,10 @@ data class PersonDetailsUiState(
     val transactions: List<TransactionWithCategory> = emptyList(),
     val totalExpense: Long = 0L,
     val totalIncome: Long = 0L,
+    val currencyCode: String = "USD",
+    val decimals: Int = 2,
+    val formatterConfig: MoneyFormatter.Config = MoneyFormatter.Config(),
+    val dateFormat: Int = 0,
     val isLoading: Boolean = true,
     val isEditDialogOpen: Boolean = false,
     val editName: String = "",
@@ -36,7 +43,8 @@ data class PersonDetailsUiState(
 @HiltViewModel
 class PersonDetailsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val personRepository: PersonRepository
+    private val personRepository: PersonRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     val personId: String = checkNotNull(savedStateHandle["personId"])
@@ -55,8 +63,9 @@ class PersonDetailsViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 personRepository.getPeople(),
-                personRepository.getTransactionsForPerson(personId)
-            ) { allPeople, transactions ->
+                personRepository.getTransactionsForPerson(personId),
+                settingsRepository.formattingSettings
+            ) { allPeople, transactions, settings ->
                 val currentPerson = allPeople.find { it.id == personId }
 
                 var totalExpense = 0L
@@ -70,11 +79,26 @@ class PersonDetailsViewModel @Inject constructor(
                     }
                 }
 
+                val transactionCurrencies = transactions.mapNotNull { it.currencySymbol ?: it.currencyCode }.distinct()
+                val displayCurrency = if (transactionCurrencies.size == 1) transactionCurrencies.first() else settings.globalCurrency
+                val displayDecimals = transactions.firstOrNull()?.decimals ?: 2
+
+                val formatterConfig = MoneyFormatter.Config(
+                    showCurrency = settings.showCurrency,
+                    groupDigits = settings.groupDigits,
+                    roundDecimals = settings.roundDecimals,
+                    showPlusMinus = settings.showPlusMinus
+                )
+
                 _uiState.value = _uiState.value.copy(
                     person = currentPerson,
                     transactions = transactions,
                     totalExpense = totalExpense,
                     totalIncome = totalIncome,
+                    currencyCode = displayCurrency,
+                    decimals = displayDecimals,
+                    formatterConfig = formatterConfig,
+                    dateFormat = settings.dateFormat,
                     isLoading = false
                 )
             }.collect {}

@@ -217,7 +217,12 @@ fun PersonDetailsScreen(
                             PersonMetricCard(
                                 modifier = Modifier.weight(1f),
                                 title = "Total Expense",
-                                value = MoneyFormatter.format(uiState.totalExpense, "USD"),
+                                value = MoneyFormatter.format(
+                                    amount = uiState.totalExpense,
+                                    currencyCode = uiState.currencyCode,
+                                    decimals = uiState.decimals,
+                                    config = uiState.formatterConfig
+                                ),
                                 icon = Icons.AutoMirrored.Filled.TrendingDown,
                                 color = Color(0xFFE53935)
                             )
@@ -225,7 +230,12 @@ fun PersonDetailsScreen(
                             PersonMetricCard(
                                 modifier = Modifier.weight(1f),
                                 title = "Total Income",
-                                value = MoneyFormatter.format(uiState.totalIncome, "USD"),
+                                value = MoneyFormatter.format(
+                                    amount = uiState.totalIncome,
+                                    currencyCode = uiState.currencyCode,
+                                    decimals = uiState.decimals,
+                                    config = uiState.formatterConfig
+                                ),
                                 icon = Icons.Default.TrendingUp,
                                 color = Color(0xFF43A047)
                             )
@@ -255,6 +265,10 @@ fun PersonDetailsScreen(
                             }
                         },
                         onTransactionClick = onTransactionClick,
+                        decimals = uiState.decimals,
+                        currencyCode = uiState.currencyCode,
+                        formatterConfig = uiState.formatterConfig,
+                        dateFormat = uiState.dateFormat,
                         emptyMessage = "No transactions for this person yet."
                     )
                 }

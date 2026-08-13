@@ -18,6 +18,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import com.sinxn.mymoney.core.data.preferences.SettingsRepository
+import com.sinxn.mymoney.core.util.MoneyFormatter
+
 sealed class CategoryDetailsEvent {
     object Deleted : CategoryDetailsEvent()
 }
@@ -31,6 +34,10 @@ data class CategoryDetailsUiState(
     val transactions: List<TransactionWithCategory> = emptyList(),
     val totalExpense: Long = 0L,
     val totalIncome: Long = 0L,
+    val currencyCode: String = "USD",
+    val decimals: Int = 2,
+    val formatterConfig: MoneyFormatter.Config = MoneyFormatter.Config(),
+    val dateFormat: Int = 0,
     val isLoading: Boolean = true,
     val isEditDialogOpen: Boolean = false,
     val editName: String = "",
@@ -42,7 +49,8 @@ data class CategoryDetailsUiState(
 @HiltViewModel
 class CategoryDetailsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val categoryRepository: CategoryRepository
+    private val categoryRepository: CategoryRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     val categoryId: String = checkNotNull(savedStateHandle["categoryId"])
@@ -61,8 +69,9 @@ class CategoryDetailsViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 categoryRepository.getCategories(),
-                categoryRepository.getTransactionsForCategory(categoryId)
-            ) { allCategories, transactions ->
+                categoryRepository.getTransactionsForCategory(categoryId),
+                settingsRepository.formattingSettings
+            ) { allCategories, transactions, settings ->
                 val currentCat = allCategories.find { it.id == categoryId }
                 val parentCat = currentCat?.parentId?.let { pId -> allCategories.find { it.id == pId } }
                 val subCats = allCategories.filter { it.parentId == categoryId }
@@ -78,6 +87,17 @@ class CategoryDetailsViewModel @Inject constructor(
                     }
                 }
 
+                val transactionCurrencies = transactions.mapNotNull { it.currencySymbol ?: it.currencyCode }.distinct()
+                val displayCurrency = if (transactionCurrencies.size == 1) transactionCurrencies.first() else settings.globalCurrency
+                val displayDecimals = transactions.firstOrNull()?.decimals ?: 2
+
+                val formatterConfig = MoneyFormatter.Config(
+                    showCurrency = settings.showCurrency,
+                    groupDigits = settings.groupDigits,
+                    roundDecimals = settings.roundDecimals,
+                    showPlusMinus = settings.showPlusMinus
+                )
+
                 _uiState.value = _uiState.value.copy(
                     category = currentCat,
                     parentCategory = parentCat,
@@ -86,6 +106,10 @@ class CategoryDetailsViewModel @Inject constructor(
                     transactions = transactions,
                     totalExpense = totalExpense,
                     totalIncome = totalIncome,
+                    currencyCode = displayCurrency,
+                    decimals = displayDecimals,
+                    formatterConfig = formatterConfig,
+                    dateFormat = settings.dateFormat,
                     isLoading = false
                 )
             }.collect {}
