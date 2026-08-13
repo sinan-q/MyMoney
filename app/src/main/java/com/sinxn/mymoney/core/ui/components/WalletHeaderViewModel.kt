@@ -37,10 +37,64 @@ class WalletHeaderViewModel @Inject constructor(
             initialValue = Constants.TOTAL_WALLET_ID
         )
 
-    val currentWallet: StateFlow<WalletWithBalance?> = combine(allWallets, currentWalletId) { wallets, id ->
-        wallets.find { it.wallet.id == id }
-            ?: wallets.firstOrNull { it.wallet.id == Constants.TOTAL_WALLET_ID }
-            ?: wallets.firstOrNull()
+    val currentWallet: StateFlow<WalletWithBalance?> = combine(
+        allWallets,
+        currentWalletId,
+        settingsRepository.formattingSettings
+    ) { wallets, id, settings ->
+        if (id == Constants.TOTAL_WALLET_ID) {
+            val walletsInTotal = wallets.filter {
+                it.wallet.countInTotal && (!settings.excludeArchivedFromTotal || !it.wallet.isArchived)
+            }
+            val totalBalance = walletsInTotal.sumOf { it.currentBalance }
+            val globalCurrency = settings.globalCurrency
+            val currency = try {
+                java.util.Currency.getInstance(globalCurrency)
+            } catch (e: Exception) {
+                null
+            }
+
+            val distinctCurrencies = walletsInTotal.map { it.wallet.currency }.distinct()
+            val isTotalValid = distinctCurrencies.size <= 1 && (distinctCurrencies.isEmpty() || distinctCurrencies.first() == globalCurrency)
+
+            val breakdown = if (!isTotalValid && walletsInTotal.isNotEmpty()) {
+                walletsInTotal
+                    .groupBy { it.wallet.currency }
+                    .map { (currency, group) ->
+                        val sum = group.sumOf { it.currentBalance }
+                        val groupDecimals = group.firstOrNull()?.decimals ?: 2
+                        MoneyFormatter.format(
+                            amount = sum,
+                            currencyCode = currency,
+                            decimals = groupDecimals
+                        )
+                    }.joinToString(", ")
+            } else null
+
+            WalletWithBalance(
+                wallet = com.sinxn.mymoney.core.data.local.entity.WalletEntity(
+                    id = Constants.TOTAL_WALLET_ID,
+                    name = "Total",
+                    icon = "sigma",
+                    currency = globalCurrency,
+                    startMoney = 0,
+                    isArchived = false,
+                    note = null,
+                    countInTotal = false,
+                    index = -1,
+                    isDeleted = false,
+                    lastEdit = 0,
+                    tag = null
+                ),
+                currentBalance = totalBalance,
+                decimals = currency?.defaultFractionDigits ?: 2,
+                currencySymbol = currency?.symbol ?: globalCurrency,
+                isTotalValid = isTotalValid,
+                balanceBreakdown = breakdown
+            )
+        } else {
+            wallets.find { it.wallet.id == id } ?: wallets.firstOrNull()
+        }
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),

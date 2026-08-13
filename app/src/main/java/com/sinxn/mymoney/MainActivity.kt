@@ -5,18 +5,27 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -26,6 +35,8 @@ import com.sinxn.mymoney.feature.home.HomeScreen
 import com.sinxn.mymoney.feature.settings.BackupScreen
 import com.sinxn.mymoney.feature.settings.SqlConsoleScreen
 import androidx.lifecycle.lifecycleScope
+import com.sinxn.mymoney.core.util.Constants
+import com.sinxn.mymoney.feature.recurrence.RecurrenceScreen
 import kotlinx.coroutines.launch
 import com.sinxn.mymoney.ui.theme.MyMoneyTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -56,26 +67,12 @@ class MainActivity : ComponentActivity() {
                     
                     if (startDest != "loading") {
                         val pagerState = androidx.compose.foundation.pager.rememberPagerState(initialPage = 1, pageCount = { 2 })
-                        val allWallets by viewModel.allWallets.collectAsState()
-                        val formattingSettings by viewModel.formattingSettings.collectAsState()
-                        val formatterConfig = com.sinxn.mymoney.core.util.MoneyFormatter.Config(
-                            showCurrency = formattingSettings.showCurrency,
-                            groupDigits = formattingSettings.groupDigits,
-                            roundDecimals = formattingSettings.roundDecimals,
-                            showPlusMinus = formattingSettings.showPlusMinus
-                        )
                         val currentBackStackEntry by navController.currentBackStackEntryAsState()
                         val currentRoute = currentBackStackEntry?.destination?.route?.substringBefore("?") ?: "wallet_details/${com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID}"
                         
-                        val isWalletRelated = currentRoute.startsWith("wallet_details")
-                        
-                        var isWalletListExpanded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
-                        
+
+
                         val currentWalletId by viewModel.currentWalletId.collectAsState()
-                        
-                        val selectedWallet = allWallets.find { it.wallet.id == currentWalletId }
-                            ?: allWallets.firstOrNull { it.wallet.id == com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID }
-                            ?: allWallets.firstOrNull()
                         
                         val selectedItemId = when {
                             currentRoute == "home" || currentRoute.startsWith("wallet_details") -> "transactions"
@@ -97,7 +94,7 @@ class MainActivity : ComponentActivity() {
                         
                         val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
 
-                        androidx.compose.foundation.pager.HorizontalPager(state = pagerState) { page ->
+                        HorizontalPager(state = pagerState) { page ->
                             if (page == 1) {
                                 val isTopLevelScreen = currentRoute.substringBefore("?") in listOf(
                                     "wallet_details/{walletId}", "wallet_details",
@@ -106,8 +103,8 @@ class MainActivity : ComponentActivity() {
                                     "overview", "about", "support_developer"
                                 )
 
-                                androidx.compose.material3.Scaffold(
-                                     contentWindowInsets = if (isTopLevelScreen) androidx.compose.material3.ScaffoldDefaults.contentWindowInsets else androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
+                                Scaffold(
+                                     contentWindowInsets = if (isTopLevelScreen) ScaffoldDefaults.contentWindowInsets else WindowInsets(0, 0, 0, 0),
                                      topBar = {
                                          if (isTopLevelScreen) {
                                              val pageTitle = when {
@@ -126,15 +123,15 @@ class MainActivity : ComponentActivity() {
                                                  currentRoute == "support_developer" -> "Support Developer"
                                                  else -> "My Money"
                                              }
-                                             androidx.compose.material3.TopAppBar(
+                                             TopAppBar(
                                                  title = {
-                                                     androidx.compose.material3.Text(
+                                                     Text(
                                                          text = pageTitle,
-                                                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                                         fontWeight = FontWeight.Bold
                                                      )
                                                  },
                                                  navigationIcon = {
-                                                     androidx.compose.material3.IconButton(
+                                                     IconButton(
                                                          onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } }
                                                      ) {
                                                          androidx.compose.material3.Icon(
@@ -149,34 +146,21 @@ class MainActivity : ComponentActivity() {
                                              )
                                          }
                                      },
-                                    floatingActionButton = {
-                                        if (isTopLevelScreen && isWalletRelated) {
-                                            if (selectedItemId == "transactions") {
-                                                androidx.compose.material3.FloatingActionButton(
-                                                    onClick = { navController.navigate("transaction_details/new") },
-                                                    containerColor = MaterialTheme.colorScheme.primary,
-                                                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
-                                                ) {
-                                                    androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Add, contentDescription = "Add Transaction")
-                                                }
-                                            }
-                                        }
-                                    }
+
                                 ) { paddingValues ->
-                                    androidx.compose.foundation.layout.Box(modifier = Modifier.padding(paddingValues)) {
+                                    Box(modifier = Modifier.padding(paddingValues)) {
                                         NavHost(navController = navController, startDestination = startDest) {
                                             composable("home") {
                                                 // Redirect to current wallet details
-                                                androidx.compose.runtime.LaunchedEffect(Unit) {
-                                                    val targetWallet = if (currentWalletId.isEmpty()) com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID else currentWalletId
+                                                LaunchedEffect(Unit) {
+                                                    val targetWallet = currentWalletId.ifEmpty { Constants.TOTAL_WALLET_ID }
                                                     navController.navigate("wallet_details/$targetWallet") {
                                                         popUpTo("home") { inclusive = true }
                                                     }
                                                 }
                                             }
                             composable("recurrences") {
-                                com.sinxn.mymoney.feature.recurrence.RecurrenceScreen(
+                                RecurrenceScreen(
                                     onNavigateUp = { navController.navigateUp() },
                                     onAddRecurrentTransaction = {
                                         navController.navigate("recurrent_transaction_details/new")
@@ -540,7 +524,7 @@ class MainActivity : ComponentActivity() {
                         }
                     } else {
                         // Show Loading Screen or Splash
-                        androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
                              androidx.compose.material3.CircularProgressIndicator()
                         }
                     }

@@ -42,10 +42,8 @@ class WalletDetailsViewModel @Inject constructor(
                 if (walletId == Constants.TOTAL_WALLET_ID) {
                     settingsRepository.setCurrentWalletId(walletId)
                 } else {
-                    moneyDao.getWalletById(walletId)?.let { wallet ->
-                        if (!wallet.isArchived) {
-                            settingsRepository.setCurrentWalletId(walletId)
-                        }
+                    moneyDao.getWalletById(walletId)?.let { _ ->
+                        settingsRepository.setCurrentWalletId(walletId)
                     }
                 }
             } catch (e: Exception) {
