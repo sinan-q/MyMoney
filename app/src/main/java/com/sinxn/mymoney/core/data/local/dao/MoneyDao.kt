@@ -236,6 +236,9 @@ interface MoneyDao {
     @Query("UPDATE categories SET showReport = :showReport, lastEdit = :lastEdit WHERE id = :categoryId")
     suspend fun updateCategoryShowReport(categoryId: String, showReport: Boolean, lastEdit: Long)
 
+    @Query("UPDATE categories SET isArchived = :isArchived, lastEdit = :lastEdit WHERE id = :categoryId")
+    suspend fun updateCategoryArchived(categoryId: String, isArchived: Boolean, lastEdit: Long)
+
     @Query("UPDATE categories SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :categoryId")
     suspend fun softDeleteCategory(categoryId: String, lastEdit: Long)
 
@@ -386,6 +389,9 @@ interface MoneyDao {
     @Update
     suspend fun updatePlace(place: com.sinxn.mymoney.core.data.local.entity.PlaceEntity)
 
+    @Query("UPDATE places SET isArchived = :isArchived, lastEdit = :lastEdit WHERE id = :placeId")
+    suspend fun updatePlaceArchived(placeId: String, isArchived: Boolean, lastEdit: Long)
+
     @Query("UPDATE places SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :placeId")
     suspend fun softDeletePlace(placeId: String, lastEdit: Long)
 
@@ -419,6 +425,9 @@ interface MoneyDao {
     @Update
     suspend fun updateEvent(event: com.sinxn.mymoney.core.data.local.entity.EventEntity)
 
+    @Query("UPDATE events SET isArchived = :isArchived, lastEdit = :lastEdit WHERE id = :eventId")
+    suspend fun updateEventArchived(eventId: String, isArchived: Boolean, lastEdit: Long)
+
     @Query("UPDATE events SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :eventId")
     suspend fun softDeleteEvent(eventId: String, lastEdit: Long)
 
@@ -451,6 +460,9 @@ interface MoneyDao {
 
     @Update
     suspend fun updatePerson(person: com.sinxn.mymoney.core.data.local.entity.PersonEntity)
+
+    @Query("UPDATE people SET isArchived = :isArchived, lastEdit = :lastEdit WHERE id = :personId")
+    suspend fun updatePersonArchived(personId: String, isArchived: Boolean, lastEdit: Long)
 
     @Query("UPDATE people SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :personId")
     suspend fun softDeletePerson(personId: String, lastEdit: Long)

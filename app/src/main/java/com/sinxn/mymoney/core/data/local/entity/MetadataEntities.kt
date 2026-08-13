@@ -11,6 +11,7 @@ data class PlaceEntity(
     val address: String?,
     val latitude: Double?,
     val longitude: Double?,
+    val isArchived: Boolean = false,
     val isDeleted: Boolean,
     val lastEdit: Long,
     val tag: String?
@@ -22,6 +23,7 @@ data class PersonEntity(
     val name: String,
     val icon: String,
     val note: String?,
+    val isArchived: Boolean = false,
     val isDeleted: Boolean,
     val lastEdit: Long,
     val tag: String?
@@ -35,6 +37,7 @@ data class EventEntity(
     val note: String?,
     val startDate: String,
     val endDate: String,
+    val isArchived: Boolean = false,
     val isDeleted: Boolean,
     val lastEdit: Long,
     val tag: String?

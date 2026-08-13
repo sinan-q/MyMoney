@@ -29,6 +29,7 @@ class PersonRepository @Inject constructor(
         name: String,
         icon: String = "ic_person",
         note: String? = null,
+        isArchived: Boolean = false,
         tag: String? = null
     ): String {
         val now = System.currentTimeMillis()
@@ -39,6 +40,7 @@ class PersonRepository @Inject constructor(
             name = name,
             icon = icon,
             note = note,
+            isArchived = isArchived,
             isDeleted = false,
             lastEdit = now,
             tag = tag
@@ -46,6 +48,11 @@ class PersonRepository @Inject constructor(
 
         moneyDao.insertPerson(person)
         return personId
+    }
+
+    suspend fun updatePersonArchived(personId: String, isArchived: Boolean) {
+        val now = System.currentTimeMillis()
+        moneyDao.updatePersonArchived(personId, isArchived, now)
     }
 
     suspend fun deletePerson(personId: String) {

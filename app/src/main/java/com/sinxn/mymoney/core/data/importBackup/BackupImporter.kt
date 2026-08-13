@@ -270,6 +270,7 @@ class BackupImporter @Inject constructor(
                     // For now, map parentId only if it *exists in the input list* to avoid referring to deleted/missing cats.
                     parentId = if (categories.any { it.id == json.parentId }) json.parentId else null,
                     showReport = json.showReport ?: true,
+                    isArchived = json.archived ?: false,
                     index = json.index ?: 0,
                     isDeleted = json.deleted ?: false,
                     lastEdit = json.lastEdit ?: 0L,
@@ -290,6 +291,7 @@ class BackupImporter @Inject constructor(
                     address = json.address,
                     latitude = json.latitude,
                     longitude = json.longitude,
+                    isArchived = json.archived ?: false,
                     isDeleted = json.deleted ?: false,
                     lastEdit = json.lastEdit ?: 0L,
                     tag = json.tag
@@ -306,6 +308,7 @@ class BackupImporter @Inject constructor(
                     name = json.name ?: "",
                     icon = json.icon ?: "",
                     note = json.note,
+                    isArchived = json.archived ?: false,
                     isDeleted = json.deleted ?: false,
                     lastEdit = json.lastEdit ?: 0L,
                     tag = json.tag
@@ -324,6 +327,7 @@ class BackupImporter @Inject constructor(
                     note = json.note,
                     startDate = json.startDate ?: "",
                     endDate = json.endDate ?: "",
+                    isArchived = json.archived ?: false,
                     isDeleted = json.deleted ?: false,
                     lastEdit = json.lastEdit ?: 0L,
                     tag = json.tag

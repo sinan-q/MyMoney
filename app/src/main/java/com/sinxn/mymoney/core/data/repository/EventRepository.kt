@@ -31,6 +31,7 @@ class EventRepository @Inject constructor(
         startDate: String,
         endDate: String,
         note: String? = null,
+        isArchived: Boolean = false,
         tag: String? = null
     ): String {
         val now = System.currentTimeMillis()
@@ -43,6 +44,7 @@ class EventRepository @Inject constructor(
             note = note,
             startDate = startDate,
             endDate = endDate,
+            isArchived = isArchived,
             isDeleted = false,
             lastEdit = now,
             tag = tag
@@ -50,6 +52,11 @@ class EventRepository @Inject constructor(
 
         moneyDao.insertEvent(event)
         return eventId
+    }
+
+    suspend fun updateEventArchived(eventId: String, isArchived: Boolean) {
+        val now = System.currentTimeMillis()
+        moneyDao.updateEventArchived(eventId, isArchived, now)
     }
 
     suspend fun deleteEvent(eventId: String) {

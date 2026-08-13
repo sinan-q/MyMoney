@@ -50,6 +50,7 @@ data class JsonCategory(
     @SerializedName("type") val type: Int?,
     @SerializedName("parent") val parentId: String?,
     @SerializedName("show_report") val showReport: Boolean?,
+    @SerializedName("archived") val archived: Boolean? = null,
     @SerializedName("index") val index: Int?,
     @SerializedName("deleted") val deleted: Boolean?,
     @SerializedName("last_edit") val lastEdit: Long?,

@@ -45,7 +45,7 @@ object DatabaseModule {
 
                 for (cat in systemCategories) {
                     db.execSQL(
-                        "INSERT OR IGNORE INTO categories (id, name, icon, type, parentId, showReport, `index`, isDeleted, lastEdit, tag) VALUES (?, ?, ?, ?, NULL, ?, ?, 0, ?, ?)",
+                        "INSERT OR IGNORE INTO categories (id, name, icon, type, parentId, showReport, isArchived, `index`, isDeleted, lastEdit, tag) VALUES (?, ?, ?, ?, NULL, ?, 0, ?, 0, ?, ?)",
                         arrayOf<Any>(cat[0], cat[1], cat[2], cat[3].toInt(), cat[4].toInt(), cat[5].toInt(), cat[7].toLong(), cat[8])
                     )
                 }

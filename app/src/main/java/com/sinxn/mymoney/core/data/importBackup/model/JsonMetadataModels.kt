@@ -9,6 +9,7 @@ data class JsonPlace(
     @SerializedName("address") val address: String?,
     @SerializedName("latitude") val latitude: Double?,
     @SerializedName("longitude") val longitude: Double?,
+    @SerializedName("archived") val archived: Boolean? = null,
     @SerializedName("deleted") val deleted: Boolean?,
     @SerializedName("last_edit") val lastEdit: Long?,
     @SerializedName("tag") val tag: String?
@@ -19,6 +20,7 @@ data class JsonPerson(
     @SerializedName("name") val name: String?,
     @SerializedName("icon") val icon: String?,
     @SerializedName("note") val note: String?,
+    @SerializedName("archived") val archived: Boolean? = null,
     @SerializedName("deleted") val deleted: Boolean?,
     @SerializedName("last_edit") val lastEdit: Long?,
     @SerializedName("tag") val tag: String?
@@ -31,6 +33,7 @@ data class JsonEvent(
     @SerializedName("note") val note: String?,
     @SerializedName("start_date") val startDate: String?,
     @SerializedName("end_date") val endDate: String?,
+    @SerializedName("archived") val archived: Boolean? = null,
     @SerializedName("deleted") val deleted: Boolean?,
     @SerializedName("last_edit") val lastEdit: Long?,
     @SerializedName("tag") val tag: String?

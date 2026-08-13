@@ -31,6 +31,7 @@ class PlaceRepository @Inject constructor(
         address: String? = null,
         latitude: Double? = null,
         longitude: Double? = null,
+        isArchived: Boolean = false,
         tag: String? = null
     ): String {
         val now = System.currentTimeMillis()
@@ -43,6 +44,7 @@ class PlaceRepository @Inject constructor(
             address = address,
             latitude = latitude,
             longitude = longitude,
+            isArchived = isArchived,
             isDeleted = false,
             lastEdit = now,
             tag = tag
@@ -50,6 +52,11 @@ class PlaceRepository @Inject constructor(
 
         moneyDao.insertPlace(place)
         return placeId
+    }
+
+    suspend fun updatePlaceArchived(placeId: String, isArchived: Boolean) {
+        val now = System.currentTimeMillis()
+        moneyDao.updatePlaceArchived(placeId, isArchived, now)
     }
 
     suspend fun deletePlace(placeId: String) {

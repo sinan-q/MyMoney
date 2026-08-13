@@ -26,6 +26,7 @@ class CategoryRepository @Inject constructor(
         type: Int, // 0: Income, 1: Expense, 2: System (CategoryType)
         parentId: String? = null,
         showReport: Boolean = true,
+        isArchived: Boolean = false,
         index: Int = 0,
         tag: String? = null
     ): String {
@@ -39,6 +40,7 @@ class CategoryRepository @Inject constructor(
             type = type,
             parentId = parentId,
             showReport = showReport,
+            isArchived = isArchived,
             index = index,
             isDeleted = false,
             lastEdit = now,
@@ -47,6 +49,11 @@ class CategoryRepository @Inject constructor(
 
         moneyDao.insertCategory(category)
         return categoryId
+    }
+
+    suspend fun updateCategoryArchived(categoryId: String, isArchived: Boolean) {
+        val now = System.currentTimeMillis()
+        moneyDao.updateCategoryArchived(categoryId, isArchived, now)
     }
 
     suspend fun deleteCategory(categoryId: String) {

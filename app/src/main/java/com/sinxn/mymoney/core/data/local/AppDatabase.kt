@@ -53,8 +53,8 @@ import com.sinxn.mymoney.core.data.local.entity.DebtPeopleEntity
         EventPeopleEntity::class,
         DebtPeopleEntity::class
     ],
-    version = 4,
-    exportSchema = true
+    version = 1,
+    exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun moneyDao(): MoneyDao

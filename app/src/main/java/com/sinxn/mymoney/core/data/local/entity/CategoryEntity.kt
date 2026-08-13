@@ -24,6 +24,7 @@ data class CategoryEntity(
     val type: Int, // 0: Expense, 1: Income (guessing from context, or checking moneywallet source)
     val parentId: String?,
     val showReport: Boolean,
+    val isArchived: Boolean = false,
     val index: Int,
     val isDeleted: Boolean,
     val lastEdit: Long,
