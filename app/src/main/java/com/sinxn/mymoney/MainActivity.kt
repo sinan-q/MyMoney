@@ -107,6 +107,7 @@ class MainActivity : ComponentActivity() {
                                 )
 
                                 androidx.compose.material3.Scaffold(
+                                     contentWindowInsets = if (isTopLevelScreen) androidx.compose.material3.ScaffoldDefaults.contentWindowInsets else androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
                                      topBar = {
                                          if (isTopLevelScreen) {
                                              val pageTitle = when {
@@ -225,6 +226,7 @@ class MainActivity : ComponentActivity() {
                                             context = this@MainActivity,
                                             navController = navController,
                                             itemId = itemId,
+                                            currentWalletId = currentWalletId,
                                             currentRoute = "debts"
                                         )
                                     },
@@ -316,6 +318,7 @@ class MainActivity : ComponentActivity() {
                                             context = this@MainActivity,
                                             navController = navController,
                                             itemId = itemId,
+                                            currentWalletId = currentWalletId,
                                             currentRoute = "wallet_details"
                                         )
                                     }
@@ -371,6 +374,7 @@ class MainActivity : ComponentActivity() {
                                             context = this@MainActivity,
                                             navController = navController,
                                             itemId = itemId,
+                                            currentWalletId = currentWalletId,
                                             currentRoute = "budgets"
                                         )
                                     },
@@ -432,6 +436,7 @@ class MainActivity : ComponentActivity() {
                                             context = this@MainActivity,
                                             navController = navController,
                                             itemId = itemId,
+                                            currentWalletId = currentWalletId,
                                             currentRoute = "savings"
                                         )
                                     },
