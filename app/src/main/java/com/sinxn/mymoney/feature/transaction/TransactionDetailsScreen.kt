@@ -39,7 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.sinxn.mymoney.feature.transaction.components.UltraCleanTransactionContent
+import com.sinxn.mymoney.feature.transaction.components.EditTransactionContent
 import com.sinxn.mymoney.feature.transaction.components.ViewTransactionContent
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -99,7 +99,7 @@ fun TransactionDetailsScreen(
             } else {
                 Crossfade(targetState = isEditing, label = "TransactionScreenMode") { editing ->
                     if (editing) {
-                        UltraCleanTransactionContent(
+                        EditTransactionContent(
                             uiState = uiState,
                             settings = settings,
                             viewModel = viewModel,
@@ -117,26 +117,9 @@ fun TransactionDetailsScreen(
         }
 
         if (showDeleteConfirmation) {
-            AlertDialog(
-                onDismissRequest = { showDeleteConfirmation = false },
-                title = { Text("Delete Transaction") },
-                text = { Text("Are you sure you want to delete this transaction?") },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            showDeleteConfirmation = false
-                            viewModel.deleteTransaction { onNavigateBack() }
-                        },
-                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                    ) {
-                        Text("Delete")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteConfirmation = false }) {
-                        Text("Cancel")
-                    }
-                }
+            DeleteConfirmationDialogue(
+                onDismiss = { showDeleteConfirmation = false },
+                onDelete = { viewModel.deleteTransaction { onNavigateBack() }},
             )
         }
     }
@@ -189,5 +172,33 @@ fun MinimalTopBar(
             }
         }
     }
+}
+
+@Composable
+fun DeleteConfirmationDialogue(
+    onDismiss: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = { onDismiss() },
+        title = { Text("Delete Transaction") },
+        text = { Text("Are you sure you want to delete this transaction?") },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onDismiss()
+                    onDelete()
+                },
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { onDismiss() }) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
