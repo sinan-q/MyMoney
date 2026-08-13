@@ -67,6 +67,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.util.MoneyFormatter
+import com.sinxn.mymoney.navigation.Screen
 
 data class NavigationMenuItem(
     val id: String,
@@ -77,17 +78,17 @@ data class NavigationMenuItem(
 
 val navigationMenuItems = listOf(
     // Group 1: Main modules (Matching legacy MainActivity drawer order)
-    NavigationMenuItem("transactions", "Transactions", Icons.Default.ShoppingCart, 1),
-    NavigationMenuItem("categories", "Categories", Icons.Default.GridView, 1),
-    NavigationMenuItem("overview", "Overview", Icons.Default.Equalizer, 1),
-    NavigationMenuItem("debts", "Debts", Icons.Default.AccountBalanceWallet, 1),
-    NavigationMenuItem("budgets", "Budgets", Icons.Default.PieChart, 1),
-    NavigationMenuItem("savings", "Savings", Icons.Default.Savings, 1),
-    NavigationMenuItem("events", "Events", Icons.Default.Flag, 1),
-    NavigationMenuItem("recurrences", "Recurrences", Icons.Default.Restore, 1),
-    NavigationMenuItem("models", "Models", Icons.Default.Bookmark, 1),
-    NavigationMenuItem("places", "Places", Icons.Default.Place, 1),
-    NavigationMenuItem("people", "People", Icons.Default.People, 1),
+    NavigationMenuItem(Screen.Transactions.sidebarItemId, "Transactions", Icons.Default.ShoppingCart, 1),
+    NavigationMenuItem(Screen.Categories.sidebarItemId, "Categories", Icons.Default.GridView, 1),
+    NavigationMenuItem(Screen.Overview.sidebarItemId, "Overview", Icons.Default.Equalizer, 1),
+    NavigationMenuItem(Screen.Debts.sidebarItemId, "Debts", Icons.Default.AccountBalanceWallet, 1),
+    NavigationMenuItem(Screen.Budgets.sidebarItemId, "Budgets", Icons.Default.PieChart, 1),
+    NavigationMenuItem(Screen.Savings.sidebarItemId, "Savings", Icons.Default.Savings, 1),
+    NavigationMenuItem(Screen.Events.sidebarItemId, "Events", Icons.Default.Flag, 1),
+    NavigationMenuItem(Screen.Recurrences.sidebarItemId, "Recurrences", Icons.Default.Restore, 1),
+    NavigationMenuItem(Screen.Templates.sidebarItemId, "Models", Icons.Default.Bookmark, 1),
+    NavigationMenuItem(Screen.Places.sidebarItemId, "Places", Icons.Default.Place, 1),
+    NavigationMenuItem(Screen.People.sidebarItemId, "People", Icons.Default.People, 1),
 
     // Group 2: Utilities
     NavigationMenuItem("calculator", "Calculator", Icons.Default.Calculate, 2),
@@ -96,9 +97,9 @@ val navigationMenuItems = listOf(
     NavigationMenuItem("search_bank", "Search bank", Icons.Default.AccountBalance, 2),
 
     // Group 3: Settings & Info
-    NavigationMenuItem("settings", "Settings", Icons.Default.Settings, 3),
-    NavigationMenuItem("support_developer", "Support developer", Icons.Default.FavoriteBorder, 3),
-    NavigationMenuItem("about", "About", Icons.Default.Info, 3)
+    NavigationMenuItem(Screen.Settings.sidebarItemId, "Settings", Icons.Default.Settings, 3),
+    NavigationMenuItem(Screen.SupportDeveloper.sidebarItemId, "Support developer", Icons.Default.FavoriteBorder, 3),
+    NavigationMenuItem(Screen.About.sidebarItemId, "About", Icons.Default.Info, 3)
 )
 
 @Composable
@@ -289,33 +290,31 @@ fun handleSidebarNavigation(
     onLocalSectionSelect: ((String) -> Unit)? = null
 ) {
     when (itemId) {
-        "transactions" -> {
+        Screen.Transactions.sidebarItemId -> {
             val targetWallet = if (currentWalletId.isEmpty()) com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID else currentWalletId
-            navController.navigate("wallet_details/$targetWallet") {
+            navController.navigate(Screen.Transactions.createRoute(targetWallet)) {
                 popUpTo(navController.graph.startDestinationId) { saveState = true }
                 launchSingleTop = true
                 restoreState = true
             }
         }
-        "debts" -> {
-            navController.navigate("debts") { launchSingleTop = true }
-        }
-        "categories" -> navController.navigate("categories") { launchSingleTop = true }
-        "overview" -> navController.navigate("overview") { launchSingleTop = true }
-        "budgets" -> navController.navigate("budgets") { launchSingleTop = true }
-        "savings" -> navController.navigate("savings") { launchSingleTop = true }
-        "events" -> navController.navigate("events") { launchSingleTop = true }
-        "recurrences" -> navController.navigate("recurrences") { launchSingleTop = true }
-        "models" -> navController.navigate("templates") { launchSingleTop = true }
-        "places" -> navController.navigate("places") { launchSingleTop = true }
-        "people" -> navController.navigate("people") { launchSingleTop = true }
+        Screen.Debts.sidebarItemId -> navController.navigate(Screen.Debts.routePattern) { launchSingleTop = true }
+        Screen.Categories.sidebarItemId -> navController.navigate(Screen.Categories.routePattern) { launchSingleTop = true }
+        Screen.Overview.sidebarItemId -> navController.navigate(Screen.Overview.routePattern) { launchSingleTop = true }
+        Screen.Budgets.sidebarItemId -> navController.navigate(Screen.Budgets.routePattern) { launchSingleTop = true }
+        Screen.Savings.sidebarItemId -> navController.navigate(Screen.Savings.routePattern) { launchSingleTop = true }
+        Screen.Events.sidebarItemId -> navController.navigate(Screen.Events.routePattern) { launchSingleTop = true }
+        Screen.Recurrences.sidebarItemId -> navController.navigate(Screen.Recurrences.routePattern) { launchSingleTop = true }
+        Screen.Templates.sidebarItemId -> navController.navigate(Screen.Templates.routePattern) { launchSingleTop = true }
+        Screen.Places.sidebarItemId -> navController.navigate(Screen.Places.routePattern) { launchSingleTop = true }
+        Screen.People.sidebarItemId -> navController.navigate(Screen.People.routePattern) { launchSingleTop = true }
         "calculator" -> launchCalculatorIntent(context)
         "converter" -> launchConverterIntent(context)
         "search_atm" -> launchSearchIntent(context, "ATM")
         "search_bank" -> launchSearchIntent(context, "Bank")
-        "settings" -> navController.navigate("settings") { launchSingleTop = true }
-        "support_developer" -> navController.navigate("support_developer") { launchSingleTop = true }
-        "about" -> navController.navigate("about") { launchSingleTop = true }
+        Screen.Settings.sidebarItemId -> navController.navigate(Screen.Settings.routePattern) { launchSingleTop = true }
+        Screen.SupportDeveloper.sidebarItemId -> navController.navigate(Screen.SupportDeveloper.routePattern) { launchSingleTop = true }
+        Screen.About.sidebarItemId -> navController.navigate(Screen.About.routePattern) { launchSingleTop = true }
         else -> {
             try {
                 navController.navigate(itemId) { launchSingleTop = true }

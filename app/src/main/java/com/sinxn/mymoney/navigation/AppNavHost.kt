@@ -54,12 +54,12 @@ fun AppNavHost(
             // Redirect to current wallet details
             LaunchedEffect(Unit) {
                 val targetWallet = currentWalletId.ifEmpty { Constants.TOTAL_WALLET_ID }
-                navController.navigate("wallet_details/$targetWallet") {
+                navController.navigate(Screen.Transactions.createRoute(targetWallet)) {
                     popUpTo("home") { inclusive = true }
                 }
             }
         }
-        composable("recurrences") {
+        composable(Screen.Recurrences.routePattern) {
             RecurrenceScreen(
                 onNavigateUp = { navController.navigateUp() },
                 onAddRecurrentTransaction = {
@@ -96,7 +96,7 @@ fun AppNavHost(
                 onNavigateBack = { navController.navigateUp() }
             )
         }
-        composable("debts") { _ ->
+        composable(Screen.Debts.routePattern) { _ ->
             DebtListScreen(
                 onNavigateUp = { navController.navigateUp() },
                 onDebtClick = { debtId ->
@@ -142,7 +142,7 @@ fun AppNavHost(
         composable("backup") {
             BackupScreen()
         }
-        composable("settings") {
+        composable(Screen.Settings.routePattern) {
             SettingsScreen(
                 onNavigateUp = { navController.navigateUp() },
                 onNavigateToSqlConsole = {
@@ -241,7 +241,7 @@ fun AppNavHost(
                 onNavigateBack = { navController.navigateUp() }
             )
         }
-        composable("budgets") { _ ->
+        composable(Screen.Budgets.routePattern) { _ ->
             BudgetListScreen(
                 onNavigateUp = { navController.navigateUp() },
                 onBudgetClick = { budgetId ->
@@ -297,7 +297,7 @@ fun AppNavHost(
             )
         }
 
-        composable("savings") { backStackEntry ->
+        composable(Screen.Savings.routePattern) { backStackEntry ->
             SavingListScreen(
                 onNavigateUp = { navController.navigateUp() },
                 onSavingClick = { savingId ->
@@ -347,43 +347,43 @@ fun AppNavHost(
                 onClose = { navController.popBackStack() }
             )
         }
-        composable("categories") {
+        composable(Screen.Categories.routePattern) {
             CategoryListScreen(
                 onNavigateBack = { navController.navigateUp() }
             )
         }
-        composable("people") {
+        composable(Screen.People.routePattern) {
             PeopleListScreen(
                 onNavigateBack = { navController.navigateUp() }
             )
         }
-        composable("places") {
+        composable(Screen.Places.routePattern) {
             PlaceListScreen(
                 onNavigateBack = { navController.navigateUp() }
             )
         }
-        composable("events") {
+        composable(Screen.Events.routePattern) {
             EventListScreen(
                 onNavigateBack = { navController.navigateUp() }
             )
         }
-        composable("templates") {
+        composable(Screen.Templates.routePattern) {
             TemplateListScreen(
                 onNavigateBack = { navController.navigateUp() }
             )
         }
-        composable("overview") {
+        composable(Screen.Overview.routePattern) {
             OverviewScreen(
                 onNavigateBack = { navController.navigateUp() },
                 onNavigateToRecap = { navController.navigate("recap") }
             )
         }
-        composable("about") {
+        composable(Screen.About.routePattern) {
             AboutScreen(
                 onNavigateBack = { navController.navigateUp() }
             )
         }
-        composable("support_developer") {
+        composable(Screen.SupportDeveloper.routePattern) {
             SupportDeveloperScreen(
                 onNavigateBack = { navController.navigateUp() }
             )

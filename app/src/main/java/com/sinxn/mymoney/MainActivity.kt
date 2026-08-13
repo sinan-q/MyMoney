@@ -39,6 +39,7 @@ import com.sinxn.mymoney.core.ui.components.NavigationMenuPage
 import com.sinxn.mymoney.core.ui.components.handleSidebarNavigation
 import com.sinxn.mymoney.core.util.Constants
 import com.sinxn.mymoney.navigation.AppNavHost
+import com.sinxn.mymoney.navigation.Screen
 import com.sinxn.mymoney.ui.theme.MyMoneyTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -46,6 +47,7 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
     @Inject
     lateinit var recurrenceRepository: RecurrenceRepository
 
@@ -70,61 +72,24 @@ class MainActivity : ComponentActivity() {
                     if (startDest != "loading") {
                         val pagerState = rememberPagerState(initialPage = 1, pageCount = { 2 })
                         val currentBackStackEntry by navController.currentBackStackEntryAsState()
-                        val currentRoute = currentBackStackEntry?.destination?.route?.substringBefore("?") ?: "wallet_details/${Constants.TOTAL_WALLET_ID}"
-                        
-
-
+                        val currentRoute = currentBackStackEntry?.destination?.route ?: "wallet_details/${Constants.TOTAL_WALLET_ID}"
                         val currentWalletId by viewModel.currentWalletId.collectAsState()
                         
-                        val selectedItemId = when {
-                            currentRoute == "home" || currentRoute.startsWith("wallet_details") -> "transactions"
-                            currentRoute.startsWith("debts") || currentRoute.startsWith("debt_details") -> "debts"
-                            currentRoute.startsWith("budgets") || currentRoute.startsWith("budget_details") || currentRoute.startsWith("budget_overview") -> "budgets"
-                            currentRoute.startsWith("savings") || currentRoute.startsWith("saving_details") -> "savings"
-                            currentRoute == "categories" -> "categories"
-                            currentRoute == "events" -> "events"
-                            currentRoute == "places" -> "places"
-                            currentRoute == "people" -> "people"
-                            currentRoute == "templates" -> "models"
-                            currentRoute == "recurrences" || currentRoute.startsWith("recurrent_") -> "recurrences"
-                            currentRoute == "settings" -> "settings"
-                            currentRoute == "recap" || currentRoute == "overview" -> "overview"
-                            currentRoute == "about" -> "about"
-                            currentRoute == "support_developer" -> "support_developer"
-                            else -> "transactions"
+                        val screenMetadata = androidx.compose.runtime.remember(currentRoute) {
+                            Screen.fromRoute(currentRoute)
                         }
+                        val selectedItemId = screenMetadata.selectedItemId
+                        val isTopLevelScreen = screenMetadata.isTopLevel
+                        val pageTitle = screenMetadata.title
                         
                         val coroutineScope = rememberCoroutineScope()
 
                         HorizontalPager(state = pagerState) { page ->
                             if (page == 1) {
-                                val isTopLevelScreen = currentRoute.substringBefore("?") in listOf(
-                                    "wallet_details/{walletId}", "wallet_details",
-                                    "categories", "debts", "budgets", "savings",
-                                    "events", "recurrences", "templates", "places", "people",
-                                    "overview", "about", "support_developer"
-                                )
-
                                 Scaffold(
                                      contentWindowInsets = if (isTopLevelScreen) ScaffoldDefaults.contentWindowInsets else WindowInsets(0, 0, 0, 0),
                                      topBar = {
                                          if (isTopLevelScreen) {
-                                             val pageTitle = when {
-                                                 currentRoute.startsWith("wallet_details") -> "Transactions"
-                                                 currentRoute.startsWith("categories") -> "Categories"
-                                                 currentRoute.startsWith("debts") -> "Debts & Credits"
-                                                 currentRoute.startsWith("budgets") -> "Budgets"
-                                                 currentRoute.startsWith("savings") -> "Savings Goals"
-                                                 currentRoute.startsWith("events") -> "Events"
-                                                 currentRoute.startsWith("recurrence") -> "Recurrences"
-                                                 currentRoute.startsWith("templates") -> "Models"
-                                                 currentRoute.startsWith("places") -> "Places"
-                                                 currentRoute.startsWith("people") -> "People"
-                                                 currentRoute == "overview" -> "Overview"
-                                                 currentRoute == "about" -> "About"
-                                                 currentRoute == "support_developer" -> "Support Developer"
-                                                 else -> "My Money"
-                                             }
                                              TopAppBar(
                                                  title = {
                                                      Text(
