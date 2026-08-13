@@ -5,59 +5,15 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Event
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Notes
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.SwapVert
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -67,23 +23,32 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sinxn.mymoney.core.ui.components.CategoryIcon
-import com.sinxn.mymoney.core.ui.components.CategorySelectionDialog
+import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.ui.components.NumpadView
-import com.sinxn.mymoney.core.ui.components.SelectionDialog
-import com.sinxn.mymoney.core.ui.components.WalletSelectionDialog
-import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.Direction
 import com.sinxn.mymoney.feature.transaction.TransactionDetailsUiState
 import com.sinxn.mymoney.feature.transaction.TransactionDetailsViewModel
-import kotlin.collections.plus
-import kotlin.text.ifEmpty
+
+@Composable
+fun EditTransactionContent(
+    uiState: TransactionDetailsUiState,
+    settings: FormattingSettings,
+    viewModel: TransactionDetailsViewModel,
+    onNavigateBack: () -> Unit
+) {
+    UltraCleanTransactionContent(
+        uiState = uiState,
+        settings = settings,
+        viewModel = viewModel,
+        onNavigateBack = onNavigateBack
+    )
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UltraCleanTransactionContent(
     uiState: TransactionDetailsUiState,
-    settings: com.sinxn.mymoney.core.data.preferences.FormattingSettings,
+    settings: FormattingSettings,
     viewModel: TransactionDetailsViewModel,
     onNavigateBack: () -> Unit
 ) {
@@ -101,11 +66,11 @@ fun UltraCleanTransactionContent(
     var showDatePicker by remember { mutableStateOf(false) }
     var isNumpadVisible by remember { mutableStateOf(true) }
 
-    // Minimal Direction Accent
+    // Direction Accent Color
     val accentColor = when {
-        uiState.isTransfer || uiState.editDirection == Direction.TRANSFER -> Color(0xFF0284C7) // Transfer Blue
-        uiState.editDirection == Direction.INCOME -> Color(0xFF10B981) // Income Mint
-        else -> Color(0xFFE11D48) // Expense Rose
+        uiState.isTransfer || uiState.editDirection == Direction.TRANSFER -> Color(0xFF0284C7)
+        uiState.editDirection == Direction.INCOME -> Color(0xFF10B981)
+        else -> Color(0xFFE11D48)
     }
 
     val hasOperatorInAmount = run {
@@ -129,17 +94,20 @@ fun UltraCleanTransactionContent(
         "Save Changes"
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        // Scrollable Form Content
+    val dismissKeyboardAndNumpad = {
+        focusManager.clearFocus()
+        keyboardController?.hide()
+        isNumpadVisible = false
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(scrollState)
                 .padding(bottom = 16.dp)
         ) {
-            // Mode Switcher (Transaction vs Transfer) - Only shown for new entries
+            // Mode Switcher (Transaction vs Transfer)
             if (uiState.isNewTransaction) {
                 TransactionTransferSegmentedControl(
                     isTransfer = uiState.isTransfer,
@@ -148,471 +116,100 @@ fun UltraCleanTransactionContent(
                 Spacer(modifier = Modifier.height(4.dp))
             }
 
-            // 1. Centered Large Amount Display (Click to open Numpad)
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .clickable {
-                        focusManager.clearFocus()
-                        keyboardController?.hide()
-                        isNumpadVisible = true
-                    }
-                    .padding(vertical = 12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                val displayAmount = if (hasOperatorInAmount) {
-                    viewModel.getImmediateResult(uiState.editAmount)
-                } else {
-                    if (uiState.editAmount.isEmpty()) "0" else uiState.editAmount
+            // 1. Amount Header Display
+            EditTransactionAmountHeader(
+                amountText = uiState.editAmount,
+                currencySymbol = uiState.currencySymbol,
+                evaluatedResult = evaluatedAmountStr,
+                hasOperatorInAmount = hasOperatorInAmount,
+                accentColor = accentColor,
+                isNumpadVisible = isNumpadVisible,
+                onHeaderClick = {
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                    isNumpadVisible = true
                 }
-
-                if (hasOperatorInAmount) {
-                    Text(
-                        text = uiState.editAmount,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = accentColor,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                }
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = uiState.currencySymbol,
-                        fontSize = 38.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = accentColor
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = displayAmount,
-                        fontSize = 60.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        letterSpacing = (-1.5).sp
-                    )
-                }
-
-                if (!isNumpadVisible) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Edit Amount",
-                            tint = accentColor.copy(alpha = 0.7f),
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Tap to edit amount",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = accentColor.copy(alpha = 0.7f),
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-            }
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 2. Description Card (Top of inputs)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 12.dp)
-                ) {
-                    OutlinedTextField(
-                        value = uiState.editDescription,
-                        onValueChange = viewModel::onDescriptionChange,
-                        label = { Text("Description") },
-                        placeholder = { Text("Add description...") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Description,
-                                contentDescription = null,
-                                tint = accentColor,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(focusRequester)
-                            .onFocusChanged { focusState ->
-                                if (focusState.isFocused) {
-                                    isNumpadVisible = false
-                                }
-                            },
-                        shape = RoundedCornerShape(14.dp)
-                    )
-                }
-            }
+            // 2. Description Card
+            TransactionDescriptionCard(
+                description = uiState.editDescription,
+                accentColor = accentColor,
+                isEditable = true,
+                onDescriptionChange = viewModel::onDescriptionChange,
+                focusRequester = focusRequester,
+                onFocusField = { isNumpadVisible = false }
+            )
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // 2.5 Transfer Wallets Section (Separate Cards with Swap Button in the Middle)
+            // 2.5 Transfer Wallets Section
             if (uiState.isTransfer) {
-                val activeFromWallet = uiState.availableWallets.find { it.id == uiState.editWalletId }
-                val activeToWallet = uiState.availableWallets.find { it.id == uiState.targetWalletId }
-
-                // From Wallet Card
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                ) {
-                    CleanListRow(
-                        icon = {
-                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
-                        },
-                        label = "From Wallet",
-                        value = activeFromWallet?.name ?: uiState.walletName.ifEmpty { "Select Source Wallet" },
-                        onClick = {
-                            focusManager.clearFocus()
-                            keyboardController?.hide()
-                            isNumpadVisible = false
-                            showWalletPicker = true
-                        }
-                    )
-                }
-
-                // Centered Swap Button in the Middle
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 40.dp)
-                    )
-                    Surface(
-                        onClick = { viewModel.swapTransferWallets() },
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surface,
-                        tonalElevation = 3.dp,
-                        shadowElevation = 2.dp,
-                        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.3f)),
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.SwapVert,
-                                contentDescription = "Swap Wallets",
-                                tint = accentColor,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                }
-
-                // To Wallet Card
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                ) {
-                    CleanListRow(
-                        icon = {
-                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
-                        },
-                        label = "To Wallet",
-                        value = activeToWallet?.name ?: uiState.targetWalletName.ifEmpty { "Select Target Wallet" },
-                        onClick = {
-                            focusManager.clearFocus()
-                            keyboardController?.hide()
-                            isNumpadVisible = false
-                            showTargetWalletPicker = true
-                        }
-                    )
-                }
-
-                // If wallets have different currencies, show Destination Amount field
-                if (activeFromWallet != null && activeToWallet != null && !activeFromWallet.currency.equals(activeToWallet.currency, ignoreCase = true)) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                    ) {
-                        Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
-                            OutlinedTextField(
-                                value = uiState.editTargetAmount,
-                                onValueChange = viewModel::onTargetAmountChange,
-                                label = { Text("Destination Amount (${uiState.targetWalletCurrency})") },
-                                placeholder = { Text("Received in ${uiState.targetWalletCurrency}") },
-                                leadingIcon = { Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = true,
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal)
-                            )
-                        }
-                    }
-                }
-
-                // Transfer Fee / Tax Field
-                Spacer(modifier = Modifier.height(10.dp))
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                ) {
-                    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
-                        OutlinedTextField(
-                            value = uiState.editTransferFee,
-                            onValueChange = viewModel::onTransferFeeChange,
-                            label = { Text("Transfer Fee / Tax (${uiState.currencyCode})") },
-                            placeholder = { Text("0.00") },
-                            leadingIcon = { Icon(Icons.Default.Tune, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal)
-                        )
-                    }
-                }
-
+                EditTransactionTransferWallets(
+                    uiState = uiState,
+                    accentColor = accentColor,
+                    onFromWalletClick = {
+                        dismissKeyboardAndNumpad()
+                        showWalletPicker = true
+                    },
+                    onToWalletClick = {
+                        dismissKeyboardAndNumpad()
+                        showTargetWalletPicker = true
+                    },
+                    onSwapWallets = viewModel::swapTransferWallets,
+                    onTargetAmountChange = viewModel::onTargetAmountChange,
+                    onTransferFeeChange = viewModel::onTransferFeeChange
+                )
                 Spacer(modifier = Modifier.height(10.dp))
             }
 
-            // 3. Single Unified Options Card (Category to Count in Total)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-            ) {
-                Column {
-                    // Category Row (Hidden for transfers)
-                    if (!uiState.isTransfer) {
-                        val activeCategory = uiState.availableCategories.find { it.id == uiState.editCategoryId }
-                        CleanListRow(
-                            icon = {
-                                if (activeCategory != null) {
-                                    CategoryIcon(
-                                        iconString = activeCategory.icon,
-                                        categoryName = activeCategory.name,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                } else {
-                                    Icon(Icons.Default.Category, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
-                                }
-                            },
-                            label = "Category",
-                            value = activeCategory?.name?.replace("  ↳ ", "") ?: "Select Category",
-                            onClick = {
-                                focusManager.clearFocus()
-                                keyboardController?.hide()
-                                isNumpadVisible = false
-                                showCategoryPicker = true
-                            }
-                        )
-
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
-
-                        val activeWallet = uiState.availableWallets.find { it.id == uiState.editWalletId }
-                        CleanListRow(
-                            icon = {
-                                Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
-                            },
-                            label = "Wallet",
-                            value = activeWallet?.name ?: "Select Wallet",
-                            onClick = {
-                                focusManager.clearFocus()
-                                keyboardController?.hide()
-                                isNumpadVisible = false
-                                showWalletPicker = true
-                            }
-                        )
-
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
-                    }
-
-                    // Date Row
-                    val parsedDate = DateUtils.parseDate(uiState.editDate)
-                    val dateText = when {
-                        DateUtils.isToday(parsedDate) -> "Today"
-                        DateUtils.isYesterday(parsedDate) -> "Yesterday"
-                        else -> DateUtils.formatDate(parsedDate, settings.dateFormat)
-                    }
-
-                    CleanListRow(
-                        icon = {
-                            Icon(Icons.Default.CalendarToday, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp))
-                        },
-                        label = "Date",
-                        value = dateText,
-                        onClick = {
-                            focusManager.clearFocus()
-                            keyboardController?.hide()
-                            isNumpadVisible = false
-                            showDatePicker = true
-                        }
-                    )
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
-
-                    // People Row
-                    val selectedPeopleNames = uiState.availablePeople
-                        .filter { it.id in uiState.editPeopleIds }
-                        .joinToString { it.name }
-                        .ifEmpty { "None" }
-
-                    CleanListRow(
-                        icon = { Icon(Icons.Default.People, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
-                        label = "People",
-                        value = selectedPeopleNames,
-                        onClick = {
-                            focusManager.clearFocus()
-                            keyboardController?.hide()
-                            isNumpadVisible = false
-                            showPeoplePicker = true
-                        }
-                    )
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
-
-                    // Place Row
-                    val activePlace = uiState.availablePlaces.find { it.id == uiState.editPlaceId }
-                    CleanListRow(
-                        icon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
-                        label = "Place",
-                        value = activePlace?.name ?: "None",
-                        onClick = {
-                            focusManager.clearFocus()
-                            keyboardController?.hide()
-                            isNumpadVisible = false
-                            showPlacePicker = true
-                        }
-                    )
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
-
-                    // Event Row
-                    val activeEvent = uiState.availableEvents.find { it.id == uiState.editEventId }
-                    CleanListRow(
-                        icon = { Icon(Icons.Default.Event, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
-                        label = "Event",
-                        value = activeEvent?.name ?: "None",
-                        onClick = {
-                            focusManager.clearFocus()
-                            keyboardController?.hide()
-                            isNumpadVisible = false
-                            showEventPicker = true
-                        }
-                    )
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
-
-                    // Note Field
-                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                        OutlinedTextField(
-                            value = uiState.editNote,
-                            onValueChange = viewModel::onNoteChange,
-                            label = { Text("Note") },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .onFocusChanged { focusState ->
-                                    if (focusState.isFocused) {
-                                        isNumpadVisible = false
-                                    }
-                                },
-                            shape = RoundedCornerShape(14.dp),
-                            leadingIcon = { Icon(Icons.Default.Notes, contentDescription = null, tint = accentColor) }
-                        )
-                    }
-
-                    if (!settings.hideStatusAndImpact) {
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
-
-                        // Confirmed Switch Row
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Confirmed", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                            Switch(
-                                checked = uiState.editConfirmed,
-                                onCheckedChange = {
-                                    focusManager.clearFocus()
-                                    keyboardController?.hide()
-                                    viewModel.onConfirmedChange(it)
-                                }
-                            )
-                        }
-
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
-
-                        // Count in Total Switch Row
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Count in Total", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                            Switch(
-                                checked = uiState.editCountInTotal,
-                                onCheckedChange = {
-                                    focusManager.clearFocus()
-                                    keyboardController?.hide()
-                                    viewModel.onCountInTotalChange(it)
-                                }
-                            )
-                        }
-                    }
-                }
-            }
+            // 3. Options Card
+            EditTransactionFormOptions(
+                uiState = uiState,
+                settings = settings,
+                accentColor = accentColor,
+                onCategoryClick = {
+                    dismissKeyboardAndNumpad()
+                    showCategoryPicker = true
+                },
+                onWalletClick = {
+                    dismissKeyboardAndNumpad()
+                    showWalletPicker = true
+                },
+                onDateClick = {
+                    dismissKeyboardAndNumpad()
+                    showDatePicker = true
+                },
+                onPeopleClick = {
+                    dismissKeyboardAndNumpad()
+                    showPeoplePicker = true
+                },
+                onPlaceClick = {
+                    dismissKeyboardAndNumpad()
+                    showPlacePicker = true
+                },
+                onEventClick = {
+                    dismissKeyboardAndNumpad()
+                    showEventPicker = true
+                },
+                onNoteChange = viewModel::onNoteChange,
+                onConfirmedChange = {
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                    viewModel.onConfirmedChange(it)
+                },
+                onCountInTotalChange = {
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                    viewModel.onCountInTotalChange(it)
+                },
+                onFocusField = { isNumpadVisible = false }
+            )
         }
 
-        // Docked Bottom Bar (Numpad or Save Button like IME sheet)
+        // Docked Bottom Bar (Numpad or Save Button)
         Surface(
             tonalElevation = 6.dp,
             shadowElevation = 8.dp,
@@ -683,95 +280,22 @@ fun UltraCleanTransactionContent(
     }
 
     // Modal Dialog Pickers
-    if (showCategoryPicker) {
-        CategorySelectionDialog(
-            showIncome = uiState.editDirection == Direction.INCOME,
-            incomeCategories = uiState.availableIncomeCategories,
-            expenseCategories = uiState.availableExpenseCategories,
-            selectedCategoryId = uiState.editCategoryId,
-            onCategorySelected = { category -> viewModel.onCategoryIdChange(category.id) },
-            onDismissRequest = { showCategoryPicker = false }
-        )
-    }
-
-    if (showWalletPicker) {
-        WalletSelectionDialog(
-            title = "Select From Wallet",
-            wallets = uiState.availableWallets,
-            selectedWalletId = uiState.editWalletId,
-            onWalletSelected = { wallet ->
-                viewModel.onWalletIdChange(wallet.id)
-                showWalletPicker = false
-            },
-            onDismissRequest = { showWalletPicker = false }
-        )
-    }
-
-    if (showTargetWalletPicker) {
-        WalletSelectionDialog(
-            title = "Select To Wallet",
-            wallets = uiState.availableWallets.filter { it.id != uiState.editWalletId },
-            selectedWalletId = uiState.targetWalletId ?: "",
-            onWalletSelected = { wallet ->
-                viewModel.onTargetWalletIdChange(wallet.id)
-                showTargetWalletPicker = false
-            },
-            onDismissRequest = { showTargetWalletPicker = false }
-        )
-    }
-
-    if (showPlacePicker) {
-        SelectionDialog(
-            title = "Select Place",
-            options = uiState.availablePlaces + com.sinxn.mymoney.core.data.local.entity.PlaceEntity("null", "None", "", null, null, null, false, 0, null),
-            onOptionSelected = {
-                viewModel.onPlaceIdChange(if (it.id == "null") null else it.id)
-                showPlacePicker = false
-            },
-            onDismissRequest = { showPlacePicker = false },
-            labelProvider = { it.name }
-        )
-    }
-
-    if (showEventPicker) {
-        SelectionDialog(
-            title = "Select Event",
-            options = uiState.availableEvents + com.sinxn.mymoney.core.data.local.entity.EventEntity("null", "None", "", null, "", "", false, 0, null),
-            onOptionSelected = {
-                viewModel.onEventIdChange(if (it.id == "null") null else it.id)
-                showEventPicker = false
-            },
-            onDismissRequest = { showEventPicker = false },
-            labelProvider = { it.name }
-        )
-    }
-
-    if (showPeoplePicker) {
-        SelectionDialog(
-            title = "Select People",
-            options = uiState.availablePeople,
-            selectedOptions = uiState.availablePeople.filter { it.id in uiState.editPeopleIds }.toSet(),
-            onOptionSelected = { viewModel.onPeopleToggle(it.id) },
-            onDismissRequest = { showPeoplePicker = false },
-            labelProvider = { it.name },
-            multiSelect = true
-        )
-    }
-
-    if (showDatePicker) {
-        val datePickerState = rememberDatePickerState()
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let {
-                        viewModel.onDateChange(it)
-                        showDatePicker = false
-                    }
-                }) { Text("OK") }
-            }
-        ) {
-            DatePicker(state = datePickerState)
-        }
-    }
+    EditTransactionDialogs(
+        uiState = uiState,
+        viewModel = viewModel,
+        showCategoryPicker = showCategoryPicker,
+        showWalletPicker = showWalletPicker,
+        showTargetWalletPicker = showTargetWalletPicker,
+        showPlacePicker = showPlacePicker,
+        showEventPicker = showEventPicker,
+        showPeoplePicker = showPeoplePicker,
+        showDatePicker = showDatePicker,
+        onDismissCategoryPicker = { showCategoryPicker = false },
+        onDismissWalletPicker = { showWalletPicker = false },
+        onDismissTargetWalletPicker = { showTargetWalletPicker = false },
+        onDismissPlacePicker = { showPlacePicker = false },
+        onDismissEventPicker = { showEventPicker = false },
+        onDismissPeoplePicker = { showPeoplePicker = false },
+        onDismissDatePicker = { showDatePicker = false }
+    )
 }
