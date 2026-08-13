@@ -25,6 +25,8 @@ import com.sinxn.mymoney.core.ui.components.CategoryIcon
 @Composable
 fun PeopleListScreen(
     onNavigateBack: () -> Unit,
+    onPersonClick: (String) -> Unit = {},
+    onAddPersonClick: () -> Unit = {},
     viewModel: PeopleViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -45,7 +47,7 @@ fun PeopleListScreen(
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
-            FloatingActionButton(onClick = viewModel::openCreatePersonDialog) {
+            FloatingActionButton(onClick = onAddPersonClick) {
                 Icon(Icons.Default.Add, contentDescription = "Add Person")
             }
         }
@@ -123,25 +125,11 @@ fun PeopleListScreen(
                     ) { _, person ->
                         PersonRow(
                             person = person,
-                            onClick = { viewModel.openEditPersonDialog(person) }
+                            onClick = { onPersonClick(person.id) }
                         )
                     }
                 }
             }
-        }
-
-        if (uiState.isEditDialogOpen) {
-            PersonEditDialog(
-                uiState = uiState,
-                onNameChange = viewModel::onNameChange,
-                onNoteChange = viewModel::onNoteChange,
-                onDismiss = viewModel::closeDialog,
-                onSave = viewModel::savePerson,
-                onDelete = {
-                    uiState.editingPerson?.let { viewModel.deletePerson(it) }
-                    viewModel.closeDialog()
-                }
-            )
         }
     }
 }

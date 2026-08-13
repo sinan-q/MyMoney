@@ -23,6 +23,8 @@ import com.sinxn.mymoney.feature.debt.DebtListScreen
 import com.sinxn.mymoney.feature.event.EventListScreen
 import com.sinxn.mymoney.feature.overview.OverviewScreen
 import com.sinxn.mymoney.feature.people.PeopleListScreen
+import com.sinxn.mymoney.feature.people.PersonAddEditScreen
+import com.sinxn.mymoney.feature.people.PersonDetailsScreen
 import com.sinxn.mymoney.feature.place.PlaceListScreen
 import com.sinxn.mymoney.feature.recap.YearRecapScreen
 import com.sinxn.mymoney.feature.recurrence.RecurrenceScreen
@@ -397,6 +399,38 @@ fun AppNavHost(
         }
         composable(Screen.People.routePattern) {
             PeopleListScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onPersonClick = { personId ->
+                    navController.navigate(Screen.PersonDetails.createRoute(personId))
+                },
+                onAddPersonClick = {
+                    navController.navigate(Screen.PersonAddEdit.createRoute())
+                }
+            )
+        }
+        composable(
+            Screen.PersonDetails.routePattern,
+            arguments = listOf(
+                navArgument("personId") { type = NavType.StringType }
+            )
+        ) {
+            PersonDetailsScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onTransactionClick = { transactionId ->
+                    navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
+                },
+                onEditPersonClick = { personId ->
+                    navController.navigate(Screen.PersonAddEdit.createRoute(personId))
+                }
+            )
+        }
+        composable(
+            Screen.PersonAddEdit.routePattern,
+            arguments = listOf(
+                navArgument("personId") { type = NavType.StringType; nullable = true; defaultValue = null }
+            )
+        ) {
+            PersonAddEditScreen(
                 onNavigateBack = { navController.navigateUp() }
             )
         }

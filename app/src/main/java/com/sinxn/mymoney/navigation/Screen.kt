@@ -99,6 +99,16 @@ sealed class Screen(
         }
     }
 
+    object PersonDetails : Screen("person_details/{personId}", "people", "Person Details", isTopLevel = false) {
+        fun createRoute(personId: String): String = "person_details/$personId"
+    }
+
+    object PersonAddEdit : Screen("person_edit?personId={personId}", "people", "Person Edit", isTopLevel = false) {
+        fun createRoute(personId: String? = null): String {
+            return if (personId != null) "person_edit?personId=$personId" else "person_edit"
+        }
+    }
+
     object SqlConsole : Screen("sql_console", "settings", "SQL Console", isTopLevel = false)
     object Backup : Screen("backup", "settings", "Backup", isTopLevel = false)
     object Recap : Screen("recap", "overview", "Year Recap", isTopLevel = false)
@@ -109,7 +119,7 @@ sealed class Screen(
                 Transactions, Categories, Debts, Budgets, Savings,
                 Events, Recurrences, Templates, Places, People,
                 Overview, About, SupportDeveloper, Settings,
-                DebtDetails, CategoryDetails, BudgetDetails, BudgetOverview, SavingDetails,
+                DebtDetails, CategoryDetails, PersonDetails, PersonAddEdit, BudgetDetails, BudgetOverview, SavingDetails,
                 RecurrentTransactionDetails, RecurrentTransferDetails, TransactionDetails,
                 SqlConsole, Backup, Recap
             )
@@ -149,7 +159,7 @@ sealed class Screen(
                 cleanRoute == "categories" -> ScreenMetadata(Categories.sidebarItemId, Categories.title, isTopLevel = true)
                 cleanRoute == "events" -> ScreenMetadata(Events.sidebarItemId, Events.title, isTopLevel = true)
                 cleanRoute == "places" -> ScreenMetadata(Places.sidebarItemId, Places.title, isTopLevel = true)
-                cleanRoute == "people" -> ScreenMetadata(People.sidebarItemId, People.title, isTopLevel = true)
+                cleanRoute == "people" || cleanRoute.startsWith("person_") -> ScreenMetadata(People.sidebarItemId, People.title, isTopLevel = cleanRoute == "people")
                 cleanRoute == "templates" -> ScreenMetadata(Templates.sidebarItemId, Templates.title, isTopLevel = true)
                 cleanRoute == "overview" || cleanRoute == "recap" -> ScreenMetadata(Overview.sidebarItemId, Overview.title, isTopLevel = true)
                 cleanRoute == "about" -> ScreenMetadata(About.sidebarItemId, About.title, isTopLevel = true)
