@@ -98,13 +98,21 @@ fun EditTransactionFormOptions(
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
 
             // People Row
-            val selectedPeopleNames = uiState.availablePeople
-                .filter { it.id in uiState.editPeopleIds }
-                .joinToString { it.name }
-                .ifEmpty { "None" }
+            val selectedPeople = uiState.availablePeople.filter { it.id in uiState.editPeopleIds }
+            val selectedPeopleNames = selectedPeople.joinToString { it.name }.ifEmpty { "None" }
 
             CleanListRow(
-                icon = { Icon(Icons.Default.People, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
+                icon = {
+                    if (selectedPeople.size == 1) {
+                        CategoryIcon(
+                            iconString = selectedPeople.first().icon,
+                            categoryName = selectedPeople.first().name,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    } else {
+                        Icon(Icons.Default.People, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp))
+                    }
+                },
                 label = "People",
                 value = selectedPeopleNames,
                 onClick = onPeopleClick

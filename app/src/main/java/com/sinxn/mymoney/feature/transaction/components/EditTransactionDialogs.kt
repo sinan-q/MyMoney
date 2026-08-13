@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import com.sinxn.mymoney.core.data.local.entity.EventEntity
 import com.sinxn.mymoney.core.data.local.entity.PlaceEntity
 import com.sinxn.mymoney.core.ui.components.CategorySelectionDialog
+import com.sinxn.mymoney.core.ui.components.PeopleSelectionDialog
 import com.sinxn.mymoney.core.ui.components.SelectionDialog
 import com.sinxn.mymoney.core.ui.components.WalletSelectionDialog
 import com.sinxn.mymoney.core.util.Direction
@@ -103,14 +104,12 @@ fun EditTransactionDialogs(
     }
 
     if (showPeoplePicker) {
-        SelectionDialog(
+        PeopleSelectionDialog(
             title = "Select People",
-            options = uiState.availablePeople,
-            selectedOptions = uiState.availablePeople.filter { it.id in uiState.editPeopleIds }.toSet(),
-            onOptionSelected = { viewModel.onPeopleToggle(it.id) },
-            onDismissRequest = onDismissPeoplePicker,
-            labelProvider = { it.name },
-            multiSelect = true
+            people = uiState.availablePeople,
+            selectedPeopleIds = uiState.editPeopleIds,
+            onPersonToggle = { person -> viewModel.onPeopleToggle(person.id) },
+            onDismissRequest = onDismissPeoplePicker
         )
     }
 
