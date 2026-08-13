@@ -5,6 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.model.BudgetWithDetails
 import com.sinxn.mymoney.core.data.repository.BudgetRepository
+import com.sinxn.mymoney.core.data.local.dao.MoneyDao
+import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
+import com.sinxn.mymoney.core.util.DateUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,8 +29,16 @@ data class BudgetListUiState(
 @HiltViewModel
 class BudgetListViewModel @Inject constructor(
     private val budgetRepository: BudgetRepository,
+    private val moneyDao: MoneyDao,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    val allWallets: StateFlow<List<WalletWithBalance>> = moneyDao.getWalletsWithBalance(DateUtils.getSQLDateTimeString(java.util.Date()))
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
     val initialWalletId: String? = savedStateHandle.get<String>("walletId")
     private val _walletIdFlow = MutableStateFlow(initialWalletId)

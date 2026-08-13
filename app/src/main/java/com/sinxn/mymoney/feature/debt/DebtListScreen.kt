@@ -7,8 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -43,7 +42,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.entity.PersonEntity
 import com.sinxn.mymoney.core.data.local.entity.WalletEntity
 import com.sinxn.mymoney.core.data.local.model.DebtWithDetails
-import com.sinxn.mymoney.core.ui.components.NavigationMenuPage
+
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import kotlinx.coroutines.launch
@@ -63,72 +62,17 @@ fun DebtListScreen(
     viewModel: DebtListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val pagerState = rememberPagerState(pageCount = { 2 })
-    val coroutineScope = rememberCoroutineScope()
-
-    // Handle back button to close drawer
-    BackHandler(enabled = pagerState.currentPage == 1) {
-        coroutineScope.launch {
-            pagerState.animateScrollToPage(0)
-        }
-    }
-
-    HorizontalPager(
-        state = pagerState,
-        modifier = Modifier.fillMaxSize(),
-        userScrollEnabled = true
-    ) { page ->
-        if (page == 1) {
-            NavigationMenuPage(
-                selectedItemId = "debts",
-                onReturnToMain = {
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(0)
-                    }
-                },
-                onWalletSelect = { wallet ->
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(0)
-                    }
-                    onNavigateToWallet(wallet.wallet.id)
-                },
-                onAddWallet = {
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(0)
-                    }
-                    onNavigateToWallet("new")
-                },
-                onManageWallets = {
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(0)
-                    }
-                    onNavigateToSettings()
-                },
-                onItemClick = { item ->
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(0)
-                    }
-                    onNavigateMenuItem(item.id)
-                }
-            )
-        } else {
-            DebtListContent(
-                uiState = uiState,
-                onNavigateUp = onNavigateUp,
-                onOpenDrawer = {
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(1)
-                    }
-                },
-                onTabSelected = viewModel::setSelectedTab,
-                onToggleIncludeArchived = { viewModel.setIncludeArchived(!uiState.includeArchived) },
-                onDebtClick = onDebtClick,
-                onAddDebt = { onAddDebt(uiState.selectedTab) },
-                onToggleArchived = viewModel::toggleArchived,
-                onDeleteDebt = viewModel::deleteDebt
-            )
-        }
-    }
+    DebtListContent(
+        uiState = uiState,
+        onNavigateUp = onNavigateUp,
+        onOpenDrawer = {},
+        onTabSelected = viewModel::setSelectedTab,
+        onToggleIncludeArchived = { viewModel.setIncludeArchived(!uiState.includeArchived) },
+        onDebtClick = onDebtClick,
+        onAddDebt = { onAddDebt(uiState.selectedTab) },
+        onToggleArchived = viewModel::toggleArchived,
+        onDeleteDebt = viewModel::deleteDebt
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -252,36 +196,7 @@ private fun DebtListContent(
     onDeleteDebt: (String) -> Unit
 ) {
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Debts & Credits",
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onOpenDrawer) {
-                        Icon(
-                            imageVector = Icons.Default.Menu,
-                            contentDescription = "Open Drawer"
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onToggleIncludeArchived) {
-                        Icon(
-                            imageVector = Icons.Default.Archive,
-                            contentDescription = "Toggle Archived",
-                            tint = if (uiState.includeArchived) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = onAddDebt,

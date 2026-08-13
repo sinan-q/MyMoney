@@ -28,16 +28,7 @@ fun CategoryListScreen(
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Expenses, 1: Income
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Categories") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                }
-            )
-        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {

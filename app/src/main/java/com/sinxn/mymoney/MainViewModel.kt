@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import com.sinxn.mymoney.core.util.DateUtils
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -19,7 +20,7 @@ class MainViewModel @Inject constructor(
     val startDestination: StateFlow<String> = settingsRepository.currentWalletId
         .map { id ->
             if (id.isEmpty()) {
-                "home"
+                "wallet_details/${com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID}"
             } else if (id == com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID) {
                 "wallet_details/$id"
             } else {
@@ -28,10 +29,7 @@ class MainViewModel @Inject constructor(
                 if (wallet != null && !wallet.isDeleted) {
                     "wallet_details/$id"
                 } else {
-                    // Invalid or deleted wallet, reset preference and go home
-                    // Note: Optimally we should clear the preference here, but doing side effects in map is debatable.
-                    // Ideally, we launch a coroutine to clear it, but for now defaulting to home is safe.
-                    "home"
+                    "wallet_details/${com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID}"
                 }
             }
         }
@@ -39,5 +37,19 @@ class MainViewModel @Inject constructor(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = "loading"
+        )
+        
+    val allWallets: StateFlow<List<com.sinxn.mymoney.core.data.local.model.WalletWithBalance>> = moneyDao.getWalletsWithBalance(DateUtils.getSQLDateTimeString(java.util.Date()))
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val formattingSettings: StateFlow<com.sinxn.mymoney.core.data.preferences.FormattingSettings> = settingsRepository.formattingSettings
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = com.sinxn.mymoney.core.data.preferences.FormattingSettings()
         )
 }

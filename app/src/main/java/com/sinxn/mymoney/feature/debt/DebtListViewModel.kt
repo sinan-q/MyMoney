@@ -6,6 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.model.DebtWithDetails
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.DebtRepository
+import com.sinxn.mymoney.core.data.local.dao.MoneyDao
+import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
+import com.sinxn.mymoney.core.util.DateUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,8 +37,16 @@ data class DebtListUiState(
 class DebtListViewModel @Inject constructor(
     private val debtRepository: DebtRepository,
     private val settingsRepository: SettingsRepository,
+    private val moneyDao: MoneyDao,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    val allWallets: StateFlow<List<WalletWithBalance>> = moneyDao.getWalletsWithBalance(DateUtils.getSQLDateTimeString(java.util.Date()))
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
     val walletId: String? = savedStateHandle.get<String>("walletId")
 

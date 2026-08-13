@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -45,14 +46,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.core.util.Constants
-import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.filled.Archive
-import androidx.compose.runtime.rememberCoroutineScope
-import com.sinxn.mymoney.core.ui.components.NavigationMenuPage
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,231 +67,81 @@ fun HomeScreen(
     var showMenu by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
 
-    var activeSection by remember { mutableStateOf("transactions") }
-    val debtListViewModel: com.sinxn.mymoney.feature.debt.DebtListViewModel = hiltViewModel()
-    val debtUiState by debtListViewModel.uiState.collectAsState()
+    val totalWallet = uiState.activeWallets.find { it.wallet.id == Constants.TOTAL_WALLET_ID }
+    val otherWallets = uiState.activeWallets.filter { it.wallet.id != Constants.TOTAL_WALLET_ID }
 
-    val pagerState = rememberPagerState(pageCount = { 2 })
-    val coroutineScope = rememberCoroutineScope()
-
-    BackHandler(enabled = pagerState.currentPage == 1 || activeSection != "transactions") {
-        if (pagerState.currentPage == 1) {
-            coroutineScope.launch {
-                pagerState.animateScrollToPage(0)
-            }
-        } else {
-            activeSection = "transactions"
-        }
-    }
-
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { 
-                    Text(
-                        "MY MONEY",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                        letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified
-                    )
-                },
-                actions = {
-                    if (activeSection == "debts") {
-                        IconButton(onClick = { debtListViewModel.setIncludeArchived(!debtUiState.includeArchived) }) {
-                            Icon(
-                                imageVector = androidx.compose.material.icons.Icons.Default.Archive,
-                                contentDescription = "Toggle Archived",
-                                tint = if (debtUiState.includeArchived) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    } else {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "Menu")
-                        }
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Import Backup") },
-                                onClick = {
-                                    showMenu = false
-                                    onNavigateToBackup()
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Settings") },
-                                onClick = {
-                                    showMenu = false
-                                    onNavigateToSettings()
-                                }
-                            )
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
-                )
-            )
-        },
-        floatingActionButton = {
-            if (activeSection == "debts") {
-                androidx.compose.material3.ExtendedFloatingActionButton(
-                    onClick = { onAddDebt(debtUiState.selectedTab) },
-                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    text = { Text(if (debtUiState.selectedTab == 0) "Add Debt" else "Add Credit") },
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            } else {
-                androidx.compose.material3.FloatingActionButton(
-                    onClick = onAddTransaction,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Transaction")
-                }
-            }
-        }
-    ) { padding ->
-        val totalWallet = uiState.activeWallets.find { it.wallet.id == Constants.TOTAL_WALLET_ID }
-        val otherWallets = uiState.activeWallets.filter { it.wallet.id != Constants.TOTAL_WALLET_ID }
-
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
+    Column(
+        modifier = Modifier.fillMaxSize()
         ) {
-            // Constant Grand Total Header at top
-            totalWallet?.let {
+            if (totalWallet != null) {
                 GrandTotalHeader(
-                    wallet = it,
+                    wallet = totalWallet,
                     isTotalValid = uiState.isTotalValid,
                     balanceBreakdown = uiState.balanceBreakdown,
-                    activeSection = activeSection,
-                    debtUiState = debtUiState,
-                    onClick = { onNavigateToWallet(it.wallet.id) }
+                    activeSection = "transactions", // Only used for animation states or specific UI, safe to hardcode
+                    debtUiState = null, // Debt logic is handled in DebtListScreen
+                    onClick = { onNavigateToWallet(totalWallet.wallet.id) }
                 )
             }
-
-            // HorizontalPager for content
-            HorizontalPager(
-                state = pagerState,
+            LazyColumn(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth()
-            ) { page ->
-                when (page) {
-                    0 -> {
-                        if (activeSection == "debts") {
-                            com.sinxn.mymoney.feature.debt.DebtListBodyContent(
-                                uiState = debtUiState,
-                                showSummaryCard = false,
-                                onTabSelected = debtListViewModel::setSelectedTab,
-                                onDebtClick = onDebtClick,
-                                onToggleArchived = debtListViewModel::toggleArchived,
-                                onDeleteDebt = debtListViewModel::deleteDebt
-                            )
-                        } else {
-                            LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(bottom = 80.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                if (uiState.pendingTransactions.isNotEmpty()) {
-                                    item {
-                                        Text(
-                                            text = "Pending Confirmation",
-                                            style = MaterialTheme.typography.titleSmall,
-                                            color = MaterialTheme.colorScheme.error,
-                                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                                        )
-                                    }
-                                    items(uiState.pendingTransactions, key = { "pending_${it.transaction.id}" }) { txWithCat ->
-                                        PendingConfirmationItem(
-                                            item = txWithCat,
-                                            onConfirm = { viewModel.confirmTransaction(txWithCat.transaction.id) },
-                                            onDismiss = { viewModel.dismissTransaction(txWithCat.transaction.id) }
-                                        )
-                                    }
-                                }
-
-                                if (otherWallets.isNotEmpty()) {
-                                    item {
-                                        Text(
-                                            text = "Your Wallets",
-                                            style = MaterialTheme.typography.titleSmall,
-                                            color = MaterialTheme.colorScheme.outline,
-                                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                                        )
-                                    }
-                                }
-
-                                items(otherWallets) { walletWithBalance ->
-                                    WalletItem(
-                                        item = walletWithBalance,
-                                        onClick = { onNavigateToWallet(walletWithBalance.wallet.id) }
-                                    )
-                                }
-
-                                if (uiState.archivedWallets.isNotEmpty()) {
-                                    item {
-                                        Text(
-                                            text = "Archived",
-                                            style = MaterialTheme.typography.titleSmall,
-                                            color = MaterialTheme.colorScheme.outline,
-                                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                                        )
-                                    }
-                                    items(uiState.archivedWallets) { walletWithBalance ->
-                                        WalletItem(
-                                            item = walletWithBalance,
-                                            onClick = { onNavigateToWallet(walletWithBalance.wallet.id) }
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                    .fillMaxWidth(),
+                contentPadding = PaddingValues(bottom = 80.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (uiState.pendingTransactions.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "Pending Confirmation",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                        )
                     }
-                    1 -> {
-                        com.sinxn.mymoney.core.ui.components.NavigationMenuContent(
-                            wallets = uiState.activeWallets,
-                            selectedItemId = activeSection,
-                            onWalletSelect = { wallet ->
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(0)
-                                }
-                                onNavigateToWallet(wallet.wallet.id)
-                            },
-                            onAddWallet = {
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(0)
-                                }
-                                onNavigateToWallet("new")
-                            },
-                            onManageWallets = {
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(0)
-                                }
-                                onNavigateToSettings()
-                            },
-                            onItemClick = { item ->
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(0)
-                                }
-                                when (item.id) {
-                                    "debts" -> activeSection = "debts"
-                                    "transactions" -> activeSection = "transactions"
-                                    else -> onNavigateMenuItem(item.id)
-                                }
-                            }
+                    items(uiState.pendingTransactions, key = { "pending_${it.transaction.id}" }) { txWithCat ->
+                        PendingConfirmationItem(
+                            item = txWithCat,
+                            onConfirm = { viewModel.confirmTransaction(txWithCat.transaction.id) },
+                            onDismiss = { viewModel.dismissTransaction(txWithCat.transaction.id) }
                         )
                     }
                 }
-            }
+
+                if (otherWallets.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "Your Wallets",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                        )
+                    }
+                }
+
+                items(otherWallets) { walletWithBalance ->
+                    WalletItem(
+                        item = walletWithBalance,
+                        onClick = { onNavigateToWallet(walletWithBalance.wallet.id) }
+                    )
+                }
+
+                if (uiState.archivedWallets.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "Archived",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                        )
+                    }
+                    items(uiState.archivedWallets) { walletWithBalance ->
+                        WalletItem(
+                            item = walletWithBalance,
+                            onClick = { onNavigateToWallet(walletWithBalance.wallet.id) }
+                        )
+                    }
+                }
         }
     }
 }

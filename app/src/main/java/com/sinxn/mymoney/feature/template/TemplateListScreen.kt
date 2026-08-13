@@ -30,16 +30,7 @@ fun TemplateListScreen(
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Transactions, 1: Transfers
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Transaction Templates") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                }
-            )
-        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { viewModel.openCreateTxTemplateDialog(selectedTab == 1) }

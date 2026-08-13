@@ -107,36 +107,29 @@ fun NavigationMenuContent(
     wallets: List<WalletWithBalance> = emptyList(),
     selectedWallet: WalletWithBalance? = null,
     selectedItemId: String? = null,
+    formatterConfig: MoneyFormatter.Config = MoneyFormatter.Config(),
     onWalletSelect: (WalletWithBalance) -> Unit = {},
     onAddWallet: () -> Unit = {},
     onManageWallets: () -> Unit = {},
     onItemClick: (NavigationMenuItem) -> Unit = {}
 ) {
     var isHeaderExpanded by remember { mutableStateOf(false) }
+    val headerWallet = selectedWallet ?: wallets.firstOrNull()
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 24.dp)
     ) {
-        item {
-            AccountHeader(
-                wallets = wallets,
-                selectedWallet = selectedWallet ?: wallets.firstOrNull(),
-                isExpanded = isHeaderExpanded,
-                onToggleExpand = { isHeaderExpanded = !isHeaderExpanded },
-                onWalletSelect = { wallet ->
-                    isHeaderExpanded = false
-                    onWalletSelect(wallet)
-                },
-                onAddWallet = {
-                    isHeaderExpanded = false
-                    onAddWallet()
-                },
-                onManageWallets = {
-                    isHeaderExpanded = false
-                    onManageWallets()
-                }
-            )
+        if (headerWallet != null) {
+            item {
+                WalletHeader(
+                    wallet = headerWallet,
+                    formatterConfig = formatterConfig,
+                    activeSection = selectedItemId ?: "transactions",
+                    isExpanded = isHeaderExpanded,
+                    onToggleExpand = { isHeaderExpanded = !isHeaderExpanded }
+                )
+            }
         }
 
         if (isHeaderExpanded) {
@@ -224,6 +217,7 @@ fun NavigationMenuPage(
     wallets: List<WalletWithBalance> = emptyList(),
     selectedWallet: WalletWithBalance? = null,
     selectedItemId: String? = null,
+    formatterConfig: MoneyFormatter.Config = MoneyFormatter.Config(),
     onReturnToMain: () -> Unit = {},
     onWalletSelect: (WalletWithBalance) -> Unit = {},
     onAddWallet: () -> Unit = {},
@@ -260,6 +254,7 @@ fun NavigationMenuPage(
             wallets = wallets,
             selectedWallet = selectedWallet,
             selectedItemId = selectedItemId,
+            formatterConfig = formatterConfig,
             onWalletSelect = onWalletSelect,
             onAddWallet = onAddWallet,
             onManageWallets = onManageWallets,
@@ -268,83 +263,10 @@ fun NavigationMenuPage(
     }
 }
 
-@Composable
-private fun AccountHeader(
-    wallets: List<WalletWithBalance>,
-    selectedWallet: WalletWithBalance?,
-    isExpanded: Boolean,
-    onToggleExpand: () -> Unit,
-    onWalletSelect: (WalletWithBalance) -> Unit,
-    onAddWallet: () -> Unit,
-    onManageWallets: () -> Unit
-) {
-    val activeProfileName = selectedWallet?.wallet?.name ?: if (wallets.isEmpty()) "No wallet found" else "Total"
-    val formattedBalance = selectedWallet?.let {
-        MoneyFormatter.format(
-            amount = it.currentBalance,
-            currencyCode = it.wallet.currency,
-            decimals = it.decimals
-        )
-    } ?: if (wallets.isEmpty()) "Add one wallet" else ""
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.primaryContainer)
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onToggleExpand() },
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(48.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = activeProfileName.take(1).uppercase(),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = activeProfileName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (formattedBalance.isNotEmpty()) {
-                    Text(
-                        text = formattedBalance,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                    )
-                }
-            }
-
-            Icon(
-                imageVector = if (isExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-                contentDescription = "Switch wallet profile",
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        }
-    }
-}
 
 @Composable
-private fun WalletProfileRow(
+fun WalletProfileRow(
     wallet: WalletWithBalance,
     isSelected: Boolean,
     onClick: () -> Unit
@@ -402,7 +324,7 @@ private fun WalletProfileRow(
 }
 
 @Composable
-private fun ActionProfileRow(
+fun ActionProfileRow(
     title: String,
     icon: ImageVector,
     onClick: () -> Unit
@@ -484,25 +406,17 @@ fun handleSidebarNavigation(
 ) {
     when (itemId) {
         "transactions" -> {
-            if (onLocalSectionSelect != null && (currentRoute == "home" || currentRoute?.startsWith("wallet_details") == true)) {
-                onLocalSectionSelect("transactions")
-            } else {
-                navController.navigate("home") {
-                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                    launchSingleTop = true
-                    restoreState = true
-                }
+            navController.navigate("wallet_details/${com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID}") {
+                popUpTo(navController.graph.startDestinationId) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
             }
         }
         "debts" -> {
-            if (onLocalSectionSelect != null && (currentRoute == "home" || currentRoute?.startsWith("wallet_details") == true)) {
-                onLocalSectionSelect("debts")
-            } else {
-                navController.navigate("debts") { launchSingleTop = true }
-            }
+            navController.navigate("debts") { launchSingleTop = true }
         }
         "categories" -> navController.navigate("categories") { launchSingleTop = true }
-        "overview" -> navController.navigate("recap") { launchSingleTop = true }
+        "overview" -> navController.navigate("overview") { launchSingleTop = true }
         "budgets" -> navController.navigate("budgets") { launchSingleTop = true }
         "savings" -> navController.navigate("savings") { launchSingleTop = true }
         "events" -> navController.navigate("events") { launchSingleTop = true }
@@ -515,8 +429,8 @@ fun handleSidebarNavigation(
         "search_atm" -> launchSearchIntent(context, "ATM")
         "search_bank" -> launchSearchIntent(context, "Bank")
         "settings" -> navController.navigate("settings") { launchSingleTop = true }
-        "support_developer" -> launchSupportIntent(context)
-        "about" -> navController.navigate("settings") { launchSingleTop = true }
+        "support_developer" -> navController.navigate("support_developer") { launchSingleTop = true }
+        "about" -> navController.navigate("about") { launchSingleTop = true }
         else -> {
             try {
                 navController.navigate(itemId) { launchSingleTop = true }

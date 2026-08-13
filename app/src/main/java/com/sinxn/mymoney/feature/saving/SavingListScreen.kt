@@ -6,8 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -35,7 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.model.SavingWithDetails
-import com.sinxn.mymoney.core.ui.components.NavigationMenuPage
+
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import kotlinx.coroutines.launch
 
@@ -54,73 +53,19 @@ fun SavingListScreen(
     viewModel: SavingListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val pagerState = rememberPagerState(pageCount = { 2 })
-    val coroutineScope = rememberCoroutineScope()
-
-    BackHandler(enabled = pagerState.currentPage == 1) {
-        coroutineScope.launch {
-            pagerState.animateScrollToPage(0)
-        }
-    }
-
-    HorizontalPager(
-        state = pagerState,
-        modifier = Modifier.fillMaxSize(),
-        userScrollEnabled = true
-    ) { page ->
-        if (page == 1) {
-            NavigationMenuPage(
-                selectedItemId = "savings",
-                onReturnToMain = {
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(0)
-                    }
-                },
-                onWalletSelect = { wallet ->
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(0)
-                    }
-                    onNavigateToWallet(wallet.wallet.id)
-                },
-                onAddWallet = {
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(0)
-                    }
-                    onNavigateToWallet("new")
-                },
-                onManageWallets = {
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(0)
-                    }
-                    onNavigateToSettings()
-                },
-                onItemClick = { item ->
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(0)
-                    }
-                    onNavigateMenuItem(item.id)
-                }
-            )
-        } else {
-            SavingListContent(
-                uiState = uiState,
-                onNavigateUp = onNavigateUp,
-                onOpenDrawer = {
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(1)
-                    }
-                },
-                onTabSelected = viewModel::setSelectedTab,
-                onSavingClick = onSavingClick,
-                onAddSaving = onAddSaving,
-                onDeposit = onDeposit,
-                onWithdraw = onWithdraw,
-                onWithdrawEverything = onWithdrawEverything,
-                onToggleComplete = viewModel::toggleComplete,
-                onDeleteSaving = viewModel::deleteSaving
-            )
-        }
-    }
+    SavingListContent(
+        uiState = uiState,
+        onNavigateUp = onNavigateUp,
+        onOpenDrawer = {},
+        onTabSelected = viewModel::setSelectedTab,
+        onSavingClick = onSavingClick,
+        onAddSaving = onAddSaving,
+        onDeposit = onDeposit,
+        onWithdraw = onWithdraw,
+        onWithdrawEverything = onWithdrawEverything,
+        onToggleComplete = viewModel::toggleComplete,
+        onDeleteSaving = viewModel::deleteSaving
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -171,33 +116,19 @@ fun SavingListContent(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            Column {
-                TopAppBar(
-                    title = { Text("Savings Goals", fontWeight = FontWeight.Bold) },
-                    navigationIcon = {
-                        IconButton(onClick = onOpenDrawer) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu")
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = onNavigateUp) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    }
+            TabRow(selectedTabIndex = uiState.selectedTab) {
+                Tab(
+                    selected = uiState.selectedTab == 0,
+                    onClick = { onTabSelected(0) },
+                    text = { Text("In Progress", fontWeight = FontWeight.Bold) }
                 )
-                TabRow(selectedTabIndex = uiState.selectedTab) {
-                    Tab(
-                        selected = uiState.selectedTab == 0,
-                        onClick = { onTabSelected(0) },
-                        text = { Text("In Progress", fontWeight = FontWeight.Bold) }
-                    )
-                    Tab(
-                        selected = uiState.selectedTab == 1,
-                        onClick = { onTabSelected(1) },
-                        text = { Text("Completed", fontWeight = FontWeight.Bold) }
-                    )
-                }
+                Tab(
+                    selected = uiState.selectedTab == 1,
+                    onClick = { onTabSelected(1) },
+                    text = { Text("Completed", fontWeight = FontWeight.Bold) }
+                )
             }
         },
         floatingActionButton = {
