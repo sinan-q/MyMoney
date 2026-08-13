@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import javax.inject.Inject
 
 @HiltViewModel
@@ -35,6 +36,16 @@ class WalletDetailsViewModel @Inject constructor(
 ) : ViewModel() {
 
     val walletId: String = checkNotNull(savedStateHandle["walletId"])
+
+    val pendingTransactions: StateFlow<List<TransactionWithCategory>> = if (walletId == Constants.TOTAL_WALLET_ID) {
+        moneyDao.getPendingUnconfirmedTransactions()
+    } else {
+        moneyDao.getPendingUnconfirmedTransactionsForWallet(walletId)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     init {
         // Save as current wallet accessible on launch
@@ -238,6 +249,18 @@ class WalletDetailsViewModel @Inject constructor(
                     lastEdit = System.currentTimeMillis()
                 )
             }
+        }
+    }
+
+    fun confirmTransaction(transactionId: String) {
+        viewModelScope.launch {
+            moneyDao.confirmTransaction(transactionId, System.currentTimeMillis())
+        }
+    }
+
+    fun dismissTransaction(transactionId: String) {
+        viewModelScope.launch {
+            moneyDao.softDeleteTransaction(transactionId, System.currentTimeMillis())
         }
     }
 }

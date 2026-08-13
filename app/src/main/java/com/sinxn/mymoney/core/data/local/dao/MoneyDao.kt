@@ -292,6 +292,20 @@ interface MoneyDao {
     """)
     fun getPendingUnconfirmedTransactions(): Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory>>
 
+    @androidx.room.Transaction
+    @Query("""
+        SELECT t.*, c.name as categoryName, c.icon as categoryIcon,
+               COALESCE(curr.decimals, 2) as decimals, curr.symbol as currencySymbol,
+               w.currency as currencyCode
+        FROM transactions t
+        LEFT JOIN categories c ON t.categoryId = c.id
+        INNER JOIN wallets w ON t.walletId = w.id
+        LEFT JOIN currencies curr ON w.currency = curr.iso
+        WHERE t.confirmed = 0 AND t.isDeleted = 0 AND t.walletId = :walletId
+        ORDER BY t.date DESC
+    """)
+    fun getPendingUnconfirmedTransactionsForWallet(walletId: String): Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory>>
+
     @Query("UPDATE transactions SET confirmed = 1, lastEdit = :lastEdit WHERE id = :transactionId")
     suspend fun confirmTransaction(transactionId: String, lastEdit: Long)
 

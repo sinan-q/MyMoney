@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -64,6 +65,7 @@ fun WalletDetailsScreen(
     val wallet by viewModel.wallet.collectAsState(initial = null)
     val allWallets by viewModel.allWallets.collectAsState(initial = emptyList())
     val transactions by viewModel.transactions.collectAsState(initial = emptyList())
+    val pendingTransactions by viewModel.pendingTransactions.collectAsState()
     val settings by viewModel.formattingSettings.collectAsState()
     
     var showSettings by remember { mutableStateOf(false) }
@@ -130,12 +132,15 @@ fun WalletDetailsScreen(
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     TransactionList(
                         items = transactions,
+                        pendingTransactions = pendingTransactions,
                         decimals = wallet!!.decimals,
                         currencyCode = wallet!!.wallet.currency,
                         formatterConfig = formatterConfig,
                         dateFormat = settings.dateFormat,
                         listState = listState,
-                        onTransactionClick = onTransactionClick
+                        onTransactionClick = onTransactionClick,
+                        onConfirmPending = { viewModel.confirmTransaction(it) },
+                        onDismissPending = { viewModel.dismissTransaction(it) }
                     )
 
                     FloatingActionButton(
@@ -328,12 +333,15 @@ fun WalletSettingsBottomSheet(
 @Composable
 fun TransactionList(
     items: List<TransactionListItem>,
+    pendingTransactions: List<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory> = emptyList(),
     decimals: Int,
     currencyCode: String,
     formatterConfig: MoneyFormatter.Config,
     dateFormat: Int,
     listState: LazyListState,
-    onTransactionClick: (String) -> Unit
+    onTransactionClick: (String) -> Unit,
+    onConfirmPending: (String) -> Unit = {},
+    onDismissPending: (String) -> Unit = {}
 ) {
     var collapsedGroups by remember { mutableStateOf(setOf<String>()) }
     
@@ -341,7 +349,29 @@ fun TransactionList(
         state = listState,
         contentPadding = PaddingValues(bottom = 80.dp),
     ) {
-        if (items.isEmpty()) {
+        if (pendingTransactions.isNotEmpty()) {
+            item(key = "pending_header") {
+                Text(
+                    text = "Pending Confirmations",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+            items(
+                items = pendingTransactions,
+                key = { "pending_${it.transaction.id}" }
+            ) { item ->
+                PendingConfirmationItem(
+                    item = item,
+                    onConfirm = { onConfirmPending(item.transaction.id) },
+                    onDismiss = { onDismissPending(item.transaction.id) }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
+
+        if (items.isEmpty() && pendingTransactions.isEmpty()) {
             item {
                 Box(
                     modifier = Modifier
@@ -492,6 +522,78 @@ fun RecapBanner(onClick: () -> Unit) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.8f)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun PendingConfirmationItem(
+    item: com.sinxn.mymoney.core.data.local.model.TransactionWithCategory,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = item.transaction.description.takeIf { !it.isNullOrBlank() } ?: item.categoryName ?: "Recurrence",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = item.transaction.date.take(10), // yyyy-MM-dd
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                val formattedMoney = MoneyFormatter.formatColored(
+                    amount = item.transaction.money,
+                    currencyCode = item.currencyCode ?: "USD",
+                    decimals = item.decimals ?: 2,
+                    tintMode = if (item.transaction.direction == 1) MoneyFormatter.TintMode.INCOME else MoneyFormatter.TintMode.EXPENSE
+                )
+                Text(
+                    text = formattedMoney,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text("Dismiss", color = MaterialTheme.colorScheme.error)
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(
+                    onClick = onConfirm,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text("Confirm")
+                }
             }
         }
     }
