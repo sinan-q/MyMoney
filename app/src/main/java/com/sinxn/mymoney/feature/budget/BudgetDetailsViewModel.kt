@@ -31,6 +31,7 @@ data class BudgetDetailsUiState(
     val categoryId: String? = null,
     val startDate: String = DateUtils.getSQLDateTimeString(Date()),
     val endDate: String = DateUtils.getSQLDateTimeString(DateUtils.addMonths(Calendar.getInstance(), 1)),
+    val period: Int = com.sinxn.mymoney.core.data.repository.BudgetPeriod.MONTHLY,
     val moneyInput: String = "0",
     val currency: String = "USD",
     val selectedWalletIds: Set<String> = emptySet(),
@@ -79,6 +80,7 @@ class BudgetDetailsViewModel @Inject constructor(
                                 categoryId = details.budget.categoryId,
                                 startDate = details.budget.startDate,
                                 endDate = details.budget.endDate,
+                                period = com.sinxn.mymoney.core.data.repository.BudgetPeriod.fromTag(details.budget.tag),
                                 moneyInput = (details.budget.money / 100.0).toString(),
                                 currency = details.budget.currency,
                                 selectedWalletIds = details.wallets.map { it.id }.toSet(),
@@ -131,6 +133,10 @@ class BudgetDetailsViewModel @Inject constructor(
         _uiState.update { it.copy(moneyInput = input) }
     }
 
+    fun setPeriod(period: Int) {
+        _uiState.update { it.copy(period = period) }
+    }
+
     fun toggleWalletSelection(walletId: String) {
         _uiState.update { state ->
             val current = state.selectedWalletIds.toMutableSet()
@@ -176,7 +182,7 @@ class BudgetDetailsViewModel @Inject constructor(
                 endDate = currentState.endDate,
                 money = moneyAmount.toLong(),
                 currency = currentState.currency,
-                tag = null,
+                tag = com.sinxn.mymoney.core.data.repository.BudgetPeriod.toTag(currentState.period),
                 walletIds = walletIds
             )
 

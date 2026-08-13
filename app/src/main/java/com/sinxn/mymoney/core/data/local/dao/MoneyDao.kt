@@ -648,6 +648,13 @@ interface MoneyDao {
     @Query("SELECT walletId FROM budget_wallets WHERE budgetId = :budgetId AND isDeleted = 0")
     suspend fun getWalletIdsForBudget(budgetId: String): List<String>
 
+    @Query("""
+        SELECT * FROM transactions 
+        WHERE walletId IN (:walletIds) AND isDeleted = 0 
+          AND DATE(date) >= DATE(:startDate) AND DATE(date) <= DATE(:endDate)
+    """)
+    suspend fun getTransactionsForWalletsBetweenDates(walletIds: List<String>, startDate: String, endDate: String): List<TransactionEntity>
+
     @Query("SELECT * FROM wallets WHERE id IN (SELECT walletId FROM budget_wallets WHERE budgetId = :budgetId AND isDeleted = 0) AND isDeleted = 0")
     suspend fun getWalletsForBudget(budgetId: String): List<WalletEntity>
 

@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Date
 import java.util.UUID
@@ -154,6 +155,7 @@ class BudgetRepository @Inject constructor(
      * Get list of budgets enriched with linked wallets and category.
      * For category budgets, the progress is recomputed in Kotlin to include
      * all descendant subcategories (REG-01 fix).
+     * For auto-renewing budgets, updates DB dates if expired (REG-02 fix).
      */
     fun getBudgets(walletId: String? = null): Flow<List<BudgetWithDetails>> {
         val maxDate = DateUtils.getSQLDateTimeString(Date())
@@ -161,6 +163,36 @@ class BudgetRepository @Inject constructor(
             budgetList.map { budgetWithDetails ->
                 val wallets = moneyDao.getWalletsForBudget(budgetWithDetails.budget.id)
                 budgetWithDetails.apply { this.wallets = wallets }
+                
+                val (windowStart, windowEnd) = getCurrentBudgetWindow(budgetWithDetails.budget)
+                var updatedProgress = budgetWithDetails.progress
+                var needsRecompute = false
+
+                if (windowStart != budgetWithDetails.budget.startDate || windowEnd != budgetWithDetails.budget.endDate) {
+                    val updatedBudget = budgetWithDetails.budget.copy(startDate = windowStart, endDate = windowEnd)
+                    kotlinx.coroutines.GlobalScope.launch { moneyDao.updateBudget(updatedBudget) }
+                    needsRecompute = true
+                }
+
+                if (budgetWithDetails.budget.type == BudgetType.CATEGORY) {
+                    needsRecompute = true
+                }
+
+                if (needsRecompute) {
+                    val walletIds = wallets.map { it.id }
+                    if (walletIds.isNotEmpty()) {
+                        val transactions = moneyDao.getTransactionsForWalletsBetweenDates(walletIds, windowStart, windowEnd)
+                        updatedProgress = computeBudgetProgress(budgetWithDetails.budget, transactions)
+                    }
+                }
+
+                budgetWithDetails.copy(
+                    budget = budgetWithDetails.budget.copy(startDate = windowStart, endDate = windowEnd),
+                    progress = updatedProgress
+                ).apply {
+                    this.wallets = wallets
+                    this.category = budgetWithDetails.category
+                }
             }
         }
     }
@@ -171,9 +203,66 @@ class BudgetRepository @Inject constructor(
     fun getBudgetDetails(budgetId: String): Flow<BudgetWithDetails?> {
         val maxDate = DateUtils.getSQLDateTimeString(Date())
         return moneyDao.getBudgetWithDetailsById(budgetId, maxDate).map { budgetWithDetails ->
-            budgetWithDetails?.apply {
-                this.wallets = moneyDao.getWalletsForBudget(budgetId)
+            budgetWithDetails?.let { details ->
+                val wallets = moneyDao.getWalletsForBudget(details.budget.id)
+                details.apply { this.wallets = wallets }
+
+                val (windowStart, windowEnd) = getCurrentBudgetWindow(details.budget)
+                var updatedProgress = details.progress
+                var needsRecompute = false
+
+                if (windowStart != details.budget.startDate || windowEnd != details.budget.endDate) {
+                    val updatedBudget = details.budget.copy(startDate = windowStart, endDate = windowEnd)
+                    kotlinx.coroutines.GlobalScope.launch { moneyDao.updateBudget(updatedBudget) }
+                    needsRecompute = true
+                }
+
+                if (details.budget.type == BudgetType.CATEGORY) {
+                    needsRecompute = true
+                }
+
+                if (needsRecompute) {
+                    val walletIds = wallets.map { it.id }
+                    if (walletIds.isNotEmpty()) {
+                        val transactions = moneyDao.getTransactionsForWalletsBetweenDates(walletIds, windowStart, windowEnd)
+                        updatedProgress = computeBudgetProgress(details.budget, transactions)
+                    }
+                }
+
+                details.copy(
+                    budget = details.budget.copy(startDate = windowStart, endDate = windowEnd),
+                    progress = updatedProgress
+                ).apply {
+                    this.wallets = wallets
+                    this.category = details.category
+                }
             }
+        }
+    }
+
+    private suspend fun computeBudgetProgress(
+        budget: BudgetEntity,
+        transactions: List<com.sinxn.mymoney.core.data.local.entity.TransactionEntity>
+    ): Long {
+        val validTransactions = transactions.filter { it.type == com.sinxn.mymoney.core.util.TransactionType.STANDARD && !it.isDeleted }
+
+        return when (budget.type) {
+            BudgetType.EXPENSES -> {
+                validTransactions.filter { it.direction == com.sinxn.mymoney.core.util.Direction.EXPENSE }.sumOf { it.money }
+            }
+            BudgetType.INCOMES -> {
+                validTransactions.filter { it.direction == com.sinxn.mymoney.core.util.Direction.INCOME }.sumOf { it.money }
+            }
+            BudgetType.CATEGORY -> {
+                val targetCategories = if (budget.categoryId != null) {
+                    getAllDescendantCategoryIds(budget.categoryId) + budget.categoryId
+                } else emptySet()
+
+                validTransactions
+                    .filter { targetCategories.contains(it.categoryId) }
+                    .sumOf { if (it.direction == com.sinxn.mymoney.core.util.Direction.INCOME) it.money else -it.money }
+            }
+            else -> 0L
         }
     }
 

@@ -157,9 +157,53 @@ fun BudgetDetailsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
+                    
+                    // Period Selection
+                    var periodExpanded by remember { mutableStateOf(false) }
+                    val periods = listOf(
+                        com.sinxn.mymoney.core.data.repository.BudgetPeriod.CUSTOM to "Custom (Fixed Dates)",
+                        com.sinxn.mymoney.core.data.repository.BudgetPeriod.WEEKLY to "Weekly (Auto-renew)",
+                        com.sinxn.mymoney.core.data.repository.BudgetPeriod.MONTHLY to "Monthly (Auto-renew)",
+                        com.sinxn.mymoney.core.data.repository.BudgetPeriod.ANNUAL to "Annual (Auto-renew)"
+                    )
+                    val selectedPeriod = periods.firstOrNull { it.first == uiState.period }?.second ?: "Monthly (Auto-renew)"
+
+                    ExposedDropdownMenuBox(
+                        expanded = periodExpanded,
+                        onExpandedChange = { periodExpanded = !periodExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedPeriod,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Renewal Period") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = periodExpanded) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = periodExpanded,
+                            onDismissRequest = { periodExpanded = false }
+                        ) {
+                            periods.forEach { (periodVal, label) ->
+                                DropdownMenuItem(
+                                    text = { Text(label) },
+                                    onClick = {
+                                        viewModel.setPeriod(periodVal)
+                                        periodExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
 
                     // Date Range
-                    Text("Date Range", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = if (uiState.period == com.sinxn.mymoney.core.data.repository.BudgetPeriod.CUSTOM) "Date Range" else "Current Period Window", 
+                        style = MaterialTheme.typography.titleMedium, 
+                        fontWeight = FontWeight.Bold
+                    )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)

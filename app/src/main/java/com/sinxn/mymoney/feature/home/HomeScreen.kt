@@ -46,6 +46,7 @@ import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.core.util.Constants
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.filled.Archive
@@ -206,6 +207,24 @@ fun HomeScreen(
                                 contentPadding = PaddingValues(bottom = 80.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
+                                if (uiState.pendingTransactions.isNotEmpty()) {
+                                    item {
+                                        Text(
+                                            text = "Pending Confirmation",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            color = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                                        )
+                                    }
+                                    items(uiState.pendingTransactions, key = { "pending_${it.transaction.id}" }) { txWithCat ->
+                                        PendingConfirmationItem(
+                                            item = txWithCat,
+                                            onConfirm = { viewModel.confirmTransaction(txWithCat.transaction.id) },
+                                            onDismiss = { viewModel.dismissTransaction(txWithCat.transaction.id) }
+                                        )
+                                    }
+                                }
+
                                 if (otherWallets.isNotEmpty()) {
                                     item {
                                         Text(
@@ -464,6 +483,78 @@ fun WalletItem(
                 fontWeight = FontWeight.ExtraBold,
                 color = MaterialTheme.colorScheme.primary
             )
+        }
+    }
+}
+
+@Composable
+fun PendingConfirmationItem(
+    item: com.sinxn.mymoney.core.data.local.model.TransactionWithCategory,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = item.transaction.description.takeIf { !it.isNullOrBlank() } ?: item.categoryName ?: "Recurrence",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = item.transaction.date.take(10), // yyyy-MM-dd
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                val formattedMoney = MoneyFormatter.formatColored(
+                    amount = item.transaction.money,
+                    currencyCode = item.currencyCode ?: "USD",
+                    decimals = item.decimals ?: 2,
+                    tintMode = if (item.transaction.direction == 1) MoneyFormatter.TintMode.INCOME else MoneyFormatter.TintMode.EXPENSE
+                )
+                Text(
+                    text = formattedMoney,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                androidx.compose.material3.TextButton(onClick = onDismiss) {
+                    Text("Dismiss", color = MaterialTheme.colorScheme.error)
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                androidx.compose.material3.Button(
+                    onClick = onConfirm,
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text("Confirm")
+                }
+            }
         }
     }
 }

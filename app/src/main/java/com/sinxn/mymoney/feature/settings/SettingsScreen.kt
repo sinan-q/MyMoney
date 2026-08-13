@@ -140,6 +140,23 @@ fun SettingsScreen(
             )
             
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+            
+            Text(
+                text = "Notifications",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+
+            SettingsSwitchItem(
+                title = "Daily Reminder (8:00 PM)",
+                checked = settings.dailyReminderHour != -1,
+                onCheckedChange = { enabled ->
+                    viewModel.updateDailyReminderHour(if (enabled) 20 else -1)
+                }
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
             Text(
                 text = "Developer Tools",
