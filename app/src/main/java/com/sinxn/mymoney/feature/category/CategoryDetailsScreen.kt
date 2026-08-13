@@ -155,11 +155,9 @@ fun CategoryDetailsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp),
-                            shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                             ),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                         ) {
                             Column(
                                 modifier = Modifier.padding(16.dp),
@@ -172,14 +170,13 @@ fun CategoryDetailsScreen(
                                     Box(
                                         modifier = Modifier
                                             .size(56.dp)
-                                            .clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                                            .clip(CircleShape),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         CategoryIcon(
                                             iconString = category.icon,
                                             categoryName = category.name,
-                                            modifier = Modifier.size(36.dp)
+                                            modifier = Modifier.size(44.dp)
                                         )
                                     }
 
