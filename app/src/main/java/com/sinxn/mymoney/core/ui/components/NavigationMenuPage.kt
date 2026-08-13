@@ -104,107 +104,88 @@ val navigationMenuItems = listOf(
 @Composable
 fun NavigationMenuContent(
     modifier: Modifier = Modifier,
-    wallets: List<WalletWithBalance> = emptyList(),
-    selectedWallet: WalletWithBalance? = null,
     selectedItemId: String? = null,
-    formatterConfig: MoneyFormatter.Config = MoneyFormatter.Config(),
     onWalletSelect: (WalletWithBalance) -> Unit = {},
     onAddWallet: () -> Unit = {},
     onManageWallets: () -> Unit = {},
     onItemClick: (NavigationMenuItem) -> Unit = {}
 ) {
     var isHeaderExpanded by remember { mutableStateOf(false) }
-    val headerWallet = selectedWallet ?: wallets.firstOrNull()
 
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 24.dp)
-    ) {
-        if (headerWallet != null) {
-            item {
-                WalletHeader(
-                    wallet = headerWallet,
-                    formatterConfig = formatterConfig,
-                    isExpanded = isHeaderExpanded,
-                    onToggleExpand = { isHeaderExpanded = !isHeaderExpanded }
-                )
-            }
-        }
+    Column(modifier = modifier.fillMaxSize()) {
+        WalletHeader(
+            isExpanded = isHeaderExpanded,
+            onToggleExpand = { isHeaderExpanded = !isHeaderExpanded }
+        )
 
         if (isHeaderExpanded) {
-            items(wallets) { wallet ->
-                WalletProfileRow(
-                    wallet = wallet,
-                    isSelected = selectedWallet?.wallet?.id == wallet.wallet.id,
-                    onClick = {
-                        isHeaderExpanded = false
-                        onWalletSelect(wallet)
-                    }
-                )
-            }
-            item {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                ActionProfileRow(
-                    title = "New wallet",
-                    icon = Icons.Default.Add,
-                    onClick = {
-                        isHeaderExpanded = false
-                        onAddWallet()
-                    }
-                )
-                ActionProfileRow(
-                    title = "Manage wallets",
-                    icon = Icons.Default.Settings,
-                    onClick = {
-                        isHeaderExpanded = false
-                        onManageWallets()
-                    }
-                )
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            }
+            WalletDropdownList(
+                onWalletSelect = { wallet ->
+                    isHeaderExpanded = false
+                    onWalletSelect(wallet)
+                },
+                onAddWallet = {
+                    isHeaderExpanded = false
+                    onAddWallet()
+                },
+                onManageWallets = {
+                    isHeaderExpanded = false
+                    onManageWallets()
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            )
         } else {
-            // Group 1 Items
-            val group1 = navigationMenuItems.filter { it.group == 1 }
-            items(group1) { item ->
-                NavigationDrawerItemRow(
-                    item = item,
-                    isSelected = selectedItemId == item.id,
-                    onClick = { onItemClick(item) }
-                )
-            }
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentPadding = PaddingValues(bottom = 24.dp)
+            ) {
+                // Group 1 Items
+                val group1 = navigationMenuItems.filter { it.group == 1 }
+                items(group1) { item ->
+                    NavigationDrawerItemRow(
+                        item = item,
+                        isSelected = selectedItemId == item.id,
+                        onClick = { onItemClick(item) }
+                    )
+                }
 
-            item {
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-            }
+                item {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                }
 
-            // Group 2 Items
-            val group2 = navigationMenuItems.filter { it.group == 2 }
-            items(group2) { item ->
-                NavigationDrawerItemRow(
-                    item = item,
-                    isSelected = selectedItemId == item.id,
-                    onClick = { onItemClick(item) }
-                )
-            }
+                // Group 2 Items
+                val group2 = navigationMenuItems.filter { it.group == 2 }
+                items(group2) { item ->
+                    NavigationDrawerItemRow(
+                        item = item,
+                        isSelected = selectedItemId == item.id,
+                        onClick = { onItemClick(item) }
+                    )
+                }
 
-            item {
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-            }
+                item {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                }
 
-            // Group 3 Items
-            val group3 = navigationMenuItems.filter { it.group == 3 }
-            items(group3) { item ->
-                NavigationDrawerItemRow(
-                    item = item,
-                    isSelected = selectedItemId == item.id,
-                    onClick = { onItemClick(item) }
-                )
+                // Group 3 Items
+                val group3 = navigationMenuItems.filter { it.group == 3 }
+                items(group3) { item ->
+                    NavigationDrawerItemRow(
+                        item = item,
+                        isSelected = selectedItemId == item.id,
+                        onClick = { onItemClick(item) }
+                    )
+                }
             }
         }
     }
@@ -213,10 +194,7 @@ fun NavigationMenuContent(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NavigationMenuPage(
-    wallets: List<WalletWithBalance> = emptyList(),
-    selectedWallet: WalletWithBalance? = null,
     selectedItemId: String? = null,
-    formatterConfig: MoneyFormatter.Config = MoneyFormatter.Config(),
     onReturnToMain: () -> Unit = {},
     onWalletSelect: (WalletWithBalance) -> Unit = {},
     onAddWallet: () -> Unit = {},
@@ -250,10 +228,7 @@ fun NavigationMenuPage(
     ) { paddingValues ->
         NavigationMenuContent(
             modifier = Modifier.padding(paddingValues),
-            wallets = wallets,
-            selectedWallet = selectedWallet,
             selectedItemId = selectedItemId,
-            formatterConfig = formatterConfig,
             onWalletSelect = onWalletSelect,
             onAddWallet = onAddWallet,
             onManageWallets = onManageWallets,
@@ -264,98 +239,7 @@ fun NavigationMenuPage(
 
 
 
-@Composable
-fun WalletProfileRow(
-    wallet: WalletWithBalance,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Surface(
-        onClick = onClick,
-        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else Color.Transparent,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                shape = CircleShape,
-                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.size(36.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = wallet.wallet.name.take(1).uppercase(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
 
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Text(
-                text = wallet.wallet.name,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f)
-            )
-
-            val formattedBalance = MoneyFormatter.format(
-                amount = wallet.currentBalance,
-                currencyCode = wallet.wallet.currency,
-                decimals = wallet.decimals
-            )
-
-            Text(
-                text = formattedBalance,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-    }
-}
-
-@Composable
-fun ActionProfileRow(
-    title: String,
-    icon: ImageVector,
-    onClick: () -> Unit
-) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
-            )
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-    }
-}
 
 @Composable
 private fun NavigationDrawerItemRow(

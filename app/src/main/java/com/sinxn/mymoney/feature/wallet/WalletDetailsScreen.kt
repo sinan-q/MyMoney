@@ -118,44 +118,26 @@ fun WalletDetailsScreen(
             )
 
             if (isWalletListExpanded) {
-                LazyColumn(
+                com.sinxn.mymoney.core.ui.components.WalletDropdownList(
+                    onWalletSelect = { w ->
+                        isWalletListExpanded = false
+                        if (w.wallet.id != wallet?.wallet?.id) {
+                            onNavigateToWallet(w.wallet.id)
+                        }
+                    },
+                    onAddWallet = {
+                        isWalletListExpanded = false
+                        onNavigateToWallet("new")
+                    },
+                    onManageWallets = {
+                        isWalletListExpanded = false
+                        onNavigateToSettings()
+                    },
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
                     contentPadding = PaddingValues(bottom = 80.dp)
-                ) {
-                    items(allWallets) { w ->
-                        com.sinxn.mymoney.core.ui.components.WalletProfileRow(
-                            wallet = w,
-                            isSelected = wallet?.wallet?.id == w.wallet.id,
-                            onClick = {
-                                isWalletListExpanded = false
-                                if (w.wallet.id != wallet?.wallet?.id) {
-                                    onNavigateToWallet(w.wallet.id)
-                                }
-                            }
-                        )
-                    }
-                    item {
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                        com.sinxn.mymoney.core.ui.components.ActionProfileRow(
-                            title = "New wallet",
-                            icon = Icons.Default.Add,
-                            onClick = {
-                                isWalletListExpanded = false
-                                onNavigateToWallet("new")
-                            }
-                        )
-                        com.sinxn.mymoney.core.ui.components.ActionProfileRow(
-                            title = "Manage wallets",
-                            icon = Icons.Default.Settings,
-                            onClick = {
-                                isWalletListExpanded = false
-                                onNavigateToSettings()
-                            }
-                        )
-                    }
-                }
+                )
             } else {
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     TransactionList(

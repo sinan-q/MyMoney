@@ -509,8 +509,6 @@ class MainActivity : ComponentActivity() {
                                 }
                             } else {
                                 com.sinxn.mymoney.core.ui.components.NavigationMenuPage(
-                                    wallets = allWallets,
-                                    selectedWallet = selectedWallet,
                                     selectedItemId = selectedItemId,
                                     onReturnToMain = {
                                         coroutineScope.launch { pagerState.animateScrollToPage(1) }
