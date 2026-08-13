@@ -334,6 +334,32 @@ class TransactionDetailsViewModel @Inject constructor(
         val activeWallet = lists.wallets.find { it.wallet.id == activeWalletId }
         val targetWallet = lists.wallets.find { it.wallet.id == targetWalletId }
         
+        val activeWalletIds = setOfNotNull(
+            transaction?.transaction?.walletId,
+            _editWalletId.value.takeIf { it.isNotEmpty() },
+            edit.e2.walletId.takeIf { it.isNotEmpty() },
+            targetWalletId
+        )
+
+        val selectedCatId = edit.e1.catId ?: transaction?.transaction?.categoryId
+        val selectedCat = lists.categories.find { it.id == selectedCatId }
+        val selectedParentId = selectedCat?.parentId
+        val baseActiveCatIds = setOfNotNull(selectedCatId, selectedParentId)
+        val activeCatIds = baseActiveCatIds + lists.categories.filter { !it.isArchived || it.id in baseActiveCatIds }.mapNotNull { it.parentId }
+
+        val selectedPlaceId = edit.e2.placeId ?: transaction?.transaction?.placeId
+        val selectedEventId = edit.e2.eventId ?: transaction?.transaction?.eventId
+        val activePeopleIds = edit.e2.people + people.map { it.id }.toSet()
+
+        val filteredWallets = lists.wallets
+            .filter { !it.wallet.isArchived || it.wallet.id in activeWalletIds }
+            .map { it.wallet }
+
+        val filteredCategories = lists.categories.filter { !it.isArchived || it.id in activeCatIds }
+        val filteredPlaces = lists.places.filter { !it.isArchived || it.id == selectedPlaceId }
+        val filteredEvents = lists.events.filter { !it.isArchived || it.id == selectedEventId }
+        val filteredPeople = lists.people.filter { !it.isArchived || it.id in activePeopleIds }
+
         // Final combine with edit states
         TransactionDetailsUiState(
             transaction = transaction,
@@ -345,15 +371,13 @@ class TransactionDetailsViewModel @Inject constructor(
             event = enriched.event,
             people = people,
             attachments = attachments,
-            availableWallets = lists.wallets
-                .filter { !it.wallet.isArchived || it.wallet.id == transaction?.transaction?.walletId }
-                .map { it.wallet },
-            availableCategories = lists.categories,
-            availableIncomeCategories = lists.categories.filter { it.type == CategoryType.INCOME },
-            availableExpenseCategories = lists.categories.filter { it.type == CategoryType.EXPENSE },
-            availablePlaces = lists.places,
-            availableEvents = lists.events,
-            availablePeople = lists.people,
+            availableWallets = filteredWallets,
+            availableCategories = filteredCategories,
+            availableIncomeCategories = filteredCategories.filter { it.type == CategoryType.INCOME },
+            availableExpenseCategories = filteredCategories.filter { it.type == CategoryType.EXPENSE },
+            availablePlaces = filteredPlaces,
+            availableEvents = filteredEvents,
+            availablePeople = filteredPeople,
             
             currencyCode = activeWallet?.wallet?.currency ?: "USD",
             currencySymbol = try {
