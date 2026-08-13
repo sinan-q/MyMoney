@@ -71,14 +71,11 @@ class MainActivity : ComponentActivity() {
                         
                         var isWalletListExpanded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
                         
-                        val walletId = currentBackStackEntry?.arguments?.getString("walletId") 
-                            ?: if (currentRoute.startsWith("wallet_details/")) currentBackStackEntry?.arguments?.getString("id") else null
+                        val currentWalletId by viewModel.currentWalletId.collectAsState()
                         
-                        val selectedWallet = if (walletId != null) {
-                            allWallets.find { it.wallet.id == walletId }
-                        } else {
-                            allWallets.firstOrNull { it.wallet.id == com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID } ?: allWallets.firstOrNull()
-                        }
+                        val selectedWallet = allWallets.find { it.wallet.id == currentWalletId }
+                            ?: allWallets.firstOrNull { it.wallet.id == com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID }
+                            ?: allWallets.firstOrNull()
                         
                         val selectedItemId = when {
                             currentRoute == "home" || currentRoute.startsWith("wallet_details") -> "transactions"
@@ -169,9 +166,10 @@ class MainActivity : ComponentActivity() {
                                     androidx.compose.foundation.layout.Box(modifier = Modifier.padding(paddingValues)) {
                                         NavHost(navController = navController, startDestination = startDest) {
                                             composable("home") {
-                                                // Redirect to total wallet details
+                                                // Redirect to current wallet details
                                                 androidx.compose.runtime.LaunchedEffect(Unit) {
-                                                    navController.navigate("wallet_details/${com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID}") {
+                                                    val targetWallet = if (currentWalletId.isEmpty()) com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID else currentWalletId
+                                                    navController.navigate("wallet_details/$targetWallet") {
                                                         popUpTo("home") { inclusive = true }
                                                     }
                                                 }
@@ -213,25 +211,14 @@ class MainActivity : ComponentActivity() {
                                     onNavigateBack = { navController.navigateUp() }
                                 )
                             }
-                            composable(
-                                "debts?walletId={walletId}",
-                                arguments = listOf(
-                                    androidx.navigation.navArgument("walletId") {
-                                        type = androidx.navigation.NavType.StringType
-                                        nullable = true
-                                        defaultValue = null
-                                    }
-                                )
-                            ) { backStackEntry ->
-                                val walletId = backStackEntry.arguments?.getString("walletId")
+                            composable("debts") { backStackEntry ->
                                 com.sinxn.mymoney.feature.debt.DebtListScreen(
                                     onNavigateUp = { navController.navigateUp() },
                                     onDebtClick = { debtId ->
                                         navController.navigate("debt_details/$debtId")
                                     },
                                     onAddDebt = { type ->
-                                        val addRoute = if (!walletId.isNullOrBlank()) "debt_details/new?type=$type&walletId=$walletId" else "debt_details/new?type=$type"
-                                        navController.navigate(addRoute)
+                                        navController.navigate("debt_details/new?type=$type")
                                     },
                                     onNavigateMenuItem = { itemId ->
                                         com.sinxn.mymoney.core.ui.components.handleSidebarNavigation(
@@ -250,24 +237,19 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             composable(
-                                "debt_details/{debtId}?type={type}&walletId={walletId}",
+                                "debt_details/{debtId}?type={type}",
                                 arguments = listOf(
                                     androidx.navigation.navArgument("debtId") { type = androidx.navigation.NavType.StringType },
                                     androidx.navigation.navArgument("type") {
                                         type = androidx.navigation.NavType.IntType
                                         defaultValue = 0
-                                    },
-                                    androidx.navigation.navArgument("walletId") {
-                                        type = androidx.navigation.NavType.StringType
-                                        nullable = true
-                                        defaultValue = null
                                     }
                                 )
                             ) {
                                 com.sinxn.mymoney.feature.debt.DebtDetailsScreen(
                                     onNavigateBack = { navController.navigateUp() },
-                                    onRecordPayment = { debtId, walletId, debtAction ->
-                                        navController.navigate("transaction_details/new?walletId=$walletId&debtId=$debtId&debtAction=$debtAction")
+                                    onRecordPayment = { debtId, _, debtAction ->
+                                        navController.navigate("transaction_details/new?debtId=$debtId&debtAction=$debtAction")
                                     }
                                 )
                             }
@@ -308,24 +290,20 @@ class MainActivity : ComponentActivity() {
                                     onAddTransaction = {
                                         navController.navigate("transaction_details/new")
                                     },
-                                    onNavigateToDebts = { walletId ->
-                                        val route = if (!walletId.isNullOrBlank()) "debts?walletId=$walletId" else "debts"
-                                        navController.navigate(route)
+                                    onNavigateToDebts = { _ ->
+                                        navController.navigate("debts")
                                     },
-                                    onAddDebt = { walletId, type ->
-                                        val route = if (!walletId.isNullOrBlank()) "debt_details/new?type=$type&walletId=$walletId" else "debt_details/new?type=$type"
-                                        navController.navigate(route)
+                                    onAddDebt = { _, type ->
+                                        navController.navigate("debt_details/new?type=$type")
                                     },
                                     onDebtClick = { debtId ->
                                         navController.navigate("debt_details/$debtId")
                                     },
-                                    onNavigateToBudgets = { walletId ->
-                                        val route = if (!walletId.isNullOrBlank()) "budgets?walletId=$walletId" else "budgets"
-                                        navController.navigate(route)
+                                    onNavigateToBudgets = { _ ->
+                                        navController.navigate("budgets")
                                     },
-                                    onNavigateToSavings = { walletId ->
-                                        val route = if (!walletId.isNullOrBlank()) "savings?walletId=$walletId" else "savings"
-                                        navController.navigate(route)
+                                    onNavigateToSavings = { _ ->
+                                        navController.navigate("savings")
                                     },
                                     onNavigateToWallet = { walletId ->
                                         navController.navigate("wallet_details/$walletId")
@@ -344,7 +322,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             composable(
-                                "transaction_details/{transactionId}?savingId={savingId}&action={action}&walletId={walletId}&debtId={debtId}&debtAction={debtAction}",
+                                "transaction_details/{transactionId}?savingId={savingId}&action={action}&debtId={debtId}&debtAction={debtAction}",
                                 arguments = listOf(
                                     androidx.navigation.navArgument("transactionId") { type = androidx.navigation.NavType.StringType },
                                     androidx.navigation.navArgument("savingId") {
@@ -353,11 +331,6 @@ class MainActivity : ComponentActivity() {
                                         defaultValue = null
                                     },
                                     androidx.navigation.navArgument("action") {
-                                        type = androidx.navigation.NavType.StringType
-                                        nullable = true
-                                        defaultValue = null
-                                    },
-                                    androidx.navigation.navArgument("walletId") {
                                         type = androidx.navigation.NavType.StringType
                                         nullable = true
                                         defaultValue = null
@@ -381,16 +354,7 @@ class MainActivity : ComponentActivity() {
                                     onNavigateBack = { navController.navigateUp() }
                                 )
                             }
-                            composable(
-                                "budgets?walletId={walletId}",
-                                arguments = listOf(
-                                    androidx.navigation.navArgument("walletId") {
-                                        type = androidx.navigation.NavType.StringType
-                                        nullable = true
-                                        defaultValue = null
-                                    }
-                                )
-                            ) { backStackEntry ->
+                            composable("budgets") { backStackEntry ->
                                 com.sinxn.mymoney.feature.budget.BudgetListScreen(
                                     onNavigateUp = { navController.navigateUp() },
                                     onBudgetClick = { budgetId ->
@@ -445,16 +409,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
-                            composable(
-                                "savings?walletId={walletId}",
-                                arguments = listOf(
-                                    androidx.navigation.navArgument("walletId") {
-                                        type = androidx.navigation.NavType.StringType
-                                        nullable = true
-                                        defaultValue = null
-                                    }
-                                )
-                            ) { backStackEntry ->
+                            composable("savings") { backStackEntry ->
                                 com.sinxn.mymoney.feature.saving.SavingListScreen(
                                     onNavigateUp = { navController.navigateUp() },
                                     onSavingClick = { savingId ->
@@ -550,7 +505,7 @@ class MainActivity : ComponentActivity() {
                             } else {
                                 com.sinxn.mymoney.core.ui.components.NavigationMenuPage(
                                     wallets = allWallets,
-                                    selectedWallet = null,
+                                    selectedWallet = selectedWallet,
                                     selectedItemId = selectedItemId,
                                     onReturnToMain = {
                                         coroutineScope.launch { pagerState.animateScrollToPage(1) }
@@ -573,6 +528,7 @@ class MainActivity : ComponentActivity() {
                                             context = this@MainActivity,
                                             navController = navController,
                                             itemId = item.id,
+                                            currentWalletId = currentWalletId,
                                             currentRoute = currentRoute
                                         )
                                     }

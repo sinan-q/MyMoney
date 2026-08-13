@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -66,7 +67,6 @@ class DebtDetailsViewModel @Inject constructor(
 
     private val debtId: String = savedStateHandle.get<String>("debtId") ?: "new"
     private val initialType: Int = savedStateHandle.get<Int>("type") ?: 0
-    private val initialWalletId: String? = savedStateHandle.get<String>("walletId")
     private val isNewDebt = debtId == "new"
 
     private val _isEditMode = MutableStateFlow(isNewDebt)
@@ -76,7 +76,7 @@ class DebtDetailsViewModel @Inject constructor(
     private val _editType = MutableStateFlow(initialType)
     private val _editDescription = MutableStateFlow("")
     private val _editAmount = MutableStateFlow("")
-    private val _editWalletId = MutableStateFlow(if (initialWalletId != null && initialWalletId != "total") initialWalletId else "")
+    private val _editWalletId = MutableStateFlow("")
     private val _editPlaceId = MutableStateFlow<String?>(null)
     private val _editDate = MutableStateFlow(DateUtils.getSQLDateTimeString(Date()))
     private val _editExpirationDate = MutableStateFlow<String?>(null)
@@ -84,6 +84,17 @@ class DebtDetailsViewModel @Inject constructor(
     private val _editNote = MutableStateFlow("")
     private val _editPeopleIds = MutableStateFlow<Set<String>>(emptySet())
     private val _editInsertMasterTransaction = MutableStateFlow(true)
+
+    init {
+        if (isNewDebt) {
+            viewModelScope.launch {
+                val currentWId = settingsRepository.currentWalletId.first()
+                if (currentWId != com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID) {
+                    _editWalletId.value = currentWId
+                }
+            }
+        }
+    }
 
     private val debtDetailsFlow = if (isNewDebt) {
         flowOf(null)

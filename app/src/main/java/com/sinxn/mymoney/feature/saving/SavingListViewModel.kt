@@ -1,12 +1,12 @@
 package com.sinxn.mymoney.feature.saving
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.sinxn.mymoney.core.data.local.model.SavingWithDetails
-import com.sinxn.mymoney.core.data.repository.SavingRepository
 import com.sinxn.mymoney.core.data.local.dao.MoneyDao
+import com.sinxn.mymoney.core.data.local.model.SavingWithDetails
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
+import com.sinxn.mymoney.core.data.preferences.SettingsRepository
+import com.sinxn.mymoney.core.data.repository.SavingRepository
 import com.sinxn.mymoney.core.util.DateUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -31,7 +31,7 @@ data class SavingListUiState(
 class SavingListViewModel @Inject constructor(
     private val savingRepository: SavingRepository,
     private val moneyDao: MoneyDao,
-    savedStateHandle: SavedStateHandle
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     val allWallets: StateFlow<List<WalletWithBalance>> = moneyDao.getWalletsWithBalance(DateUtils.getSQLDateTimeString(java.util.Date()))
@@ -41,24 +41,24 @@ class SavingListViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    val initialWalletId: String? = savedStateHandle.get<String>("walletId")
     private val _selectedTab = MutableStateFlow(0)
-    private val _walletIdFlow = MutableStateFlow(initialWalletId)
 
-    private val savingsFlow = combine(_selectedTab, _walletIdFlow) { tab, wId ->
+    private val savingsFlow = combine(_selectedTab, settingsRepository.currentWalletId) { tab, wId ->
         Pair(tab, wId)
     }.flatMapLatest { (tab, wId) ->
-        savingRepository.getSavings(walletId = wId, isComplete = (tab == 1))
+        val actualWId = if (wId == "total") null else wId
+        savingRepository.getSavings(walletId = actualWId, isComplete = (tab == 1))
     }
 
     val uiState: StateFlow<SavingListUiState> = combine(
         _selectedTab,
-        _walletIdFlow,
+        settingsRepository.currentWalletId,
         savingsFlow
     ) { tab, wId, list ->
+        val actualWId = if (wId == "total") null else wId
         SavingListUiState(
             selectedTab = tab,
-            filterWalletId = wId,
+            filterWalletId = actualWId,
             savings = list,
             isLoading = false
         )
@@ -70,10 +70,6 @@ class SavingListViewModel @Inject constructor(
 
     fun setSelectedTab(tab: Int) {
         _selectedTab.value = tab
-    }
-
-    fun setWalletId(wId: String?) {
-        _walletIdFlow.value = wId
     }
 
     fun toggleComplete(savingId: String, currentComplete: Boolean) {

@@ -37,8 +37,7 @@ data class DebtListUiState(
 class DebtListViewModel @Inject constructor(
     private val debtRepository: DebtRepository,
     private val settingsRepository: SettingsRepository,
-    private val moneyDao: MoneyDao,
-    savedStateHandle: SavedStateHandle
+    private val moneyDao: MoneyDao
 ) : ViewModel() {
 
     val allWallets: StateFlow<List<WalletWithBalance>> = moneyDao.getWalletsWithBalance(DateUtils.getSQLDateTimeString(java.util.Date()))
@@ -48,30 +47,29 @@ class DebtListViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    val walletId: String? = savedStateHandle.get<String>("walletId")
-
     private val _selectedTab = MutableStateFlow(0)
     private val _includeArchived = MutableStateFlow(false)
-    private val _walletIdFlow = MutableStateFlow(walletId)
 
-    private val debtsFlow = combine(_selectedTab, _includeArchived, _walletIdFlow) { tab, archived, wId ->
+    private val debtsFlow = combine(_selectedTab, _includeArchived, settingsRepository.currentWalletId) { tab, archived, wId ->
         Triple(tab, archived, wId)
     }.flatMapLatest { (tab, archived, wId) ->
-        debtRepository.getDebts(type = tab, includeArchived = archived, walletId = wId)
+        val actualWId = if (wId == "total") null else wId
+        debtRepository.getDebts(type = tab, includeArchived = archived, walletId = actualWId)
     }
 
     val uiState: StateFlow<DebtListUiState> = combine(
         _selectedTab,
         _includeArchived,
-        _walletIdFlow,
+        settingsRepository.currentWalletId,
         debtsFlow,
         settingsRepository.formattingSettings
     ) { tab, archived, wId, debtsList, formatting ->
         val total = debtsList.sumOf { it.remainingMoney }
+        val actualWId = if (wId == "total") null else wId
         DebtListUiState(
             selectedTab = tab,
             includeArchived = archived,
-            filterWalletId = wId,
+            filterWalletId = actualWId,
             debts = debtsList,
             totalRemainingMoney = total,
             isLoading = false,
@@ -84,10 +82,6 @@ class DebtListViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = DebtListUiState()
     )
-
-    fun setWalletId(wId: String?) {
-        _walletIdFlow.value = wId
-    }
 
     fun setSelectedTab(tab: Int) {
         _selectedTab.value = tab

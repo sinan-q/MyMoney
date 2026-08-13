@@ -129,12 +129,8 @@ class TransactionDetailsViewModel @Inject constructor(
         val savingActionArg: String? = savedStateHandle.get<String>("action")
         val debtIdArg: String? = savedStateHandle.get<String>("debtId")
         val debtActionArg: String? = savedStateHandle.get<String>("debtAction")
-        val walletIdArg: String? = savedStateHandle.get<String>("walletId")
 
         if (isNewTransaction) {
-            if (!walletIdArg.isNullOrBlank()) {
-                _editWalletId.value = walletIdArg
-            }
 
             if (!savingIdArg.isNullOrBlank()) {
                 _savingId.value = savingIdArg

@@ -46,6 +46,13 @@ class MainViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
+    val currentWalletId: StateFlow<String> = settingsRepository.currentWalletId
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID
+        )
+
     val formattingSettings: StateFlow<com.sinxn.mymoney.core.data.preferences.FormattingSettings> = settingsRepository.formattingSettings
         .stateIn(
             scope = viewModelScope,

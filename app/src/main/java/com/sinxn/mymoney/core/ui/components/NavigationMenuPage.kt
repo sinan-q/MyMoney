@@ -401,12 +401,14 @@ fun handleSidebarNavigation(
     context: android.content.Context,
     navController: androidx.navigation.NavController,
     itemId: String,
+    currentWalletId: String = com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID,
     currentRoute: String? = null,
     onLocalSectionSelect: ((String) -> Unit)? = null
 ) {
     when (itemId) {
         "transactions" -> {
-            navController.navigate("wallet_details/${com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID}") {
+            val targetWallet = if (currentWalletId.isEmpty()) com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID else currentWalletId
+            navController.navigate("wallet_details/$targetWallet") {
                 popUpTo(navController.graph.startDestinationId) { saveState = true }
                 launchSingleTop = true
                 restoreState = true
