@@ -60,7 +60,15 @@ fun EditTransactionFormOptions(
                 val activeWallet = uiState.availableWallets.find { it.id == uiState.editWalletId }
                 CleanListRow(
                     icon = {
-                        Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
+                        if (activeWallet != null) {
+                            CategoryIcon(
+                                iconString = activeWallet.icon,
+                                categoryName = activeWallet.name,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        } else {
+                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
+                        }
                     },
                     label = "Wallet",
                     value = activeWallet?.name ?: "Select Wallet",

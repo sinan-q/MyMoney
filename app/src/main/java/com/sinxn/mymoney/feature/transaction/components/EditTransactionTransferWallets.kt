@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.sinxn.mymoney.core.data.local.entity.WalletEntity
+import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.feature.transaction.TransactionDetailsUiState
 
 @Composable
@@ -45,7 +46,15 @@ fun EditTransactionTransferWallets(
     ) {
         CleanListRow(
             icon = {
-                Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
+                if (activeFromWallet != null) {
+                    CategoryIcon(
+                        iconString = activeFromWallet.icon,
+                        categoryName = activeFromWallet.name,
+                        modifier = Modifier.size(24.dp)
+                    )
+                } else {
+                    Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
+                }
             },
             label = "From Wallet",
             value = activeFromWallet?.name ?: uiState.walletName.ifEmpty { "Select Source Wallet" },
@@ -99,7 +108,15 @@ fun EditTransactionTransferWallets(
     ) {
         CleanListRow(
             icon = {
-                Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
+                if (activeToWallet != null) {
+                    CategoryIcon(
+                        iconString = activeToWallet.icon,
+                        categoryName = activeToWallet.name,
+                        modifier = Modifier.size(24.dp)
+                    )
+                } else {
+                    Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
+                }
             },
             label = "To Wallet",
             value = activeToWallet?.name ?: uiState.targetWalletName.ifEmpty { "Select Target Wallet" },
