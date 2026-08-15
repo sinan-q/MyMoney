@@ -1,15 +1,22 @@
 package com.sinxn.mymoney.feature.debt
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -30,12 +37,18 @@ import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -46,14 +59,17 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.model.DebtWithDetails
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
+import com.sinxn.mymoney.core.ui.components.NumpadView
 import com.sinxn.mymoney.core.ui.components.PeopleSelectionDialog
 import com.sinxn.mymoney.core.ui.components.PlaceSelectionDialog
+import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.ui.components.WalletSelectionDialog
 import com.sinxn.mymoney.core.ui.components.groupTransactionsByMonth
 import com.sinxn.mymoney.core.ui.components.monthGroupedTransactionItems
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.feature.transaction.components.CleanListRow
+import com.sinxn.mymoney.feature.transaction.components.EditTransactionAmountHeader
 import com.sinxn.mymoney.feature.transaction.components.TransactionCardContainer
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -72,13 +88,51 @@ fun DebtDetailsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val formatterConfig = uiState.formatterConfig
-
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     val isDebt = if (uiState.isEditMode || uiState.isNewDebt) uiState.editType == 0
     else (uiState.debtDetails?.debt?.type ?: 0) == 0
 
     val accentColor = if (isDebt) DebtRoseColor else CreditEmeraldColor
+
+    val hasOperatorInAmount = remember(uiState.editAmount) {
+        val amountStr = uiState.editAmount.trim()
+        val rest = if (amountStr.startsWith("-")) amountStr.substring(1) else amountStr
+        rest.contains("+") || rest.contains("-") || rest.contains("×") || rest.contains("÷")
+    }
+
+    val evaluatedAmountStr = remember(uiState.editAmount) {
+        viewModel.getImmediateResult(uiState.editAmount)
+    }
+    val amountValue = remember(evaluatedAmountStr) {
+        evaluatedAmountStr.toDoubleOrNull()
+    }
+    val selectedWallet = uiState.availableWallets.find { it.id == uiState.editWalletId }
+    var isNumpadVisible by remember(uiState.isNewDebt) { mutableStateOf(uiState.isNewDebt) }
+
+    val formCurrency = remember(selectedWallet, uiState.currencyCode) {
+        MoneyFormatter.getCurrencySymbol(selectedWallet?.currency ?: uiState.currencyCode)
+    }
+
+    val isSaveEnabled = uiState.editDescription.isNotBlank() &&
+            (amountValue != null && amountValue > 0.0) &&
+            uiState.editWalletId.isNotBlank() &&
+            !uiState.isSaving
+
+    val actionBtnText = if (uiState.isNewDebt) {
+        if (uiState.editType == 0) "Save Debt" else "Save Credit"
+    } else {
+        "Save Changes"
+    }
+
+    val dismissKeyboardAndNumpad = {
+        focusManager.clearFocus()
+        keyboardController?.hide()
+        isNumpadVisible = false
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -176,21 +230,128 @@ fun DebtDetailsScreen(
                     CircularProgressIndicator()
                 }
             } else if (uiState.isEditMode || uiState.isNewDebt) {
-                DebtFormContent(
-                    uiState = uiState,
-                    accentColor = accentColor,
-                    onTypeChange = viewModel::updateType,
-                    onDescriptionChange = viewModel::updateDescription,
-                    onAmountChange = viewModel::updateAmount,
-                    onWalletChange = viewModel::updateWalletId,
-                    onPlaceChange = viewModel::updatePlaceId,
-                    onDateChange = viewModel::updateDate,
-                    onExpirationDateChange = viewModel::updateExpirationDate,
-                    onNoteChange = viewModel::updateNote,
-                    onPersonToggle = viewModel::togglePersonSelection,
-                    onInsertMasterTxChange = viewModel::updateInsertMasterTransaction,
-                    onSave = { viewModel.saveDebt { onNavigateBack() } }
-                )
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                            .padding(bottom = 16.dp)
+                    ) {
+                        if (uiState.isNewDebt) {
+                            TabPill(
+                                tabs = listOf("Debt" to DebtRoseColor, "Credit" to CreditEmeraldColor),
+                                activeTab = uiState.editType,
+                                onTabChange = viewModel::updateType
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
+
+                        EditTransactionAmountHeader(
+                            amountText = uiState.editAmount,
+                            currencySymbol = formCurrency,
+                            evaluatedResult = evaluatedAmountStr,
+                            hasOperatorInAmount = hasOperatorInAmount,
+                            accentColor = accentColor,
+                            isNumpadVisible = isNumpadVisible,
+                            onHeaderClick = {
+                                focusManager.clearFocus()
+                                keyboardController?.hide()
+                                isNumpadVisible = true
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        DebtFormContent(
+                            uiState = uiState,
+                            accentColor = accentColor,
+                            focusRequester = focusRequester,
+                            onDescriptionChange = viewModel::updateDescription,
+                            onWalletChange = viewModel::updateWalletId,
+                            onPlaceChange = viewModel::updatePlaceId,
+                            onDateChange = viewModel::updateDate,
+                            onExpirationDateChange = viewModel::updateExpirationDate,
+                            onNoteChange = viewModel::updateNote,
+                            onPersonToggle = viewModel::togglePersonSelection,
+                            onInsertMasterTxChange = viewModel::updateInsertMasterTransaction,
+                            onFocusField = { isNumpadVisible = false },
+                            onDismissKeyboardAndNumpad = dismissKeyboardAndNumpad
+                        )
+                    }
+
+                    // Docked Bottom Bar (Numpad or Save Button)
+                    Surface(
+                        tonalElevation = 6.dp,
+                        shadowElevation = 8.dp,
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                    ) {
+                        Column {
+                            AnimatedVisibility(
+                                visible = isNumpadVisible,
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically()
+                            ) {
+                                NumpadView(
+                                    onKeyPress = viewModel::onNumpadKeyPress,
+                                    onEvaluate = viewModel::evaluateMathExpression,
+                                    onSave = {
+                                        dismissKeyboardAndNumpad()
+                                        viewModel.saveDebt { onNavigateBack() }
+                                    },
+                                    onNext = {
+                                        isNumpadVisible = false
+                                        focusRequester.requestFocus()
+                                        keyboardController?.show()
+                                    },
+                                    hasOperatorInAmount = hasOperatorInAmount,
+                                    saveButtonText = actionBtnText,
+                                    saveButtonColor = accentColor,
+                                    isSaving = uiState.isSaving,
+                                    isSaveEnabled = isSaveEnabled
+                                )
+                            }
+
+                            if (!isNumpadVisible) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 20.dp, vertical = 10.dp)
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            dismissKeyboardAndNumpad()
+                                            viewModel.saveDebt { onNavigateBack() }
+                                        },
+                                        enabled = isSaveEnabled,
+                                        shape = RoundedCornerShape(20.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = accentColor,
+                                            contentColor = Color.White
+                                        ),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(54.dp)
+                                    ) {
+                                        if (uiState.isSaving) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(22.dp),
+                                                color = Color.White,
+                                                strokeWidth = 2.dp
+                                            )
+                                        } else {
+                                            Text(
+                                                text = actionBtnText,
+                                                fontSize = 17.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             } else {
                 val debtDetails = uiState.debtDetails
                 if (debtDetails != null) {
@@ -215,6 +376,7 @@ fun DebtDetailsScreen(
             }
         }
     }
+
 }
 
 @Composable
@@ -369,9 +531,9 @@ private fun DebtViewContent(
                             LinearProgressIndicator(
                                 progress = { progressFraction },
                                 modifier = Modifier
-                                .fillMaxWidth()
-                                .height(8.dp)
-                                .clip(CircleShape),
+                                    .fillMaxWidth()
+                                    .height(8.dp)
+                                    .clip(CircleShape),
                                 color = if (isFullyPaid) MaterialTheme.colorScheme.primary else accentColor,
                                 trackColor = MaterialTheme.colorScheme.surfaceVariant
                             )
@@ -616,9 +778,8 @@ private fun DebtViewContent(
 private fun DebtFormContent(
     uiState: DebtDetailsUiState,
     accentColor: Color,
-    onTypeChange: (Int) -> Unit,
+    focusRequester: FocusRequester,
     onDescriptionChange: (String) -> Unit,
-    onAmountChange: (String) -> Unit,
     onWalletChange: (String) -> Unit,
     onPlaceChange: (String?) -> Unit,
     onDateChange: (String) -> Unit,
@@ -626,7 +787,8 @@ private fun DebtFormContent(
     onNoteChange: (String) -> Unit,
     onPersonToggle: (String) -> Unit,
     onInsertMasterTxChange: (Boolean) -> Unit,
-    onSave: () -> Unit
+    onFocusField: () -> Unit,
+    onDismissKeyboardAndNumpad: () -> Unit
 ) {
     var showWalletPicker by remember { mutableStateOf(false) }
     var showPlacePicker by remember { mutableStateOf(false) }
@@ -636,249 +798,171 @@ private fun DebtFormContent(
 
     val selectedWallet = uiState.availableWallets.find { it.id == uiState.editWalletId }
     val selectedPlace = uiState.availablePlaces.find { it.id == uiState.editPlaceId }
-    val formCurrency = selectedWallet?.currency ?: uiState.currencyCode
 
-    val isSaveEnabled = uiState.editDescription.isNotBlank() &&
-            (uiState.editAmount.toDoubleOrNull() ?: 0.0) > 0 &&
-            uiState.editWalletId.isNotBlank() &&
-            !uiState.isSaving
-
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 48.dp),
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Mode Selector Tab Pill
-        item {
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                DebtFormTabPill(
-                    selectedTab = uiState.editType,
-                    onTabSelected = onTypeChange
+        // Description Input Card
+        OutlinedTextField(
+            value = uiState.editDescription,
+            onValueChange = onDescriptionChange,
+            label = { Text("Description") },
+            placeholder = { Text("e.g. Lunch with team, Loan for car...") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester)
+                .onFocusChanged { focusState ->
+                    if (focusState.isFocused) {
+                        onFocusField()
+                    }
+                },
+            shape = RoundedCornerShape(16.dp),
+            singleLine = true
+        )
+
+        // Form Fields (Wallet, Dates, People, Place)
+        TransactionCardContainer(horizontalPadding = 0.dp) {
+            Column {
+                // Wallet Selector Row
+                CleanListRow(
+                    icon = { Icon(Icons.Default.Wallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
+                    label = "Associated Wallet",
+                    value = selectedWallet?.name ?: "Select Wallet",
+                    onClick = {
+                        onDismissKeyboardAndNumpad()
+                        showWalletPicker = true
+                    }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                // Creation Date Row
+                CleanListRow(
+                    icon = { Icon(Icons.Default.Event, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
+                    label = "Date",
+                    value = uiState.editDate.take(10),
+                    onClick = {
+                        onDismissKeyboardAndNumpad()
+                        showDatePicker = true
+                    }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                // Expiration / Due Date Row
+                CleanListRow(
+                    icon = { Icon(Icons.Default.Event, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
+                    label = "Due Date (Optional)",
+                    value = uiState.editExpirationDate?.take(10) ?: "Not Set",
+                    onClick = {
+                        onDismissKeyboardAndNumpad()
+                        showExpDatePicker = true
+                    },
+                    trailingBadge = if (!uiState.editExpirationDate.isNullOrBlank()) {
+                        {
+                            IconButton(
+                                onClick = { onExpirationDateChange(null) },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear Due Date", modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    } else null
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                // Linked People Row
+                val linkedPeopleNames = uiState.availablePeople
+                    .filter { uiState.editPeopleIds.contains(it.id) }
+                    .joinToString(", ") { it.name }
+
+                CleanListRow(
+                    icon = { Icon(Icons.Default.Person, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
+                    label = "Linked People",
+                    value = if (linkedPeopleNames.isNotBlank()) linkedPeopleNames else "None Selected",
+                    onClick = {
+                        onDismissKeyboardAndNumpad()
+                        showPeoplePicker = true
+                    }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                // Linked Place Row
+                CleanListRow(
+                    icon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
+                    label = "Place",
+                    value = selectedPlace?.name ?: "None",
+                    onClick = {
+                        onDismissKeyboardAndNumpad()
+                        showPlacePicker = true
+                    }
                 )
             }
         }
 
-        // Amount Input Card
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-                border = BorderStroke(1.dp, accentColor.copy(alpha = 0.25f))
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "Total Amount",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = formCurrency,
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = accentColor
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        OutlinedTextField(
-                            value = uiState.editAmount,
-                            onValueChange = onAmountChange,
-                            placeholder = { Text("0.00", fontSize = 36.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)) },
-                            textStyle = LocalTextStyle.current.copy(
-                                fontSize = 36.sp,
-                                fontWeight = FontWeight.Black,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                textAlign = TextAlign.Start
-                            ),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color.Transparent,
-                                unfocusedBorderColor = Color.Transparent
-                            ),
-                            modifier = Modifier.width(IntrinsicSize.Min)
-                        )
-                    }
-                }
-            }
-        }
-
-        // Description Input Card
-        item {
-            OutlinedTextField(
-                value = uiState.editDescription,
-                onValueChange = onDescriptionChange,
-                label = { Text("Description") },
-                placeholder = { Text("e.g. Lunch with team, Loan for car...") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                singleLine = true
-            )
-        }
-
-        // Form Fields (Wallet, Dates, People, Place)
-        item {
-            TransactionCardContainer(horizontalPadding = 0.dp) {
-                Column {
-                    // Wallet Selector Row
-                    CleanListRow(
-                        icon = { Icon(Icons.Default.Wallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
-                        label = "Associated Wallet",
-                        value = selectedWallet?.name ?: "Select Wallet",
-                        onClick = { showWalletPicker = true }
-                    )
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
-
-                    // Creation Date Row
-                    CleanListRow(
-                        icon = { Icon(Icons.Default.Event, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
-                        label = "Date",
-                        value = uiState.editDate.take(10),
-                        onClick = { showDatePicker = true }
-                    )
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
-
-                    // Expiration / Due Date Row
-                    CleanListRow(
-                        icon = { Icon(Icons.Default.Event, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
-                        label = "Due Date (Optional)",
-                        value = uiState.editExpirationDate?.take(10) ?: "Not Set",
-                        onClick = { showExpDatePicker = true },
-                        trailingBadge = if (!uiState.editExpirationDate.isNullOrBlank()) {
-                            {
-                                IconButton(
-                                    onClick = { onExpirationDateChange(null) },
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(Icons.Default.Close, contentDescription = "Clear Due Date", modifier = Modifier.size(16.dp))
-                                }
-                            }
-                        } else null
-                    )
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
-
-                    // Linked People Row
-                    val linkedPeopleNames = uiState.availablePeople
-                        .filter { uiState.editPeopleIds.contains(it.id) }
-                        .joinToString(", ") { it.name }
-
-                    CleanListRow(
-                        icon = { Icon(Icons.Default.Person, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
-                        label = "Linked People",
-                        value = if (linkedPeopleNames.isNotBlank()) linkedPeopleNames else "None Selected",
-                        onClick = { showPeoplePicker = true }
-                    )
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
-
-                    // Linked Place Row
-                    CleanListRow(
-                        icon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
-                        label = "Place",
-                        value = selectedPlace?.name ?: "None",
-                        onClick = { showPlacePicker = true }
-                    )
-                }
-            }
-        }
-
         // Note Input Card
-        item {
-            OutlinedTextField(
-                value = uiState.editNote,
-                onValueChange = onNoteChange,
-                label = { Text("Note (Optional)") },
-                placeholder = { Text("Additional notes...") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                minLines = 3
-            )
-        }
+        OutlinedTextField(
+            value = uiState.editNote,
+            onValueChange = onNoteChange,
+            label = { Text("Note (Optional)") },
+            placeholder = { Text("Additional notes...") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { focusState ->
+                    if (focusState.isFocused) {
+                        onFocusField()
+                    }
+                },
+            shape = RoundedCornerShape(16.dp),
+            minLines = 3
+        )
 
         // Initial Master Transaction Toggle (Only for new debt)
         if (uiState.isNewDebt) {
-            item {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        onDismissKeyboardAndNumpad()
+                        onInsertMasterTxChange(!uiState.editInsertMasterTransaction)
+                    }
+            ) {
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onInsertMasterTxChange(!uiState.editInsertMasterTransaction) }
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Switch(
-                            checked = uiState.editInsertMasterTransaction,
-                            onCheckedChange = onInsertMasterTxChange
-                        )
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Create Initial Wallet Transaction",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = if (uiState.editType == 0) "Adds income transaction when borrowing money"
-                                else "Adds expense transaction when lending money",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                    Switch(
+                        checked = uiState.editInsertMasterTransaction,
+                        onCheckedChange = {
+                            onDismissKeyboardAndNumpad()
+                            onInsertMasterTxChange(it)
                         }
+                    )
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Create Initial Wallet Transaction",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = if (uiState.editType == 0) "Adds income transaction when borrowing money"
+                            else "Adds expense transaction when lending money",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                }
-            }
-        }
-
-        // Save Button
-        item {
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(
-                onClick = onSave,
-                enabled = isSaveEnabled,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = accentColor,
-                    contentColor = Color.White
-                ),
-                contentPadding = PaddingValues(vertical = 14.dp)
-            ) {
-                if (uiState.isSaving) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(22.dp),
-                        color = Color.White,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Text(
-                        text = if (uiState.isNewDebt) {
-                            if (uiState.editType == 0) "Save Debt" else "Save Credit"
-                        } else "Save Changes",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
                 }
             }
         }
@@ -958,69 +1042,3 @@ private fun DebtFormContent(
     }
 }
 
-@Composable
-private fun DebtFormTabPill(
-    selectedTab: Int,
-    onTabSelected: (Int) -> Unit
-) {
-    val tabs = listOf(
-        Triple("I Owe (Debt)", Icons.Default.ArrowDownward, DebtRoseColor),
-        Triple("Owed to Me (Credit)", Icons.Default.ArrowUpward, CreditEmeraldColor)
-    )
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(44.dp)
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                shape = CircleShape
-            )
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        tabs.forEachIndexed { index, (title, icon, accent) ->
-            val isSelected = selectedTab == index
-            val bgColor by animateColorAsState(
-                targetValue = if (isSelected) accent else Color.Transparent,
-                label = "FormTabBg_$index"
-            )
-            val textColor by animateColorAsState(
-                targetValue = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                label = "FormTabText_$index"
-            )
-
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .clip(CircleShape)
-                    .background(bgColor)
-                    .clickable { onTabSelected(index) }
-                    .padding(horizontal = 8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = textColor,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = textColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-        }
-    }
-}

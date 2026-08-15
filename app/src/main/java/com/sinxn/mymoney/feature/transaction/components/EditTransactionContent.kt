@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.ui.components.NumpadView
+import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.util.Direction
 import com.sinxn.mymoney.feature.transaction.TransactionDetailsUiState
 import com.sinxn.mymoney.feature.transaction.TransactionDetailsViewModel
@@ -98,9 +99,12 @@ fun EditTransactionContent(
         ) {
             // Mode Switcher (Transaction vs Transfer)
             if (uiState.isNewTransaction) {
-                TransactionTransferSegmentedControl(
-                    isTransfer = uiState.isTransfer,
-                    onModeChange = viewModel::onTransferToggle
+                TabPill(
+                    tabs = listOf("Transaction" to accentColor, "Transfer" to Color(0xFF0284C7)),
+                    activeTab = if (uiState.isTransfer) 1 else 0,
+                    onTabChange = { index ->
+                        viewModel.onTransferToggle(index == 1)
+                    }
                 )
                 Spacer(modifier = Modifier.height(4.dp))
             }

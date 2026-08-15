@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,11 +35,9 @@ public fun TabPill(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(44.dp)
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                shape = CircleShape
-            )
+            .padding(horizontal = 20.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
@@ -51,26 +51,29 @@ public fun TabPill(
                 targetValue = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                 label = "TabText_$index"
             )
-
-            Box(
+            Surface(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxHeight()
-                    .clip(CircleShape)
-                    .background(bgColor)
-                    .clickable { onTabChange(index) }
-                    .padding(horizontal = 18.dp),
-                contentAlignment = Alignment.Center
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { onTabChange(index) },
+                color = bgColor
+
             ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = textColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Box(
+                    modifier = Modifier.padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = textColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
+
         }
     }
 }

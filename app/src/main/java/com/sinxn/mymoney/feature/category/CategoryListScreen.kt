@@ -91,23 +91,16 @@ fun CategoryListScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Tab Pill Selector Row
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp, horizontal = 16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                TabPill(
-                    tabs = listOf("Expense" to Color(0xFFE11D48), "Income" to Color(0xFF10B981)),
-                    activeTab = pagerState.currentPage,
-                    onTabChange = { index ->
-                        coroutineScope.launch {
-                            pagerState.animateScrollToPage(index)
-                        }
+            TabPill(
+                tabs = listOf("Expense" to Color(0xFFE11D48), "Income" to Color(0xFF10B981)),
+                activeTab = pagerState.currentPage,
+                onTabChange = { index ->
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(index)
                     }
-                )
-            }
+                }
+            )
+
 
             if (uiState.isLoading) {
                 Box(

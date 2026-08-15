@@ -13,6 +13,7 @@ import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.DebtRepository
 import com.sinxn.mymoney.core.util.DateUtils
+import com.sinxn.mymoney.core.util.MathExpressionEvaluator
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -105,6 +106,10 @@ class DebtDetailsViewModel @Inject constructor(
         flowOf(null)
     } else {
         debtRepository.getDebtDetails(debtId)
+    }
+
+    fun getImmediateResult(editAmount: String): String {
+        return MathExpressionEvaluator.getImmediateResult(editAmount, uiState.value.currencyDecimals)
     }
 
     private val transactionsFlow = if (isNewDebt) {
@@ -265,9 +270,19 @@ class DebtDetailsViewModel @Inject constructor(
         _editPeopleIds.value = current
     }
 
+    fun onNumpadKeyPress(key: String) {
+        _editAmount.value = MathExpressionEvaluator.processNumpadKeyPress(_editAmount.value, key)
+    }
+
+    fun evaluateMathExpression() {
+        val decimals = uiState.value.currencyDecimals
+        _editAmount.value = MathExpressionEvaluator.evaluateMathExpression(_editAmount.value, decimals)
+    }
+
     fun saveDebt(onSuccess: (String) -> Unit) {
         val currentState = uiState.value
-        val amountDouble = currentState.editAmount.toDoubleOrNull() ?: 0.0
+        val evaluatedStr = MathExpressionEvaluator.getImmediateResult(currentState.editAmount, currentState.currencyDecimals)
+        val amountDouble = evaluatedStr.toDoubleOrNull() ?: currentState.editAmount.toDoubleOrNull() ?: 0.0
         val moneyCents = (amountDouble * 10.0.pow(currentState.currencyDecimals)).toLong()
 
         viewModelScope.launch {
