@@ -49,6 +49,8 @@ import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.PeopleSelectionDialog
 import com.sinxn.mymoney.core.ui.components.PlaceSelectionDialog
 import com.sinxn.mymoney.core.ui.components.WalletSelectionDialog
+import com.sinxn.mymoney.core.ui.components.groupTransactionsByMonth
+import com.sinxn.mymoney.core.ui.components.monthGroupedTransactionItems
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.feature.transaction.components.CleanListRow
@@ -64,18 +66,12 @@ private val CreditEmeraldColor = Color(0xFF10B981)
 @Composable
 fun DebtDetailsScreen(
     onNavigateBack: () -> Unit,
+    onTransactionClick: (String) -> Unit = {},
     onRecordPayment: (debtId: String, walletId: String, debtAction: String) -> Unit = { _, _, _ -> },
     viewModel: DebtDetailsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val formatterConfig = remember(uiState) {
-        MoneyFormatter.Config(
-            showCurrency = true,
-            groupDigits = true,
-            roundDecimals = false,
-            showPlusMinus = false
-        )
-    }
+    val formatterConfig = uiState.formatterConfig
 
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -95,9 +91,7 @@ fun DebtDetailsScreen(
                         } else if (uiState.isEditMode) {
                             if (uiState.editType == 0) "Edit Debt" else "Edit Credit"
                         } else {
-                            uiState.debtDetails?.debt?.description?.ifBlank {
-                                if (isDebt) "Debt Details" else "Credit Details"
-                            } ?: if (isDebt) "Debt Details" else "Credit Details"
+                            if (isDebt) "Debt Details" else "Credit Details"
                         },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
@@ -205,7 +199,10 @@ fun DebtDetailsScreen(
                         transactions = uiState.transactions,
                         formatterConfig = formatterConfig,
                         currencyCode = uiState.currencyCode,
+                        currencyDecimals = uiState.currencyDecimals,
+                        dateFormat = uiState.dateFormat,
                         accentColor = accentColor,
+                        onTransactionClick = onTransactionClick,
                         onRecordPaymentClick = {
                             onRecordPayment(
                                 debtDetails.debt.id,
@@ -226,7 +223,10 @@ private fun DebtViewContent(
     transactions: List<TransactionWithCategory>,
     formatterConfig: MoneyFormatter.Config,
     currencyCode: String,
+    currencyDecimals: Int,
+    dateFormat: Int,
     accentColor: Color,
+    onTransactionClick: (String) -> Unit,
     onRecordPaymentClick: () -> Unit
 ) {
     val debt = debtDetails.debt
@@ -234,6 +234,11 @@ private fun DebtViewContent(
     val totalMoney = debt.money
     val isDebt = debt.type == 0
     val isFullyPaid = remaining == 0L && totalMoney > 0
+
+    var collapsedGroups by remember { mutableStateOf(setOf<String>()) }
+    val groupedItems = remember(transactions) {
+        groupTransactionsByMonth(transactions)
+    }
 
     val isOverdue = remember(debt.expirationDate) {
         debt.expirationDate?.let { exp ->
@@ -249,15 +254,14 @@ private fun DebtViewContent(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 48.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        contentPadding = PaddingValues(top = 8.dp, bottom = 88.dp)
     ) {
         // 1. Centered Hero Amount Section (Inspired by Transaction View Screen)
         item {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -312,8 +316,8 @@ private fun DebtViewContent(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = if (isFullyPaid) "Paid in Full"
-                            else if (isDebt) "I Owe (Debt)"
-                            else "Owed to Me (Credit)",
+                            else if (isDebt) "Debt"
+                            else "Credit",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = if (isFullyPaid) MaterialTheme.colorScheme.primary else accentColor
@@ -326,64 +330,70 @@ private fun DebtViewContent(
         // 2. Progress Card
         if (totalMoney > 0) {
             item {
-                TransactionCardContainer(horizontalPadding = 0.dp) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Progress",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-
-                            val paidAmount = kotlin.math.abs(debtDetails.progress)
-                            val progressPercent = ((paidAmount.toFloat() / totalMoney.toFloat()) * 100).toInt().coerceIn(0, 100)
-                            Text(
-                                text = "$progressPercent% Repaid",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = accentColor
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        val progressFraction = (kotlin.math.abs(debtDetails.progress).toFloat() / totalMoney.toFloat()).coerceIn(0f, 1f)
-                        LinearProgressIndicator(
-                            progress = { progressFraction },
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                ) {
+                    TransactionCardContainer(horizontalPadding = 0.dp) {
+                        Column(
                             modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Progress",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+
+                                val paidAmount = kotlin.math.abs(debtDetails.progress)
+                                val progressPercent = ((paidAmount.toFloat() / totalMoney.toFloat()) * 100).toInt().coerceIn(0, 100)
+                                Text(
+                                    text = "$progressPercent% Repaid",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = accentColor
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            val progressFraction = (kotlin.math.abs(debtDetails.progress).toFloat() / totalMoney.toFloat()).coerceIn(0f, 1f)
+                            LinearProgressIndicator(
+                                progress = { progressFraction },
+                                modifier = Modifier
                                 .fillMaxWidth()
                                 .height(8.dp)
                                 .clip(CircleShape),
-                            color = if (isFullyPaid) MaterialTheme.colorScheme.primary else accentColor,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "Paid: ${MoneyFormatter.format(amount = kotlin.math.abs(debtDetails.progress), currencyCode = debtDetails.walletCurrency, decimals = debtDetails.walletDecimals, config = formatterConfig)}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (isFullyPaid) MaterialTheme.colorScheme.primary else accentColor,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant
                             )
-                            Text(
-                                text = "Total: ${MoneyFormatter.format(amount = totalMoney, currencyCode = debtDetails.walletCurrency, decimals = debtDetails.walletDecimals, config = formatterConfig)}",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Paid: ${MoneyFormatter.format(amount = kotlin.math.abs(debtDetails.progress), currencyCode = debtDetails.walletCurrency, decimals = debtDetails.walletDecimals, config = formatterConfig)}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "Total: ${MoneyFormatter.format(amount = totalMoney, currencyCode = debtDetails.walletCurrency, decimals = debtDetails.walletDecimals, config = formatterConfig)}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
                     }
                 }
@@ -393,24 +403,30 @@ private fun DebtViewContent(
         // 3. Description Block (if present)
         if (debt.description.isNotBlank()) {
             item {
-                TransactionCardContainer(horizontalPadding = 0.dp) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Description",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = debt.description,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                ) {
+                    TransactionCardContainer(horizontalPadding = 0.dp) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Text(
+                                text = "Description",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = debt.description,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 }
             }
@@ -418,101 +434,107 @@ private fun DebtViewContent(
 
         // 4. Primary Details Card (Wallet, Dates, People, Place, Note)
         item {
-            TransactionCardContainer(horizontalPadding = 0.dp) {
-                Column {
-                    // Wallet Row
-                    if (debtDetails.walletName.isNotBlank()) {
-                        CleanListRow(
-                            icon = { Icon(Icons.Default.Wallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
-                            label = "Wallet",
-                            value = debtDetails.walletName
-                        )
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
-                    }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+            ) {
+                TransactionCardContainer(horizontalPadding = 0.dp) {
+                    Column {
+                        // Wallet Row
+                        if (debtDetails.walletName.isNotBlank()) {
+                            CleanListRow(
+                                icon = { Icon(Icons.Default.Wallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
+                                label = "Wallet",
+                                value = debtDetails.walletName
+                            )
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                        }
 
-                    // Creation Date Row
-                    CleanListRow(
-                        icon = { Icon(Icons.Default.Event, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
-                        label = "Date Created",
-                        value = debt.date.take(10)
-                    )
-
-                    // Due Date / Expiration Date Row
-                    if (!debt.expirationDate.isNullOrBlank()) {
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                        // Creation Date Row
                         CleanListRow(
                             icon = { Icon(Icons.Default.Event, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
-                            label = "Due Date",
-                            value = debt.expirationDate.take(10),
-                            trailingBadge = if (isOverdue) {
-                                {
-                                    Surface(
-                                        shape = CircleShape,
-                                        color = MaterialTheme.colorScheme.errorContainer,
-                                        contentColor = MaterialTheme.colorScheme.onErrorContainer
-                                    ) {
-                                        Text(
-                                            text = "Overdue",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                        )
+                            label = "Date Created",
+                            value = debt.date.take(10)
+                        )
+
+                        // Due Date / Expiration Date Row
+                        if (!debt.expirationDate.isNullOrBlank()) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                            CleanListRow(
+                                icon = { Icon(Icons.Default.Event, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
+                                label = "Due Date",
+                                value = debt.expirationDate.take(10),
+                                trailingBadge = if (isOverdue) {
+                                    {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = MaterialTheme.colorScheme.errorContainer,
+                                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                        ) {
+                                            Text(
+                                                text = "Overdue",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                            )
+                                        }
                                     }
-                                }
-                            } else null
-                        )
-                    }
+                                } else null
+                            )
+                        }
 
-                    // Linked People Row
-                    if (debtDetails.people.isNotEmpty()) {
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
-                        CleanListRow(
-                            icon = { Icon(Icons.Default.Person, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
-                            label = "People",
-                            value = debtDetails.people.joinToString(", ") { it.name }
-                        )
-                    }
+                        // Linked People Row
+                        if (debtDetails.people.isNotEmpty()) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                            CleanListRow(
+                                icon = { Icon(Icons.Default.Person, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
+                                label = "People",
+                                value = debtDetails.people.joinToString(", ") { it.name }
+                            )
+                        }
 
-                    // Linked Place Row
-                    if (!debtDetails.placeName.isNullOrBlank()) {
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
-                        CleanListRow(
-                            icon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
-                            label = "Place",
-                            value = debtDetails.placeName
-                        )
-                    }
+                        // Linked Place Row
+                        if (!debtDetails.placeName.isNullOrBlank()) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                            CleanListRow(
+                                icon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
+                                label = "Place",
+                                value = debtDetails.placeName
+                            )
+                        }
 
-                    // Notes Row
-                    if (!debt.note.isNullOrBlank()) {
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Notes, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Note",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
-                                modifier = Modifier.fillMaxWidth()
+                        // Notes Row
+                        if (!debt.note.isNullOrBlank()) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp)
                             ) {
-                                Text(
-                                    text = debt.note,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.padding(12.dp)
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Notes, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Note",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = debt.note,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(12.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -523,23 +545,29 @@ private fun DebtViewContent(
         // 5. Quick Payment Button (if not fully paid)
         if (!isFullyPaid) {
             item {
-                Button(
-                    onClick = onRecordPaymentClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = accentColor,
-                        contentColor = Color.White
-                    ),
-                    contentPadding = PaddingValues(vertical = 14.dp)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
                 ) {
-                    Icon(Icons.Default.Payment, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = if (isDebt) "Record Repayment" else "Record Collection",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Button(
+                        onClick = onRecordPaymentClick,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = accentColor,
+                            contentColor = Color.White
+                        ),
+                        contentPadding = PaddingValues(vertical = 14.dp)
+                    ) {
+                        Icon(Icons.Default.Payment, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (isDebt) "Record Repayment" else "Record Collection",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
@@ -549,156 +577,37 @@ private fun DebtViewContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp),
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Payment History",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
-                if (transactions.isNotEmpty()) {
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-                    ) {
-                        Text(
-                            text = "${transactions.size} payment" + if (transactions.size != 1) "s" else "",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                        )
-                    }
-                }
-            }
-        }
-
-        // 7. Payment History Items
-        if (transactions.isEmpty()) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "No payments have been recorded yet.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
-                    }
-                }
-            }
-        } else {
-            items(transactions, key = { it.transaction.id }) { tx ->
-                DebtTransactionItem(
-                    txWithCat = tx,
-                    formatterConfig = formatterConfig,
-                    currencyCode = currencyCode
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun DebtTransactionItem(
-    txWithCat: TransactionWithCategory,
-    formatterConfig: MoneyFormatter.Config,
-    currencyCode: String
-) {
-    val tx = txWithCat.transaction
-    val isIncome = tx.direction == 1
-    val isTransfer = tx.direction == 2 || tx.type == 1 || tx.type == 2 || txWithCat.categoryName.equals("Transfer", ignoreCase = true)
-
-    val categoryDisplayName = when {
-        isTransfer -> "Transfer"
-        !txWithCat.categoryName.isNullOrBlank() -> txWithCat.categoryName!!
-        else -> "Payment"
-    }
-
-    val amountColor = when {
-        isTransfer -> Color(0xFF0284C7)
-        isIncome -> Color(0xFF10B981)
-        else -> Color(0xFFE11D48)
-    }
-
-    val primaryTitle = if (!tx.description.isNullOrBlank()) tx.description!! else categoryDisplayName
-    val subtitleText = if (!tx.description.isNullOrBlank()) categoryDisplayName else null
-    val dateText = tx.date.take(10)
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            CategoryIcon(
-                iconString = txWithCat.categoryIcon,
-                categoryName = categoryDisplayName,
-                modifier = Modifier.size(42.dp)
-            )
-
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = primaryTitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (!subtitleText.isNullOrEmpty()) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = subtitleText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            val signedAmount = if (isIncome || isTransfer) tx.money else -tx.money
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = MoneyFormatter.format(
-                        amount = signedAmount,
-                        currencyCode = currencyCode,
-                        decimals = 2,
-                        config = formatterConfig
-                    ),
+                    text = "Payment History (${transactions.size})",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = amountColor
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = dateText,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
+
+        // 7. Month-grouped Transactions List with Sticky Headers
+        monthGroupedTransactionItems(
+            items = groupedItems,
+            collapsedGroups = collapsedGroups,
+            onToggleGroup = { headerKey ->
+                collapsedGroups = if (headerKey in collapsedGroups) {
+                    collapsedGroups - headerKey
+                } else {
+                    collapsedGroups + headerKey
+                }
+            },
+            onTransactionClick = onTransactionClick,
+            decimals = currencyDecimals,
+            currencyCode = currencyCode,
+            formatterConfig = formatterConfig,
+            dateFormat = dateFormat,
+            emptyMessage = "No payments have been recorded yet."
+        )
     }
 }
 

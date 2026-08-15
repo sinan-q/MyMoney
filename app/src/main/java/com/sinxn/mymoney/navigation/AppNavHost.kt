@@ -137,6 +137,9 @@ fun AppNavHost(
         ) {
             com.sinxn.mymoney.feature.debt.DebtDetailsScreen(
                 onNavigateBack = { navController.navigateUp() },
+                onTransactionClick = { transactionId ->
+                    navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
+                },
                 onRecordPayment = { debtId, _, debtAction ->
                     navController.navigate(Screen.TransactionDetails.createRoute("new", debtId = debtId, debtAction = debtAction))
                 }

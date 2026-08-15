@@ -13,6 +13,7 @@ import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.DebtRepository
 import com.sinxn.mymoney.core.util.DateUtils
+import com.sinxn.mymoney.core.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,7 +54,11 @@ data class DebtDetailsUiState(
     // Currency info
     val currencyCode: String = "USD",
     val currencySymbol: String = "$",
-    val currencyDecimals: Int = 2
+    val currencyDecimals: Int = 2,
+    val decimals: Int = 2,
+    val formatterConfig: MoneyFormatter.Config = MoneyFormatter.Config(),
+    val dateFormat: Int = 0,
+    val formattingSettings: FormattingSettings = FormattingSettings()
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -182,6 +187,18 @@ class DebtDetailsViewModel @Inject constructor(
             form.walletId
         }
 
+        val transactionCurrencies = txList.mapNotNull { it.currencySymbol ?: it.currencyCode }.distinct()
+        val displayCurrency = debtDetails?.walletCurrency
+            ?: if (transactionCurrencies.size == 1) transactionCurrencies.first() else selectors.formatting.globalCurrency
+        val displayDecimals = debtDetails?.walletDecimals ?: txList.firstOrNull()?.decimals ?: 2
+
+        val formatterConfig = MoneyFormatter.Config(
+            showCurrency = selectors.formatting.showCurrency,
+            groupDigits = selectors.formatting.groupDigits,
+            roundDecimals = selectors.formatting.roundDecimals,
+            showPlusMinus = selectors.formatting.showPlusMinus
+        )
+
         DebtDetailsUiState(
             debtDetails = debtDetails,
             transactions = txList,
@@ -203,9 +220,13 @@ class DebtDetailsViewModel @Inject constructor(
             availableWallets = selectors.wallets,
             availablePlaces = selectors.places,
             availablePeople = selectors.people,
-            currencyCode = selectors.formatting.globalCurrency,
+            currencyCode = displayCurrency,
             currencySymbol = "$",
-            currencyDecimals = 2
+            currencyDecimals = displayDecimals,
+            decimals = displayDecimals,
+            formatterConfig = formatterConfig,
+            dateFormat = selectors.formatting.dateFormat,
+            formattingSettings = selectors.formatting
         )
     }.stateIn(
         scope = viewModelScope,
