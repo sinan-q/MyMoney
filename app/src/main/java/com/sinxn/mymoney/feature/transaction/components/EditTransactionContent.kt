@@ -47,7 +47,7 @@ fun EditTransactionContent(
     var showEventPicker by remember { mutableStateOf(false) }
     var showPeoplePicker by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
-    var isNumpadVisible by remember { mutableStateOf(true) }
+    var isNumpadVisible by remember(uiState.isNewTransaction) { mutableStateOf(uiState.isNewTransaction) }
 
     // Direction Accent Color
     val accentColor = when {
