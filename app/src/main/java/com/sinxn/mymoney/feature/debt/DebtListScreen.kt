@@ -1,13 +1,13 @@
 package com.sinxn.mymoney.feature.debt
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -20,11 +20,10 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Event
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.*
@@ -39,16 +38,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.sinxn.mymoney.core.data.local.entity.PersonEntity
-import com.sinxn.mymoney.core.data.local.entity.WalletEntity
 import com.sinxn.mymoney.core.data.local.model.DebtWithDetails
-
-import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+private val DebtRoseColor = Color(0xFFE11D48)
+private val CreditEmeraldColor = Color(0xFF10B981)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,20 +59,104 @@ fun DebtListScreen(
     viewModel: DebtListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    var debtToDelete by remember { mutableStateOf<String?>(null) }
+
+    if (debtToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { debtToDelete = null },
+            title = { Text("Delete Debt") },
+            text = { Text("Do you want to delete all associated transactions or keep them in history?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val id = debtToDelete
+                        debtToDelete = null
+                        if (id != null) {
+                            viewModel.deleteDebt(id, deleteTransactions = true)
+                        }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete All")
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        val id = debtToDelete
+                        debtToDelete = null
+                        if (id != null) {
+                            viewModel.deleteDebt(id, deleteTransactions = false)
+                        }
+                    }) {
+                        Text("Keep Transactions")
+                    }
+                    TextButton(onClick = { debtToDelete = null }) {
+                        Text("Cancel")
+                    }
+                }
+            }
+        )
+    }
+
     DebtListContent(
         uiState = uiState,
         onNavigateUp = onNavigateUp,
-        onOpenDrawer = {},
         onTabSelected = viewModel::setSelectedTab,
         onToggleIncludeArchived = { viewModel.setIncludeArchived(!uiState.includeArchived) },
         onDebtClick = onDebtClick,
         onAddDebt = { onAddDebt(uiState.selectedTab) },
         onToggleArchived = viewModel::toggleArchived,
-        onDeleteDebt = viewModel::deleteDebt
+        onDeleteDebt = { id -> debtToDelete = id }
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DebtListContent(
+    uiState: DebtListUiState,
+    onNavigateUp: () -> Unit,
+    onTabSelected: (Int) -> Unit,
+    onToggleIncludeArchived: () -> Unit,
+    onDebtClick: (String) -> Unit,
+    onAddDebt: () -> Unit,
+    onToggleArchived: (String, Boolean) -> Unit,
+    onDeleteDebt: (String) -> Unit
+) {
+    val accentColor = if (uiState.selectedTab == 0) DebtRoseColor else CreditEmeraldColor
+
+    Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = onAddDebt,
+                icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                text = {
+                    Text(
+                        text = if (uiState.selectedTab == 0) "Add Debt" else "Add Credit",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                containerColor = accentColor,
+                contentColor = Color.White,
+                shape = RoundedCornerShape(18.dp)
+            )
+        }
+    ) { paddingValues ->
+        DebtListBodyContent(
+            uiState = uiState,
+            modifier = Modifier.padding(paddingValues),
+            showSummaryCard = true,
+            onTabSelected = onTabSelected,
+            onDebtClick = onDebtClick,
+            onAddDebt = onAddDebt,
+            onToggleArchived = onToggleArchived,
+            onDeleteDebt = onDeleteDebt
+        )
+    }
+}
+
 @Composable
 fun DebtListBodyContent(
     uiState: DebtListUiState,
@@ -83,14 +164,15 @@ fun DebtListBodyContent(
     showSummaryCard: Boolean = true,
     onTabSelected: (Int) -> Unit,
     onDebtClick: (String) -> Unit,
+    onAddDebt: () -> Unit = {},
     onToggleArchived: (String, Boolean) -> Unit,
     onDeleteDebt: (String) -> Unit
 ) {
-    val formatterConfig = remember(uiState) {
+    val formatterConfig = remember(uiState.formattingSettings) {
         MoneyFormatter.Config(
-            showCurrency = true,
-            groupDigits = true,
-            roundDecimals = false,
+            showCurrency = uiState.formattingSettings.showCurrency,
+            groupDigits = uiState.formattingSettings.groupDigits,
+            roundDecimals = uiState.formattingSettings.roundDecimals,
             showPlusMinus = false
         )
     }
@@ -98,59 +180,39 @@ fun DebtListBodyContent(
     Column(
         modifier = modifier.fillMaxSize()
     ) {
-        // Segmented Tab Switcher (Debts vs Credits)
-        SingleChoiceSegmentedButtonRow(
+        // Tab Pill Selector (Inspired by CategoryListScreen)
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center
         ) {
-            SegmentedButton(
-                selected = uiState.selectedTab == 0,
-                onClick = { onTabSelected(0) },
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                icon = {
-                    Icon(
-                        imageVector = Icons.Default.ArrowDownward,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            ) {
-                Text("I Owe (Debts)")
-            }
-            SegmentedButton(
-                selected = uiState.selectedTab == 1,
-                onClick = { onTabSelected(1) },
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                icon = {
-                    Icon(
-                        imageVector = Icons.Default.ArrowUpward,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            ) {
-                Text("Owed to Me (Credits)")
-            }
-        }
-
-        val summaryCurrency = if (uiState.debts.isNotEmpty()) uiState.debts.first().walletCurrency else uiState.currencyCode
-        val summaryDecimals = if (uiState.debts.isNotEmpty()) uiState.debts.first().walletDecimals else 2
-
-        if (showSummaryCard) {
-            // Summary Header Card
-            DebtSummaryCard(
+            DebtTabPill(
                 selectedTab = uiState.selectedTab,
-                totalRemainingMoney = uiState.totalRemainingMoney,
-                itemCount = uiState.debts.size,
-                formatterConfig = formatterConfig,
-                currencyCode = summaryCurrency,
-                currencyDecimals = summaryDecimals,
-                filterWalletId = uiState.filterWalletId
+                onTabSelected = onTabSelected
             )
         }
 
-        // Debts List
+        val summaryCurrency = if (uiState.debts.isNotEmpty()) uiState.debts.first().walletCurrency else uiState.currencyCode
+        val summaryDecimals = if (uiState.debts.isNotEmpty()) uiState.debts.first().walletDecimals else uiState.currencyDecimals
+
+        if (showSummaryCard) {
+            DebtSummaryCard(
+                selectedTab = uiState.selectedTab,
+                totalRemainingMoney = uiState.totalRemainingMoney,
+                totalOriginalMoney = uiState.totalOriginalMoney,
+                totalPaidMoney = uiState.totalPaidMoney,
+                activeCount = uiState.activeCount,
+                settledCount = uiState.settledCount,
+                formatterConfig = formatterConfig,
+                currencyCode = summaryCurrency,
+                currencyDecimals = summaryDecimals,
+                filterWalletId = uiState.filterWalletId,
+                includeArchived = uiState.includeArchived
+            )
+        }
+
+        // Debts List Content
         if (uiState.isLoading) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -159,18 +221,20 @@ fun DebtListBodyContent(
                 CircularProgressIndicator()
             }
         } else if (uiState.debts.isEmpty()) {
-            EmptyDebtState(selectedTab = uiState.selectedTab)
+            EmptyDebtState(
+                selectedTab = uiState.selectedTab,
+                onAddDebt = onAddDebt
+            )
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 88.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(uiState.debts, key = { it.debt.id }) { debtItem ->
                     DebtCardItem(
                         debtWithDetails = debtItem,
                         formatterConfig = formatterConfig,
-                        currencyCode = uiState.currencyCode,
                         onClick = { onDebtClick(debtItem.debt.id) },
                         onQuickPayment = { onDebtClick(debtItem.debt.id) },
                         onToggleArchive = { onToggleArchived(debtItem.debt.id, debtItem.debt.isArchived) },
@@ -182,39 +246,58 @@ fun DebtListBodyContent(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DebtListContent(
-    uiState: DebtListUiState,
-    onNavigateUp: () -> Unit,
-    onOpenDrawer: () -> Unit,
-    onTabSelected: (Int) -> Unit,
-    onToggleIncludeArchived: () -> Unit,
-    onDebtClick: (String) -> Unit,
-    onAddDebt: () -> Unit,
-    onToggleArchived: (String, Boolean) -> Unit,
-    onDeleteDebt: (String) -> Unit
+private fun DebtTabPill(
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit
 ) {
-    Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = onAddDebt,
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text(if (uiState.selectedTab == 0) "Add Debt" else "Add Credit") },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+    val tabs = listOf(
+        Pair("Debts",  DebtRoseColor),
+        Pair("Credits",  CreditEmeraldColor)
+    )
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(44.dp)
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                shape = CircleShape
             )
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        tabs.forEachIndexed { index, (title, accent) ->
+            val isSelected = selectedTab == index
+            val bgColor by animateColorAsState(
+                targetValue = if (isSelected) accent else Color.Transparent,
+                label = "DebtTabBg_$index"
+            )
+            val textColor by animateColorAsState(
+                targetValue = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                label = "DebtTabText_$index"
+            )
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clip(CircleShape)
+                    .background(bgColor)
+                    .clickable { onTabSelected(index) }
+                    .padding(horizontal = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    color = textColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
-    ) { paddingValues ->
-        DebtListBodyContent(
-            uiState = uiState,
-            modifier = Modifier.padding(paddingValues),
-            onTabSelected = onTabSelected,
-            onDebtClick = onDebtClick,
-            onToggleArchived = onToggleArchived,
-            onDeleteDebt = onDeleteDebt
-        )
     }
 }
 
@@ -222,30 +305,31 @@ private fun DebtListContent(
 private fun DebtSummaryCard(
     selectedTab: Int,
     totalRemainingMoney: Long,
-    itemCount: Int,
+    totalOriginalMoney: Long,
+    totalPaidMoney: Long,
+    activeCount: Int,
+    settledCount: Int,
     formatterConfig: MoneyFormatter.Config,
     currencyCode: String,
     currencyDecimals: Int = 2,
-    filterWalletId: String? = null
+    filterWalletId: String? = null,
+    includeArchived: Boolean = false
 ) {
-    val gradientColors = if (selectedTab == 0) {
-        listOf(
-            MaterialTheme.colorScheme.errorContainer,
-            MaterialTheme.colorScheme.surfaceContainerHigh
-        )
-    } else {
-        listOf(
-            MaterialTheme.colorScheme.primaryContainer,
-            MaterialTheme.colorScheme.surfaceContainerHigh
-        )
-    }
+    val isDebt = selectedTab == 0
+    val accentColor = if (isDebt) DebtRoseColor else CreditEmeraldColor
+
+    val gradientColors = listOf(
+        accentColor.copy(alpha = 0.16f),
+        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f)
+    )
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.2f))
     ) {
         Box(
             modifier = Modifier
@@ -254,27 +338,42 @@ private fun DebtSummaryCard(
                 .padding(20.dp)
         ) {
             Column {
+                // Header Label + Filter Badges
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (selectedTab == 0) "Total Unpaid Debts" else "Total Pending Credits",
+                        text = if (isDebt) "Total Outstanding Debt" else "Total Pending Credit",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.SemiBold
                     )
-                    if (!filterWalletId.isNullOrBlank() && filterWalletId != "total") {
-                        BadgeChip(
-                            icon = Icons.Default.Wallet,
-                            text = "Current Wallet",
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            contentColor = MaterialTheme.colorScheme.primary
-                        )
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (includeArchived) {
+                            BadgeChip(
+                                icon = Icons.Default.Archive,
+                                text = "Archived",
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (!filterWalletId.isNullOrBlank() && filterWalletId != "total") {
+                            BadgeChip(
+                                icon = Icons.Default.Wallet,
+                                text = "Wallet",
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                contentColor = accentColor
+                            )
+                        }
                     }
                 }
-                Spacer(modifier = Modifier.height(4.dp))
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Hero Money Amount
                 Text(
                     text = MoneyFormatter.format(
                         amount = totalRemainingMoney,
@@ -282,16 +381,50 @@ private fun DebtSummaryCard(
                         decimals = currencyDecimals,
                         config = formatterConfig
                     ),
-                    style = MaterialTheme.typography.headlineLarge,
+                    style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Black,
-                    color = if (selectedTab == 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                    color = accentColor,
+                    letterSpacing = (-0.5).sp
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "$itemCount active ${if (selectedTab == 0) "debt" else "credit"}${if (itemCount != 1) "s" else ""}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Progress Bar
+                if (totalOriginalMoney > 0) {
+                    val progressFraction = (totalPaidMoney.toFloat() / totalOriginalMoney.toFloat()).coerceIn(0f, 1f)
+                    LinearProgressIndicator(
+                        progress = { progressFraction },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(CircleShape),
+                        color = accentColor,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                // Subtitle Info Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "$activeCount active" + if (settledCount > 0) " • $settledCount settled" else "",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
+                    )
+
+                    if (totalOriginalMoney > 0) {
+                        Text(
+                            text = "Total: ${MoneyFormatter.format(amount = totalOriginalMoney, currencyCode = currencyCode, decimals = currencyDecimals, config = formatterConfig)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
+                }
             }
         }
     }
@@ -301,7 +434,6 @@ private fun DebtSummaryCard(
 private fun DebtCardItem(
     debtWithDetails: DebtWithDetails,
     formatterConfig: MoneyFormatter.Config,
-    currencyCode: String,
     onClick: () -> Unit,
     onQuickPayment: () -> Unit,
     onToggleArchive: () -> Unit,
@@ -312,7 +444,10 @@ private fun DebtCardItem(
     val totalMoney = debt.money
     val remaining = debtWithDetails.remainingMoney
 
+    val isDebt = debt.type == 0
+    val accentColor = if (isDebt) DebtRoseColor else CreditEmeraldColor
     val isFullyPaid = remaining == 0L && totalMoney > 0
+
     val isOverdue = remember(debt.expirationDate) {
         debt.expirationDate?.let { exp ->
             try {
@@ -334,32 +469,37 @@ private fun DebtCardItem(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-        )
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Top Row: Icon, Title, Status Badges & Menu
+            // Top Row: Avatar, Title, Status Badges & Menu
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Circular Indicator Icon
                 Box(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(CircleShape)
                         .background(
-                            if (debt.type == 0) MaterialTheme.colorScheme.errorContainer
-                            else MaterialTheme.colorScheme.primaryContainer
+                            if (isFullyPaid) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                            else accentColor.copy(alpha = 0.12f)
                         ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = if (debt.type == 0) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
+                        imageVector = if (isFullyPaid) Icons.Default.CheckCircle
+                        else if (isDebt) Icons.Default.ArrowDownward
+                        else Icons.Default.ArrowUpward,
                         contentDescription = null,
-                        tint = if (debt.type == 0) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
+                        tint = if (isFullyPaid) MaterialTheme.colorScheme.primary else accentColor,
+                        modifier = Modifier.size(22.dp)
                     )
                 }
 
@@ -367,36 +507,22 @@ private fun DebtCardItem(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = debt.description.ifBlank { if (debt.type == 0) "Debt" else "Credit" },
+                        text = debt.description.ifBlank { if (isDebt) "Debt" else "Credit" },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
 
-                    // Subtitle Details Row (Wallet, Place, Expiration)
+                    // Subtitle Details Badges (Wallet, People, Due Date)
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(top = 2.dp)
+                        modifier = Modifier.padding(top = 4.dp)
                     ) {
-                        // Wallet Badge
-                        if (debtWithDetails.walletName.isNotBlank()) {
-                            BadgeChip(
-                                icon = Icons.Default.Wallet,
-                                text = debtWithDetails.walletName
-                            )
-                        }
 
-                        // Expiration / Status Badge
-                        if (isFullyPaid) {
-                            BadgeChip(
-                                icon = Icons.Default.CheckCircle,
-                                text = "Paid",
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        } else if (isOverdue) {
+                        // Status Badge
+                        if (isOverdue) {
                             BadgeChip(
                                 icon = Icons.Default.Event,
                                 text = "Overdue",
@@ -406,72 +532,40 @@ private fun DebtCardItem(
                         } else if (!debt.expirationDate.isNullOrBlank()) {
                             BadgeChip(
                                 icon = Icons.Default.Event,
-                                text = "Due ${debt.expirationDate}"
+                                text = "Due ${debt.expirationDate.take(10)}"
                             )
                         }
                     }
                 }
-
-                Box {
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Menu")
-                    }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Edit") },
-                            onClick = {
-                                showMenu = false
-                                onClick()
-                            },
-                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(if (debt.isArchived) "Unarchive" else "Archive") },
-                            onClick = {
-                                showMenu = false
-                                onToggleArchive()
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = if (debt.isArchived) Icons.Default.Unarchive else Icons.Default.Archive,
-                                    contentDescription = null
-                                )
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
-                            onClick = {
-                                showMenu = false
-                                onDelete()
-                            },
-                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) }
-                        )
-                    }
-                }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // Money & Progress Row
+            // Money & Progress Stats
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
             ) {
                 Column {
+                    if (!isFullyPaid) {
+                        Text(
+                            text = "Remaining",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     Text(
-                        text = "Remaining",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = MoneyFormatter.format(amount = remaining, currencyCode = debtWithDetails.walletCurrency, decimals = debtWithDetails.walletDecimals, config = formatterConfig),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = if (isFullyPaid) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        text = if (isFullyPaid) "Fully Settled"
+                        else MoneyFormatter.format(
+                            amount = remaining,
+                            currencyCode = debtWithDetails.walletCurrency,
+                            decimals = debtWithDetails.walletDecimals,
+                            config = formatterConfig
+                        ),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Black,
+                        color = if (isFullyPaid) MaterialTheme.colorScheme.primary else accentColor
                     )
                 }
 
@@ -479,6 +573,7 @@ private fun DebtCardItem(
                     Text(
                         text = "Total: ${MoneyFormatter.format(amount = totalMoney, currencyCode = debtWithDetails.walletCurrency, decimals = debtWithDetails.walletDecimals, config = formatterConfig)}",
                         style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -492,43 +587,37 @@ private fun DebtCardItem(
                     progress = { progressFraction },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(8.dp)
+                        .height(6.dp)
                         .clip(CircleShape),
-                    color = if (isFullyPaid) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    color = if (isFullyPaid) MaterialTheme.colorScheme.primary else accentColor,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                 )
             }
 
-            // Linked People Row (if any)
-            if (debtWithDetails.people.isNotEmpty()) {
+            // Note snippet preview if present
+            if (!debt.note.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = debtWithDetails.people.joinToString(", ") { it.name },
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                Text(
+                    text = debt.note,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
 
             // Quick Payment Action Button
             if (!isFullyPaid) {
                 Spacer(modifier = Modifier.height(12.dp))
-                OutlinedButton(
+                Button(
                     onClick = onQuickPayment,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = accentColor.copy(alpha = 0.12f),
+                        contentColor = accentColor
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Payment,
@@ -536,7 +625,10 @@ private fun DebtCardItem(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(if (debt.type == 0) "Record Repayment" else "Record Collection")
+                    Text(
+                        text = if (isDebt) "Record Repayment" else "Record Collection",
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
@@ -547,7 +639,7 @@ private fun DebtCardItem(
 private fun BadgeChip(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     text: String,
-    containerColor: Color = MaterialTheme.colorScheme.surfaceVariant,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
     contentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant
 ) {
     Surface(
@@ -556,7 +648,7 @@ private fun BadgeChip(
         contentColor = contentColor
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
@@ -567,14 +659,23 @@ private fun BadgeChip(
             )
             Text(
                 text = text,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
 }
 
 @Composable
-private fun EmptyDebtState(selectedTab: Int) {
+private fun EmptyDebtState(
+    selectedTab: Int,
+    onAddDebt: () -> Unit
+) {
+    val isDebt = selectedTab == 0
+    val accentColor = if (isDebt) DebtRoseColor else CreditEmeraldColor
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -583,24 +684,59 @@ private fun EmptyDebtState(selectedTab: Int) {
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(32.dp)
         ) {
-            Icon(
-                imageVector = if (selectedTab == 0) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
+                    .background(accentColor.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isDebt) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
+                    contentDescription = null,
+                    modifier = Modifier.size(36.dp),
+                    tint = accentColor
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
             Text(
-                text = if (selectedTab == 0) "No Active Debts" else "No Pending Credits",
-                style = MaterialTheme.typography.titleMedium,
+                text = if (isDebt) "No Active Debts" else "No Pending Credits",
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
+
             Spacer(modifier = Modifier.height(8.dp))
+
             Text(
-                text = if (selectedTab == 0) "You have no recorded debts to pay." else "You have no active credits to collect.",
+                text = if (isDebt) "You have no outstanding debts to pay." else "You have no pending credits to collect.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Button(
+                onClick = onAddDebt,
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = accentColor,
+                    contentColor = Color.White
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (isDebt) "Add Debt" else "Add Credit",
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }

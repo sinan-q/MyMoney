@@ -26,10 +26,15 @@ data class DebtListUiState(
     val filterWalletId: String? = null,
     val debts: List<DebtWithDetails> = emptyList(),
     val totalRemainingMoney: Long = 0L,
+    val totalOriginalMoney: Long = 0L,
+    val totalPaidMoney: Long = 0L,
+    val activeCount: Int = 0,
+    val settledCount: Int = 0,
     val isLoading: Boolean = false,
     val currencyCode: String = "USD",
     val currencySymbol: String = "$",
-    val currencyDecimals: Int = 2
+    val currencyDecimals: Int = 2,
+    val formattingSettings: com.sinxn.mymoney.core.data.preferences.FormattingSettings = com.sinxn.mymoney.core.data.preferences.FormattingSettings()
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -64,18 +69,27 @@ class DebtListViewModel @Inject constructor(
         debtsFlow,
         settingsRepository.formattingSettings
     ) { tab, archived, wId, debtsList, formatting ->
-        val total = debtsList.sumOf { it.remainingMoney }
+        val totalRemaining = debtsList.sumOf { it.remainingMoney }
+        val totalOriginal = debtsList.sumOf { kotlin.math.abs(it.debt.money) }
+        val totalPaid = debtsList.sumOf { kotlin.math.abs(it.progress) }
+        val settled = debtsList.count { it.remainingMoney == 0L && it.debt.money > 0 }
+        val active = debtsList.size - settled
         val actualWId = if (wId == "total") null else wId
         DebtListUiState(
             selectedTab = tab,
             includeArchived = archived,
             filterWalletId = actualWId,
             debts = debtsList,
-            totalRemainingMoney = total,
+            totalRemainingMoney = totalRemaining,
+            totalOriginalMoney = totalOriginal,
+            totalPaidMoney = totalPaid,
+            activeCount = active,
+            settledCount = settled,
             isLoading = false,
             currencyCode = formatting.globalCurrency,
             currencySymbol = "$",
-            currencyDecimals = 2
+            currencyDecimals = 2,
+            formattingSettings = formatting
         )
     }.stateIn(
         scope = viewModelScope,
