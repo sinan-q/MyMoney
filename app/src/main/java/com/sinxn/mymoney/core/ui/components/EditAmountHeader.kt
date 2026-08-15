@@ -37,7 +37,7 @@ fun EditAmountHeader(
         val displayAmount = if (hasOperatorInAmount) {
             evaluatedResult
         } else {
-            if (amountText.isEmpty()) "0" else amountText
+            amountText.ifEmpty { "0" }
         }
 
         if (hasOperatorInAmount) {
@@ -68,28 +68,6 @@ fun EditAmountHeader(
                 color = MaterialTheme.colorScheme.onSurface,
                 letterSpacing = (-1.5).sp
             )
-        }
-
-        if (!isNumpadVisible) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = "Edit Amount",
-                    tint = accentColor.copy(alpha = 0.7f),
-                    modifier = Modifier.size(14.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "Tap to edit amount",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = accentColor.copy(alpha = 0.7f),
-                    fontWeight = FontWeight.Medium
-                )
-            }
         }
     }
 }

@@ -166,7 +166,7 @@ fun DebtAddEditScreen(
                             focusRequester = numpadState.focusRequester,
                             uiState = uiState,
                             viewModel = viewModel,
-                            onFocusField = numpadState::showNumpad,
+                            onFocusField = numpadState::onFocusField,
                             onDismissKeyboardAndNumpad = numpadState::dismiss
                         )
                     }
@@ -200,40 +200,41 @@ fun DebtAddEditScreen(
                                 )
                             }
 
-                            if (!numpadState.isNumpadVisible) {
-                                Box(
+
+                        }
+                        if (!numpadState.isNumpadVisible) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp, vertical = 10.dp)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        numpadState.dismiss()
+                                        viewModel.saveDebt { onNavigateBack() }
+                                    },
+                                    enabled = isSaveEnabled,
+                                    shape = RoundedCornerShape(20.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = accentColor,
+                                        contentColor = Color.White
+                                    ),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 20.dp, vertical = 10.dp)
+                                        .height(54.dp)
                                 ) {
-                                    Button(
-                                        onClick = {
-                                            numpadState.dismiss()
-                                            viewModel.saveDebt { onNavigateBack() }
-                                        },
-                                        enabled = isSaveEnabled,
-                                        shape = RoundedCornerShape(20.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = accentColor,
-                                            contentColor = Color.White
-                                        ),
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(54.dp)
-                                    ) {
-                                        if (uiState.isSaving) {
-                                            CircularProgressIndicator(
-                                                modifier = Modifier.size(22.dp),
-                                                color = Color.White,
-                                                strokeWidth = 2.dp
-                                            )
-                                        } else {
-                                            Text(
-                                                text = actionBtnText,
-                                                fontSize = 17.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
+                                    if (uiState.isSaving) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(22.dp),
+                                            color = Color.White,
+                                            strokeWidth = 2.dp
+                                        )
+                                    } else {
+                                        Text(
+                                            text = actionBtnText,
+                                            fontSize = 17.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
                                     }
                                 }
                             }

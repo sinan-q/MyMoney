@@ -1,5 +1,6 @@
 package com.sinxn.mymoney.core.ui.components
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -86,6 +87,7 @@ class NumpadFormState(
 
 /**
  * Creates and remembers a [NumpadFormState].
+ * Automatically registers a [BackHandler] to dismiss the numpad when active before allowing back navigation.
  *
  * @param initialNumpadVisible Whether the numpad is initially visible (e.g., true for new transactions/debts).
  * @param focusRequester FocusRequester for the primary next field (e.g. description input).
@@ -99,7 +101,7 @@ fun rememberNumpadFormState(
     focusManager: FocusManager = LocalFocusManager.current,
     keyboardController: SoftwareKeyboardController? = LocalSoftwareKeyboardController.current
 ): NumpadFormState {
-    return remember(focusRequester, focusManager, keyboardController) {
+    val state = remember(focusRequester, focusManager, keyboardController) {
         NumpadFormState(
             initialNumpadVisible = initialNumpadVisible,
             focusRequester = focusRequester,
@@ -107,4 +109,10 @@ fun rememberNumpadFormState(
             keyboardController = keyboardController
         )
     }
+
+    BackHandler(enabled = state.isNumpadVisible) {
+        state.dismiss()
+    }
+
+    return state
 }
