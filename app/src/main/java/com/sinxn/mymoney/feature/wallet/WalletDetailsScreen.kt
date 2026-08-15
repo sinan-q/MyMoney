@@ -72,6 +72,11 @@ fun WalletDetailsScreen(
     val sheetState = rememberModalBottomSheetState()
     
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val isHeaderReduced by remember {
+        androidx.compose.runtime.derivedStateOf {
+            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 20
+        }
+    }
     val showTopBarTitle by remember {
         androidx.compose.runtime.derivedStateOf {
             listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 300
@@ -104,7 +109,8 @@ fun WalletDetailsScreen(
                 wallet = wallet!!,
                 formatterConfig = formatterConfig,
                 isExpanded = isWalletListExpanded,
-                onToggleExpand = { isWalletListExpanded = !isWalletListExpanded }
+                onToggleExpand = { isWalletListExpanded = !isWalletListExpanded },
+                isReduced = isHeaderReduced && !isWalletListExpanded
             )
 
             if (isWalletListExpanded) {

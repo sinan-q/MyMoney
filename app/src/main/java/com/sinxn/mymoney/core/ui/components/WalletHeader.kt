@@ -37,6 +37,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.text.style.TextOverflow
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.util.MoneyFormatter
 
@@ -47,6 +54,8 @@ fun WalletHeader(
     isExpanded: Boolean = false,
     onToggleExpand: () -> Unit = {},
     onMenuClick: (() -> Unit)? = null,
+    isReduced: Boolean = false,
+    modifier: Modifier = Modifier,
     viewModel: WalletHeaderViewModel = hiltViewModel()
 ) {
     val currentWalletState by viewModel.currentWallet.collectAsState()
@@ -65,153 +74,207 @@ fun WalletHeader(
         }))
     }
 
+    val animatedVerticalPadding by animateDpAsState(
+        targetValue = if (isReduced) 4.dp else 16.dp,
+        label = "walletHeaderVerticalPadding"
+    )
+    val animatedHorizontalPadding by animateDpAsState(
+        targetValue = 16.dp,
+        label = "walletHeaderHorizontalPadding"
+    )
+    val animatedCornerRadius by animateDpAsState(
+        targetValue = if (isReduced) 16.dp else 24.dp,
+        label = "walletHeaderCornerRadius"
+    )
+    val animatedInnerPadding by animateDpAsState(
+        targetValue = if (isReduced) 12.dp else 20.dp,
+        label = "walletHeaderInnerPadding"
+    )
+
+    val formattedBalance = remember(effectiveWallet, effectiveConfig) {
+        MoneyFormatter.format(
+            amount = effectiveWallet.currentBalance,
+            currencyCode = effectiveWallet.wallet.currency,
+            decimals = effectiveWallet.decimals,
+            config = effectiveConfig
+        )
+    }
+
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .padding(16.dp)
-            .clip(RoundedCornerShape(24.dp))
+            .padding(horizontal = animatedHorizontalPadding, vertical = animatedVerticalPadding)
+            .clip(RoundedCornerShape(animatedCornerRadius))
             .background(
                 brush = Brush.linearGradient(
                     colors = listOf(baseColor, secondaryColor)
                 )
             )
-    ) {
-        // Subtle decorative background circles for "Premium" look
-        Canvas(
-            modifier = Modifier
-                .size(150.dp)
-                .align(Alignment.BottomEnd)
-                .offset(x = 40.dp, y = 40.dp)
-        ) {
-            drawCircle(
-                color = Color.White.copy(alpha = 0.1f),
-                radius = size.minDimension
+            .animateContentSize(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                )
             )
-        }
-
-        Column(
-            modifier = Modifier
-                .padding(24.dp)
-                .fillMaxWidth(),
-            horizontalAlignment = Alignment.Start
-        ) {
+            .clickable { onToggleExpand() }
+    ) {
+        if (isReduced) {
+            // Compact / Reduced Single-Row Layout
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = animatedInnerPadding),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (onMenuClick != null) {
-                        IconButton(
-                            onClick = onMenuClick,
-                            modifier = Modifier.size(36.dp).padding(end = 8.dp)
+                Text(
+                    text = effectiveWallet.wallet.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.End,
+                    modifier = Modifier.weight(1f, fill = false)
+                ) {
+
+                    Text(
+                        text = if (effectiveWallet.isTotalValid) formattedBalance else "Multi-Currency",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            shadow = Shadow(
+                                color = Color.Black.copy(alpha = 0.15f),
+                                offset = Offset(1f, 2f),
+                                blurRadius = 4f
+                            )
+                        ),
+                        color = Color.White,
+                        fontWeight = FontWeight.Black,
+                        maxLines = 1
+                    )
+                    // Dropdown Pill
+                    Surface(
+                        onClick = onToggleExpand,
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color.White.copy(alpha = 0.2f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Menu,
-                                contentDescription = "Menu",
-                                tint = Color.White
+                                imageVector = if (isExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                                contentDescription = "Toggle wallet list",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
-                    Column {
-                        Text(
-                            text = effectiveWallet.wallet.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Current Balance",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.White.copy(alpha = 0.7f)
-                        )
-                    }
                 }
-
-                // Dropdown Pill (Toggles list below replacing transaction list, same as sidebar)
-                Surface(
-                    onClick = onToggleExpand,
-                    shape = RoundedCornerShape(20.dp),
-                    color = Color.White.copy(alpha = 0.2f)
+            }
+        } else {
+            // Expanded Layout
+            Column(
+                modifier = Modifier
+                    .padding(animatedInnerPadding)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column {
+                            Text(
+                                text = effectiveWallet.wallet.name,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Current Balance",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+
+                    // Dropdown Pill (Toggles list below replacing transaction list, same as sidebar)
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color.White.copy(alpha = 0.2f)
                     ) {
-                        Text(
-                            text = effectiveWallet.wallet.currency,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Icon(
-                            imageVector = if (isExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-                            contentDescription = "Toggle wallet list",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                                contentDescription = "Toggle wallet list",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            val formattedBalance = MoneyFormatter.format(
-                amount = effectiveWallet.currentBalance,
-                currencyCode = effectiveWallet.wallet.currency,
-                decimals = effectiveWallet.decimals,
-                config = effectiveConfig
-            )
-            
-            // Large Bold Balance
-            Text(
-                text = if (effectiveWallet.isTotalValid) formattedBalance else "Multi-Currency",
-                style = if (effectiveWallet.isTotalValid) {
-                    MaterialTheme.typography.displayMedium.copy(
-                        shadow = Shadow(
-                            color = Color.Black.copy(alpha = 0.1f),
-                            offset = Offset(2f, 4f),
-                            blurRadius = 8f
+                // Large Bold Balance
+                Text(
+                    text = if (effectiveWallet.isTotalValid) formattedBalance else "Multi-Currency",
+                    style = if (effectiveWallet.isTotalValid) {
+                        MaterialTheme.typography.displayMedium.copy(
+                            shadow = Shadow(
+                                color = Color.Black.copy(alpha = 0.1f),
+                                offset = Offset(2f, 4f),
+                                blurRadius = 8f
+                            )
                         )
-                    )
-                } else {
-                    MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.Black,
-                        color = Color.White.copy(alpha = 0.9f)
-                    )
-                },
-                color = Color.White,
-                fontWeight = FontWeight.Black,
-                letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified
-            )
+                    } else {
+                        MaterialTheme.typography.headlineMedium.copy(
+                            fontWeight = FontWeight.Black,
+                            color = Color.White.copy(alpha = 0.9f)
+                        )
+                    },
+                    color = Color.White,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified
+                )
 
-            if (!effectiveWallet.isTotalValid) {
-                if (!effectiveWallet.balanceBreakdown.isNullOrEmpty()) {
+                if (!effectiveWallet.isTotalValid) {
+                    if (!effectiveWallet.balanceBreakdown.isNullOrEmpty()) {
+                        Text(
+                            text = effectiveWallet.balanceBreakdown,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
                     Text(
-                        text = effectiveWallet.balanceBreakdown,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(top = 8.dp)
+                        text = "Conversion not supported yet",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(top = 4.dp)
                     )
                 }
-                Text(
-                    text = "Conversion not supported yet",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.7f),
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
-            
-            if (!effectiveWallet.wallet.note.isNullOrEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = effectiveWallet.wallet.note!!,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.8f),
-                    fontStyle = FontStyle.Italic
-                )
+                
+                if (!effectiveWallet.wallet.note.isNullOrEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = effectiveWallet.wallet.note!!,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontStyle = FontStyle.Italic
+                    )
+                }
             }
         }
     }
