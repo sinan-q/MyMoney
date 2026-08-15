@@ -20,16 +20,24 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class DebtListUiState(
-    val selectedTab: Int = 0, // 0: DEBT, 1: CREDIT
-    val includeArchived: Boolean = false,
-    val filterWalletId: String? = null,
-    val debts: List<DebtWithDetails> = emptyList(),
+data class DebtSummaryStats(
     val totalRemainingMoney: Long = 0L,
     val totalOriginalMoney: Long = 0L,
     val totalPaidMoney: Long = 0L,
     val activeCount: Int = 0,
     val settledCount: Int = 0,
+    val currencyCode: String = "USD",
+    val currencyDecimals: Int = 2
+)
+
+data class DebtListUiState(
+    val selectedTab: Int = 0, // 0: DEBT, 1: CREDIT
+    val includeArchived: Boolean = false,
+    val filterWalletId: String? = null,
+    val debts: List<DebtWithDetails> = emptyList(),
+    val credits: List<DebtWithDetails> = emptyList(),
+    val debtSummary: DebtSummaryStats = DebtSummaryStats(),
+    val creditSummary: DebtSummaryStats = DebtSummaryStats(),
     val isLoading: Boolean = false,
     val currencyCode: String = "USD",
     val currencySymbol: String = "$",
@@ -55,11 +63,11 @@ class DebtListViewModel @Inject constructor(
     private val _selectedTab = MutableStateFlow(0)
     private val _includeArchived = MutableStateFlow(false)
 
-    private val debtsFlow = combine(_selectedTab, _includeArchived, settingsRepository.currentWalletId) { tab, archived, wId ->
-        Triple(tab, archived, wId)
-    }.flatMapLatest { (tab, archived, wId) ->
+    private val debtsFlow = combine(_includeArchived, settingsRepository.currentWalletId) { archived, wId ->
+        Pair(archived, wId)
+    }.flatMapLatest { (archived, wId) ->
         val actualWId = if (wId == "total") null else wId
-        debtRepository.getDebts(type = tab, includeArchived = archived, walletId = actualWId)
+        debtRepository.getDebts(type = null, includeArchived = archived, walletId = actualWId)
     }
 
     val uiState: StateFlow<DebtListUiState> = combine(
@@ -68,23 +76,41 @@ class DebtListViewModel @Inject constructor(
         settingsRepository.currentWalletId,
         debtsFlow,
         settingsRepository.formattingSettings
-    ) { tab, archived, wId, debtsList, formatting ->
-        val totalRemaining = debtsList.sumOf { it.remainingMoney }
-        val totalOriginal = debtsList.sumOf { kotlin.math.abs(it.debt.money) }
-        val totalPaid = debtsList.sumOf { kotlin.math.abs(it.progress) }
-        val settled = debtsList.count { it.remainingMoney == 0L && it.debt.money > 0 }
-        val active = debtsList.size - settled
+    ) { tab, archived, wId, allDebtsList, formatting ->
+        val debts = allDebtsList.filter { it.debt.type == 0 }
+        val credits = allDebtsList.filter { it.debt.type == 1 }
+
+        fun calculateStats(list: List<DebtWithDetails>): DebtSummaryStats {
+            val totalRemaining = list.sumOf { it.remainingMoney }
+            val totalOriginal = list.sumOf { kotlin.math.abs(it.debt.money) }
+            val totalPaid = list.sumOf { kotlin.math.abs(it.progress) }
+            val settled = list.count { it.remainingMoney == 0L && it.debt.money > 0 }
+            val active = list.size - settled
+            val currCode = if (list.isNotEmpty()) list.first().walletCurrency else formatting.globalCurrency
+            val currDecimals = if (list.isNotEmpty()) list.first().walletDecimals else 2
+            return DebtSummaryStats(
+                totalRemainingMoney = totalRemaining,
+                totalOriginalMoney = totalOriginal,
+                totalPaidMoney = totalPaid,
+                activeCount = active,
+                settledCount = settled,
+                currencyCode = currCode,
+                currencyDecimals = currDecimals
+            )
+        }
+
+        val debtSummary = calculateStats(debts)
+        val creditSummary = calculateStats(credits)
         val actualWId = if (wId == "total") null else wId
+
         DebtListUiState(
             selectedTab = tab,
             includeArchived = archived,
             filterWalletId = actualWId,
-            debts = debtsList,
-            totalRemainingMoney = totalRemaining,
-            totalOriginalMoney = totalOriginal,
-            totalPaidMoney = totalPaid,
-            activeCount = active,
-            settledCount = settled,
+            debts = debts,
+            credits = credits,
+            debtSummary = debtSummary,
+            creditSummary = creditSummary,
             isLoading = false,
             currencyCode = formatting.globalCurrency,
             currencySymbol = "$",

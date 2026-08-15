@@ -8,6 +8,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -41,6 +45,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.model.DebtWithDetails
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -104,10 +109,9 @@ fun DebtListScreen(
     DebtListContent(
         uiState = uiState,
         onNavigateUp = onNavigateUp,
-        onTabSelected = viewModel::setSelectedTab,
         onToggleIncludeArchived = { viewModel.setIncludeArchived(!uiState.includeArchived) },
         onDebtClick = onDebtClick,
-        onAddDebt = { onAddDebt(uiState.selectedTab) },
+        onAddDebt = onAddDebt,
         onToggleArchived = viewModel::toggleArchived,
         onDeleteDebt = { id -> debtToDelete = id }
     )
@@ -118,24 +122,24 @@ fun DebtListScreen(
 private fun DebtListContent(
     uiState: DebtListUiState,
     onNavigateUp: () -> Unit,
-    onTabSelected: (Int) -> Unit,
     onToggleIncludeArchived: () -> Unit,
     onDebtClick: (String) -> Unit,
-    onAddDebt: () -> Unit,
+    onAddDebt: (type: Int) -> Unit,
     onToggleArchived: (String, Boolean) -> Unit,
     onDeleteDebt: (String) -> Unit
 ) {
-    val accentColor = if (uiState.selectedTab == 0) DebtRoseColor else CreditEmeraldColor
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
+    val accentColor = if (pagerState.currentPage == 0) DebtRoseColor else CreditEmeraldColor
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = onAddDebt,
+                onClick = { onAddDebt(pagerState.currentPage) },
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
                 text = {
                     Text(
-                        text = if (uiState.selectedTab == 0) "Add Debt" else "Add Credit",
+                        text = if (pagerState.currentPage == 0) "Add Debt" else "Add Credit",
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -147,9 +151,9 @@ private fun DebtListContent(
     ) { paddingValues ->
         DebtListBodyContent(
             uiState = uiState,
+            pagerState = pagerState,
             modifier = Modifier.padding(paddingValues),
             showSummaryCard = true,
-            onTabSelected = onTabSelected,
             onDebtClick = onDebtClick,
             onAddDebt = onAddDebt,
             onToggleArchived = onToggleArchived,
@@ -162,13 +166,18 @@ private fun DebtListContent(
 fun DebtListBodyContent(
     uiState: DebtListUiState,
     modifier: Modifier = Modifier,
+    pagerState: PagerState = rememberPagerState(initialPage = 0, pageCount = { 2 }),
     showSummaryCard: Boolean = true,
-    onTabSelected: (Int) -> Unit,
+    onTabSelected: (Int) -> Unit = {},
     onDebtClick: (String) -> Unit,
-    onAddDebt: () -> Unit = {},
+    onAddDebt: (type: Int) -> Unit = {},
     onToggleArchived: (String, Boolean) -> Unit,
     onDeleteDebt: (String) -> Unit
 ) {
+    val coroutineScope = rememberCoroutineScope()
+    val debtListState = rememberLazyListState()
+    val creditListState = rememberLazyListState()
+
     val formatterConfig = remember(uiState.formattingSettings) {
         MoneyFormatter.Config(
             showCurrency = uiState.formattingSettings.showCurrency,
@@ -189,31 +198,16 @@ fun DebtListBodyContent(
             contentAlignment = Alignment.Center
         ) {
             DebtTabPill(
-                selectedTab = uiState.selectedTab,
-                onTabSelected = onTabSelected
+                selectedTab = pagerState.currentPage,
+                onTabSelected = { index ->
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(index)
+                    }
+                    onTabSelected(index)
+                }
             )
         }
 
-        val summaryCurrency = if (uiState.debts.isNotEmpty()) uiState.debts.first().walletCurrency else uiState.currencyCode
-        val summaryDecimals = if (uiState.debts.isNotEmpty()) uiState.debts.first().walletDecimals else uiState.currencyDecimals
-
-        if (showSummaryCard) {
-            DebtSummaryCard(
-                selectedTab = uiState.selectedTab,
-                totalRemainingMoney = uiState.totalRemainingMoney,
-                totalOriginalMoney = uiState.totalOriginalMoney,
-                totalPaidMoney = uiState.totalPaidMoney,
-                activeCount = uiState.activeCount,
-                settledCount = uiState.settledCount,
-                formatterConfig = formatterConfig,
-                currencyCode = summaryCurrency,
-                currencyDecimals = summaryDecimals,
-                filterWalletId = uiState.filterWalletId,
-                includeArchived = uiState.includeArchived
-            )
-        }
-
-        // Debts List Content
         if (uiState.isLoading) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -221,27 +215,64 @@ fun DebtListBodyContent(
             ) {
                 CircularProgressIndicator()
             }
-        } else if (uiState.debts.isEmpty()) {
-            EmptyDebtState(
-                selectedTab = uiState.selectedTab,
-                onAddDebt = onAddDebt
-            )
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 88.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(uiState.debts, key = { it.debt.id }) { debtItem ->
-                    DebtCardItem(
-                        debtWithDetails = debtItem,
-                        formatterConfig = formatterConfig,
-                        dateFormat = uiState.formattingSettings.dateFormat,
-                        onClick = { onDebtClick(debtItem.debt.id) },
-                        onQuickPayment = { onDebtClick(debtItem.debt.id) },
-                        onToggleArchive = { onToggleArchived(debtItem.debt.id, debtItem.debt.isArchived) },
-                        onDelete = { onDeleteDebt(debtItem.debt.id) }
-                    )
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                key = { page -> page }
+            ) { page ->
+                val isDebt = page == 0
+                val currentDebts = if (isDebt) uiState.debts else uiState.credits
+                val listState = if (isDebt) debtListState else creditListState
+                val summary = if (isDebt) uiState.debtSummary else uiState.creditSummary
+
+                val summaryCurrency = if (currentDebts.isNotEmpty()) currentDebts.first().walletCurrency else uiState.currencyCode
+                val summaryDecimals = if (currentDebts.isNotEmpty()) currentDebts.first().walletDecimals else uiState.currencyDecimals
+
+                Column(modifier = Modifier.fillMaxSize()) {
+                    if (showSummaryCard) {
+                        DebtSummaryCard(
+                            selectedTab = page,
+                            totalRemainingMoney = summary.totalRemainingMoney,
+                            totalOriginalMoney = summary.totalOriginalMoney,
+                            totalPaidMoney = summary.totalPaidMoney,
+                            activeCount = summary.activeCount,
+                            settledCount = summary.settledCount,
+                            formatterConfig = formatterConfig,
+                            currencyCode = summaryCurrency,
+                            currencyDecimals = summaryDecimals,
+                            filterWalletId = uiState.filterWalletId,
+                            includeArchived = uiState.includeArchived
+                        )
+                    }
+
+                    if (currentDebts.isEmpty()) {
+                        EmptyDebtState(
+                            selectedTab = page,
+                            onAddDebt = { onAddDebt(page) }
+                        )
+                    } else {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 88.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(currentDebts, key = { it.debt.id }) { debtItem ->
+                                DebtCardItem(
+                                    debtWithDetails = debtItem,
+                                    formatterConfig = formatterConfig,
+                                    dateFormat = uiState.formattingSettings.dateFormat,
+                                    onClick = { onDebtClick(debtItem.debt.id) },
+                                    onQuickPayment = { onDebtClick(debtItem.debt.id) },
+                                    onToggleArchive = { onToggleArchived(debtItem.debt.id, debtItem.debt.isArchived) },
+                                    onDelete = { onDeleteDebt(debtItem.debt.id) }
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
