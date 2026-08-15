@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.ui.components.EditAmountHeader
+import com.sinxn.mymoney.core.ui.components.FormPicker
 import com.sinxn.mymoney.core.ui.components.NumpadView
 import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.ui.components.rememberNumpadFormState
@@ -35,14 +36,7 @@ fun EditTransactionContent(
 ) {
     val scrollState = rememberScrollState()
     val numpadState = rememberNumpadFormState(initialNumpadVisible = uiState.isNewTransaction)
-
-    var showCategoryPicker by remember { mutableStateOf(false) }
-    var showWalletPicker by remember { mutableStateOf(false) }
-    var showTargetWalletPicker by remember { mutableStateOf(false) }
-    var showPlacePicker by remember { mutableStateOf(false) }
-    var showEventPicker by remember { mutableStateOf(false) }
-    var showPeoplePicker by remember { mutableStateOf(false) }
-    var showDatePicker by remember { mutableStateOf(false) }
+    var activePicker by remember { mutableStateOf<FormPicker?>(null) }
 
     // Direction Accent Color
     val accentColor = remember(uiState.isTransfer, uiState.editDirection) {
@@ -127,11 +121,11 @@ fun EditTransactionContent(
                     accentColor = accentColor,
                     onFromWalletClick = {
                         numpadState.dismiss()
-                        showWalletPicker = true
+                        activePicker = FormPicker.Wallet
                     },
                     onToWalletClick = {
                         numpadState.dismiss()
-                        showTargetWalletPicker = true
+                        activePicker = FormPicker.TargetWallet
                     },
                     onSwapWallets = viewModel::swapTransferWallets,
                     onTargetAmountChange = viewModel::onTargetAmountChange,
@@ -147,27 +141,27 @@ fun EditTransactionContent(
                 accentColor = accentColor,
                 onCategoryClick = {
                     numpadState.dismiss()
-                    showCategoryPicker = true
+                    activePicker = FormPicker.Category
                 },
                 onWalletClick = {
                     numpadState.dismiss()
-                    showWalletPicker = true
+                    activePicker = FormPicker.Wallet
                 },
                 onDateClick = {
                     numpadState.dismiss()
-                    showDatePicker = true
+                    activePicker = FormPicker.Date
                 },
                 onPeopleClick = {
                     numpadState.dismiss()
-                    showPeoplePicker = true
+                    activePicker = FormPicker.People
                 },
                 onPlaceClick = {
                     numpadState.dismiss()
-                    showPlacePicker = true
+                    activePicker = FormPicker.Place
                 },
                 onEventClick = {
                     numpadState.dismiss()
-                    showEventPicker = true
+                    activePicker = FormPicker.Event
                 },
                 onNoteChange = viewModel::onNoteChange,
                 onConfirmedChange = {
@@ -250,19 +244,7 @@ fun EditTransactionContent(
     EditTransactionDialogs(
         uiState = uiState,
         viewModel = viewModel,
-        showCategoryPicker = showCategoryPicker,
-        showWalletPicker = showWalletPicker,
-        showTargetWalletPicker = showTargetWalletPicker,
-        showPlacePicker = showPlacePicker,
-        showEventPicker = showEventPicker,
-        showPeoplePicker = showPeoplePicker,
-        showDatePicker = showDatePicker,
-        onDismissCategoryPicker = { showCategoryPicker = false },
-        onDismissWalletPicker = { showWalletPicker = false },
-        onDismissTargetWalletPicker = { showTargetWalletPicker = false },
-        onDismissPlacePicker = { showPlacePicker = false },
-        onDismissEventPicker = { showEventPicker = false },
-        onDismissPeoplePicker = { showPeoplePicker = false },
-        onDismissDatePicker = { showDatePicker = false }
+        activePicker = activePicker,
+        onDismiss = { activePicker = null }
     )
 }

@@ -60,6 +60,8 @@ import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.core.ui.components.CleanListRow
 import com.sinxn.mymoney.core.ui.components.EditAmountHeader
 import com.sinxn.mymoney.core.ui.components.FormCardContainer
+import com.sinxn.mymoney.core.ui.components.FormDatePickerDialog
+import com.sinxn.mymoney.core.ui.components.FormPicker
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -761,11 +763,7 @@ private fun DebtFormContent(
     onFocusField: () -> Unit,
     onDismissKeyboardAndNumpad: () -> Unit
 ) {
-    var showWalletPicker by remember { mutableStateOf(false) }
-    var showPlacePicker by remember { mutableStateOf(false) }
-    var showPeoplePicker by remember { mutableStateOf(false) }
-    var showDatePicker by remember { mutableStateOf(false) }
-    var showExpDatePicker by remember { mutableStateOf(false) }
+    var activePicker by remember { mutableStateOf<FormPicker?>(null) }
 
     val selectedWallet = uiState.availableWallets.find { it.id == uiState.editWalletId }
     val selectedPlace = uiState.availablePlaces.find { it.id == uiState.editPlaceId }
@@ -804,7 +802,7 @@ private fun DebtFormContent(
                     value = selectedWallet?.name ?: "Select Wallet",
                     onClick = {
                         onDismissKeyboardAndNumpad()
-                        showWalletPicker = true
+                        activePicker = FormPicker.Wallet
                     }
                 )
 
@@ -817,7 +815,7 @@ private fun DebtFormContent(
                     value = uiState.editDate.take(10),
                     onClick = {
                         onDismissKeyboardAndNumpad()
-                        showDatePicker = true
+                        activePicker = FormPicker.Date
                     }
                 )
 
@@ -830,7 +828,7 @@ private fun DebtFormContent(
                     value = uiState.editExpirationDate?.take(10) ?: "Not Set",
                     onClick = {
                         onDismissKeyboardAndNumpad()
-                        showExpDatePicker = true
+                        activePicker = FormPicker.DueDate
                     },
                     trailingBadge = if (!uiState.editExpirationDate.isNullOrBlank()) {
                         {
@@ -857,7 +855,7 @@ private fun DebtFormContent(
                     value = if (linkedPeopleNames.isNotBlank()) linkedPeopleNames else "None Selected",
                     onClick = {
                         onDismissKeyboardAndNumpad()
-                        showPeoplePicker = true
+                        activePicker = FormPicker.People
                     }
                 )
 
@@ -870,7 +868,7 @@ private fun DebtFormContent(
                     value = selectedPlace?.name ?: "None",
                     onClick = {
                         onDismissKeyboardAndNumpad()
-                        showPlacePicker = true
+                        activePicker = FormPicker.Place
                     }
                 )
             }
@@ -940,76 +938,61 @@ private fun DebtFormContent(
     }
 
     // Dialog Pickers
-    if (showWalletPicker) {
-        WalletSelectionDialog(
-            title = "Select Associated Wallet",
-            wallets = uiState.availableWallets,
-            selectedWalletId = uiState.editWalletId,
-            onWalletSelected = { wallet ->
-                onWalletChange(wallet.id)
-                showWalletPicker = false
-            },
-            onDismissRequest = { showWalletPicker = false }
-        )
-    }
-
-    if (showPlacePicker) {
-        PlaceSelectionDialog(
-            title = "Select Place",
-            places = uiState.availablePlaces,
-            selectedPlaceId = uiState.editPlaceId,
-            onPlaceSelected = { place ->
-                onPlaceChange(place?.id)
-                showPlacePicker = false
-            },
-            onDismissRequest = { showPlacePicker = false }
-        )
-    }
-
-    if (showPeoplePicker) {
-        PeopleSelectionDialog(
-            title = "Select People",
-            people = uiState.availablePeople,
-            selectedPeopleIds = uiState.editPeopleIds,
-            onPersonToggle = { person -> onPersonToggle(person.id) },
-            onDismissRequest = { showPeoplePicker = false }
-        )
-    }
-
-    if (showDatePicker) {
-        val datePickerState = rememberDatePickerState()
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let { millis ->
-                        val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                        onDateChange(formatter.format(Date(millis)))
-                        showDatePicker = false
-                    }
-                }) { Text("OK") }
-            }
-        ) {
-            DatePicker(state = datePickerState)
+    when (activePicker) {
+        FormPicker.Wallet -> {
+            WalletSelectionDialog(
+                title = "Select Associated Wallet",
+                wallets = uiState.availableWallets,
+                selectedWalletId = uiState.editWalletId,
+                onWalletSelected = { wallet ->
+                    onWalletChange(wallet.id)
+                    activePicker = null
+                },
+                onDismissRequest = { activePicker = null }
+            )
         }
-    }
-
-    if (showExpDatePicker) {
-        val expDatePickerState = rememberDatePickerState()
-        DatePickerDialog(
-            onDismissRequest = { showExpDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    expDatePickerState.selectedDateMillis?.let { millis ->
-                        val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                        onExpirationDateChange(formatter.format(Date(millis)))
-                        showExpDatePicker = false
-                    }
-                }) { Text("OK") }
-            }
-        ) {
-            DatePicker(state = expDatePickerState)
+        FormPicker.Place -> {
+            PlaceSelectionDialog(
+                title = "Select Place",
+                places = uiState.availablePlaces,
+                selectedPlaceId = uiState.editPlaceId,
+                onPlaceSelected = { place ->
+                    onPlaceChange(place?.id)
+                    activePicker = null
+                },
+                onDismissRequest = { activePicker = null }
+            )
         }
+        FormPicker.People -> {
+            PeopleSelectionDialog(
+                title = "Select People",
+                people = uiState.availablePeople,
+                selectedPeopleIds = uiState.editPeopleIds,
+                onPersonToggle = { person -> onPersonToggle(person.id) },
+                onDismissRequest = { activePicker = null }
+            )
+        }
+        FormPicker.Date -> {
+            FormDatePickerDialog(
+                initialDateString = uiState.editDate,
+                onDateStringSelected = { dateStr ->
+                    onDateChange(dateStr)
+                    activePicker = null
+                },
+                onDismissRequest = { activePicker = null }
+            )
+        }
+        FormPicker.DueDate -> {
+            FormDatePickerDialog(
+                initialDateString = uiState.editExpirationDate,
+                onDateStringSelected = { expDateStr ->
+                    onExpirationDateChange(expDateStr)
+                    activePicker = null
+                },
+                onDismissRequest = { activePicker = null }
+            )
+        }
+        else -> Unit
     }
 }
 
