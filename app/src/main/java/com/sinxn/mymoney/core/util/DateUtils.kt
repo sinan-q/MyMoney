@@ -14,6 +14,12 @@ object DateUtils {
         }
     }
 
+    private val simpleDateFormat = object : ThreadLocal<SimpleDateFormat>() {
+        override fun initialValue(): SimpleDateFormat {
+            return SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH)
+        }
+    }
+
     private val isoDateFormat = object : ThreadLocal<SimpleDateFormat>() {
         override fun initialValue(): SimpleDateFormat {
             return SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ENGLISH).apply {
@@ -27,27 +33,38 @@ object DateUtils {
     }
 
     fun parseDate(dateString: String): Date {
-        // FAST PATH: Try SQL Format (legacy default) first
+        if (dateString.isBlank()) return Date()
+
+        // 1. Try SQL Format (yyyy-MM-dd HH:mm:ss)
         try {
             return sqlDateFormat.get()?.parse(dateString) ?: Date()
         } catch (e: Exception) {
-            // Check if it's a Long timestamp (Legacy backup can sometimes use this?)
-            // Only try if it looks like a number
-            if (dateString.all { it.isDigit() }) {
-                try {
-                    return Date(dateString.toLong())
-                } catch (e: NumberFormatException) {
-                    // Ignore
-                }
-            }
-            
-            // Fallback to ISO
-             try {
-                return isoDateFormat.get()?.parse(dateString) ?: Date()
-            } catch (e: Exception) {
+            // Ignore
+        }
+
+        // 2. Try Simple Date Format (yyyy-MM-dd)
+        try {
+            return simpleDateFormat.get()?.parse(dateString) ?: Date()
+        } catch (e: Exception) {
+            // Ignore
+        }
+
+        // 3. Fallback to ISO
+        try {
+            return isoDateFormat.get()?.parse(dateString) ?: Date()
+        } catch (e: Exception) {
+            // Ignore
+        }
+
+        // 4. Check if it's a Long timestamp
+        if (dateString.all { it.isDigit() }) {
+            try {
+                return Date(dateString.toLong())
+            } catch (e: NumberFormatException) {
                 // Ignore
             }
         }
+
         return Date()
     }
 

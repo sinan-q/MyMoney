@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.model.DebtWithDetails
+import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -235,6 +236,7 @@ fun DebtListBodyContent(
                     DebtCardItem(
                         debtWithDetails = debtItem,
                         formatterConfig = formatterConfig,
+                        dateFormat = uiState.formattingSettings.dateFormat,
                         onClick = { onDebtClick(debtItem.debt.id) },
                         onQuickPayment = { onDebtClick(debtItem.debt.id) },
                         onToggleArchive = { onToggleArchived(debtItem.debt.id, debtItem.debt.isArchived) },
@@ -434,6 +436,7 @@ private fun DebtSummaryCard(
 private fun DebtCardItem(
     debtWithDetails: DebtWithDetails,
     formatterConfig: MoneyFormatter.Config,
+    dateFormat: Int = 2,
     onClick: () -> Unit,
     onQuickPayment: () -> Unit,
     onToggleArchive: () -> Unit,
@@ -458,6 +461,11 @@ private fun DebtCardItem(
                 false
             }
         } ?: false
+    }
+
+    val formattedDate = remember(debt.date, dateFormat) {
+        val dateObj = DateUtils.parseDate(debt.date)
+        DateUtils.formatDate(dateObj, dateFormat)
     }
 
     var showMenu by remember { mutableStateOf(false) }
@@ -506,14 +514,6 @@ private fun DebtCardItem(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = debt.description.ifBlank { if (isDebt) "Debt" else "Credit" },
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
                     // Subtitle Details Badges (Wallet, People, Due Date)
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -525,17 +525,33 @@ private fun DebtCardItem(
                         if (isOverdue) {
                             BadgeChip(
                                 icon = Icons.Default.Event,
-                                text = "Overdue",
+                                text = "Overdue" ,
                                 containerColor = MaterialTheme.colorScheme.errorContainer,
                                 contentColor = MaterialTheme.colorScheme.onErrorContainer
                             )
                         } else if (!debt.expirationDate.isNullOrBlank()) {
+                            val formattedDueDate = remember(debt.expirationDate, dateFormat) {
+                                val expDateObj = DateUtils.parseDate(debt.expirationDate)
+                                DateUtils.formatDate(expDateObj, dateFormat)
+                            }
                             BadgeChip(
                                 icon = Icons.Default.Event,
-                                text = "Due ${debt.expirationDate.take(10)}"
+                                text = "Due $formattedDueDate"
                             )
                         }
                     }
+                    Text(
+                        text = debt.description.ifBlank { if (isDebt) "Debt" else "Credit" },
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = formattedDate,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 

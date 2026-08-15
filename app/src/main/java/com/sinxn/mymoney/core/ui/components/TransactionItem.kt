@@ -43,7 +43,7 @@ fun TransactionItem(
     val categoryIconData = if (isTransferItem) TRANSFER_ICON_DATA else item.categoryIcon
     
     val hasDescription = !transaction.description.isNullOrBlank()
-    val primaryTitle = if (hasDescription) transaction.description!! else categoryDisplayName
+    val primaryTitle = if (hasDescription) transaction.description else categoryDisplayName
     val subtitleText = if (hasDescription) categoryDisplayName else null
 
     val formattedDate = androidx.compose.runtime.remember(transaction.date, dateFormat) {
