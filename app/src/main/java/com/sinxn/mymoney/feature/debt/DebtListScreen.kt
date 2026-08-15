@@ -43,12 +43,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.model.DebtWithDetails
+import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.collections.listOf
 
 private val DebtRoseColor = Color(0xFFE11D48)
 private val CreditEmeraldColor = Color(0xFF10B981)
@@ -197,9 +199,10 @@ fun DebtListBodyContent(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center
         ) {
-            DebtTabPill(
-                selectedTab = pagerState.currentPage,
-                onTabSelected = { index ->
+            TabPill(
+                tabs = listOf(Pair("Debts",  DebtRoseColor), Pair("Credits",  CreditEmeraldColor)),
+                activeTab = pagerState.currentPage,
+                onTabChange = { index ->
                     coroutineScope.launch {
                         pagerState.animateScrollToPage(index)
                     }
@@ -274,61 +277,6 @@ fun DebtListBodyContent(
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DebtTabPill(
-    selectedTab: Int,
-    onTabSelected: (Int) -> Unit
-) {
-    val tabs = listOf(
-        Pair("Debts",  DebtRoseColor),
-        Pair("Credits",  CreditEmeraldColor)
-    )
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(44.dp)
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                shape = CircleShape
-            )
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        tabs.forEachIndexed { index, (title, accent) ->
-            val isSelected = selectedTab == index
-            val bgColor by animateColorAsState(
-                targetValue = if (isSelected) accent else Color.Transparent,
-                label = "DebtTabBg_$index"
-            )
-            val textColor by animateColorAsState(
-                targetValue = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                label = "DebtTabText_$index"
-            )
-
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .clip(CircleShape)
-                    .background(bgColor)
-                    .clickable { onTabSelected(index) }
-                    .padding(horizontal = 8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = textColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
             }
         }
     }

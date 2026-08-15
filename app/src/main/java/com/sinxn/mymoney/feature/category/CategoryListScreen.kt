@@ -27,8 +27,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
+import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.util.CategoryType
 import kotlinx.coroutines.launch
+import kotlin.collections.listOf
 
 private sealed class CategoryRow {
     data class Parent(
@@ -97,6 +99,7 @@ fun CategoryListScreen(
                 contentAlignment = Alignment.Center
             ) {
                 TabPill(
+                    tabs = listOf("Expense" to Color(0xFFE11D48), "Income" to Color(0xFF10B981)),
                     activeTab = pagerState.currentPage,
                     onTabChange = { index ->
                         coroutineScope.launch {
@@ -177,54 +180,6 @@ fun CategoryListScreen(
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TabPill(
-    activeTab: Int,
-    onTabChange: (Int) -> Unit
-) {
-    val tabs = listOf("Expense" to Color(0xFFE11D48), "Income" to Color(0xFF10B981))
-
-    Row(
-        modifier = Modifier
-            .height(34.dp)
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                shape = CircleShape
-            )
-            .padding(3.dp),
-        horizontalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        tabs.forEachIndexed { index, (title, accent) ->
-            val isSelected = activeTab == index
-            val bgColor by animateColorAsState(
-                targetValue = if (isSelected) accent else Color.Transparent,
-                label = "TabBg"
-            )
-            val textColor by animateColorAsState(
-                targetValue = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                label = "TabText"
-            )
-
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .clip(CircleShape)
-                    .background(bgColor)
-                    .clickable { onTabChange(index) }
-                    .padding(horizontal = 18.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = textColor
-                )
             }
         }
     }
