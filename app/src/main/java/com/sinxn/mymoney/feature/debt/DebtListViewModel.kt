@@ -26,7 +26,7 @@ data class DebtListUiState(
     val filterWalletId: String? = null,
     val debts: List<DebtWithDetails> = emptyList(),
     val totalRemainingMoney: Long = 0L,
-    val isLoading: Boolean = true,
+    val isLoading: Boolean = false,
     val currencyCode: String = "USD",
     val currencySymbol: String = "$",
     val currencyDecimals: Int = 2

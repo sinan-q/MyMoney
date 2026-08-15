@@ -26,7 +26,7 @@ data class EventFormState(
 
 data class EventUiState(
     val events: List<EventEntity> = emptyList(),
-    val isLoading: Boolean = true,
+    val isLoading: Boolean = false,
     val isEditDialogOpen: Boolean = false,
     val editingEvent: EventEntity? = null,
     val editName: String = "",

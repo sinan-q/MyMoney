@@ -27,7 +27,7 @@ data class CategoryUiState(
     val categories: List<CategoryEntity> = emptyList(),
     val expenseCategories: List<CategoryEntity> = emptyList(),
     val incomeCategories: List<CategoryEntity> = emptyList(),
-    val isLoading: Boolean = true,
+    val isLoading: Boolean = false,
     val isEditDialogOpen: Boolean = false,
     val editingCategory: CategoryEntity? = null,
     val editName: String = "",

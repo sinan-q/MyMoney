@@ -22,7 +22,7 @@ data class PersonFormState(
 
 data class PeopleUiState(
     val people: List<PersonEntity> = emptyList(),
-    val isLoading: Boolean = true,
+    val isLoading: Boolean = false,
     val isEditDialogOpen: Boolean = false,
     val editingPerson: PersonEntity? = null,
     val editName: String = "",

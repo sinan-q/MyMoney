@@ -50,20 +50,26 @@ fun EditTransactionContent(
     var isNumpadVisible by remember(uiState.isNewTransaction) { mutableStateOf(uiState.isNewTransaction) }
 
     // Direction Accent Color
-    val accentColor = when {
-        uiState.isTransfer || uiState.editDirection == Direction.TRANSFER -> Color(0xFF0284C7)
-        uiState.editDirection == Direction.INCOME -> Color(0xFF10B981)
-        else -> Color(0xFFE11D48)
+    val accentColor = remember(uiState.isTransfer, uiState.editDirection) {
+        when {
+            uiState.isTransfer || uiState.editDirection == Direction.TRANSFER -> Color(0xFF0284C7)
+            uiState.editDirection == Direction.INCOME -> Color(0xFF10B981)
+            else -> Color(0xFFE11D48)
+        }
     }
 
-    val hasOperatorInAmount = run {
+    val hasOperatorInAmount = remember(uiState.editAmount) {
         val amountStr = uiState.editAmount.trim()
         val rest = if (amountStr.startsWith("-")) amountStr.substring(1) else amountStr
         rest.contains("+") || rest.contains("-") || rest.contains("×") || rest.contains("÷")
     }
 
-    val evaluatedAmountStr = viewModel.getImmediateResult(uiState.editAmount)
-    val amountValue = evaluatedAmountStr.toDoubleOrNull()
+    val evaluatedAmountStr = remember(uiState.editAmount) {
+        viewModel.getImmediateResult(uiState.editAmount)
+    }
+    val amountValue = remember(evaluatedAmountStr) {
+        evaluatedAmountStr.toDoubleOrNull()
+    }
     val isCategorySelected = !uiState.editCategoryId.isNullOrBlank() || uiState.isTransfer
     val isWalletSelected = uiState.editWalletId.isNotBlank() && (!uiState.isTransfer || !uiState.targetWalletId.isNullOrBlank())
     val isAmountNonNegative = amountValue != null && amountValue >= 0.0

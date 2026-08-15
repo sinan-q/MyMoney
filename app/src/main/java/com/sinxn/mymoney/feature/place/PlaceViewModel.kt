@@ -24,7 +24,7 @@ data class PlaceFormState(
 
 data class PlaceUiState(
     val places: List<PlaceEntity> = emptyList(),
-    val isLoading: Boolean = true,
+    val isLoading: Boolean = false,
     val isEditDialogOpen: Boolean = false,
     val editingPlace: PlaceEntity? = null,
     val editName: String = "",

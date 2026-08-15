@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
@@ -140,15 +141,15 @@ fun CategoryListScreen(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(bottom = 88.dp)
                         ) {
-                            itemsIndexed(
+                            items(
                                 items = flatRows,
-                                key = { idx, row ->
+                                key = { row ->
                                     when (row) {
-                                        is CategoryRow.Parent -> "p_${row.category.id}_$idx"
-                                        is CategoryRow.Sub -> "s_${row.category.id}_$idx"
+                                        is CategoryRow.Parent -> "p_${row.category.id}"
+                                        is CategoryRow.Sub -> "s_${row.category.id}"
                                     }
                                 }
-                            ) { _, row ->
+                            ) { row ->
                                 when (row) {
                                     is CategoryRow.Parent -> {
                                         ParentCategoryRow(
