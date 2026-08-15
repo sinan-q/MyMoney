@@ -4,6 +4,18 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -106,15 +118,47 @@ class MainActivity : ComponentActivity() {
                         val dynamicTabIcon = dynamicMenuItem?.icon ?: Icons.Default.Equalizer
 
                         Scaffold(
-                            contentWindowInsets = if (isTopLevelScreen) ScaffoldDefaults.contentWindowInsets else WindowInsets(0, 0, 0, 0),
+                            contentWindowInsets = WindowInsets(0, 0, 0, 0),
                             topBar = {
-                                if (isTopLevelScreen) {
+                                AnimatedVisibility(
+                                    visible = isTopLevelScreen,
+                                    enter = slideInVertically(
+                                        initialOffsetY = { -it },
+                                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                                    ) + expandVertically(
+                                        expandFrom = Alignment.Top,
+                                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                                    ) + fadeIn(
+                                        animationSpec = tween(durationMillis = 200)
+                                    ),
+                                    exit = slideOutVertically(
+                                        targetOffsetY = { -it },
+                                        animationSpec = tween(durationMillis = 250, easing = FastOutLinearInEasing)
+                                    ) + shrinkVertically(
+                                        shrinkTowards = Alignment.Top,
+                                        animationSpec = tween(durationMillis = 250, easing = FastOutLinearInEasing)
+                                    ) + fadeOut(
+                                        animationSpec = tween(durationMillis = 150)
+                                    )
+                                ) {
                                     TopAppBar(
                                         title = {
-                                            Text(
-                                                text = pageTitle,
-                                                fontWeight = FontWeight.Bold
-                                            )
+                                            AnimatedContent(
+                                                targetState = pageTitle,
+                                                transitionSpec = {
+                                                    fadeIn(
+                                                        animationSpec = tween(200)
+                                                    ) togetherWith fadeOut(
+                                                        animationSpec = tween(200)
+                                                    )
+                                                },
+                                                label = "TopAppBarTitle"
+                                            ) { targetTitle ->
+                                                Text(
+                                                    text = targetTitle,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
                                         },
                                         colors = TopAppBarDefaults.topAppBarColors(
                                             containerColor = MaterialTheme.colorScheme.background
