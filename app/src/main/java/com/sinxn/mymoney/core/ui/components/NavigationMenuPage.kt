@@ -59,6 +59,9 @@ import com.sinxn.mymoney.core.util.Constants
 import com.sinxn.mymoney.navigation.Screen
 import androidx.core.net.toUri
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavOptionsBuilder
+
 
 data class NavigationMenuItem(
     val id: String,
@@ -278,35 +281,39 @@ fun handleSidebarNavigation(
     itemId: String,
     currentWalletId: String = Constants.TOTAL_WALLET_ID
 ) {
+    val navOptions: NavOptionsBuilder.() -> Unit = {
+        popUpTo(navController.graph.findStartDestination().id) {
+            saveState = true
+        }
+        launchSingleTop = true
+        restoreState = true
+    }
+
     when (itemId) {
         Screen.Transactions.sidebarItemId -> {
             val targetWallet = currentWalletId.ifEmpty { Constants.TOTAL_WALLET_ID }
-            navController.navigate(Screen.Transactions.createRoute(targetWallet)) {
-                popUpTo(navController.graph.startDestinationId) { saveState = true }
-                launchSingleTop = true
-                restoreState = true
-            }
+            navController.navigate(Screen.Transactions.createRoute(targetWallet), navOptions)
         }
-        Screen.Debts.sidebarItemId -> navController.navigate(Screen.Debts.routePattern) { launchSingleTop = true }
-        Screen.Categories.sidebarItemId -> navController.navigate(Screen.Categories.routePattern) { launchSingleTop = true }
-        Screen.Overview.sidebarItemId -> navController.navigate(Screen.Overview.routePattern) { launchSingleTop = true }
-        Screen.Budgets.sidebarItemId -> navController.navigate(Screen.Budgets.routePattern) { launchSingleTop = true }
-        Screen.Savings.sidebarItemId -> navController.navigate(Screen.Savings.routePattern) { launchSingleTop = true }
-        Screen.Events.sidebarItemId -> navController.navigate(Screen.Events.routePattern) { launchSingleTop = true }
-        Screen.Recurrences.sidebarItemId -> navController.navigate(Screen.Recurrences.routePattern) { launchSingleTop = true }
-        Screen.Templates.sidebarItemId -> navController.navigate(Screen.Templates.routePattern) { launchSingleTop = true }
-        Screen.Places.sidebarItemId -> navController.navigate(Screen.Places.routePattern) { launchSingleTop = true }
-        Screen.People.sidebarItemId -> navController.navigate(Screen.People.routePattern) { launchSingleTop = true }
+        Screen.Debts.sidebarItemId -> navController.navigate(Screen.Debts.routePattern, navOptions)
+        Screen.Categories.sidebarItemId -> navController.navigate(Screen.Categories.routePattern, navOptions)
+        Screen.Overview.sidebarItemId -> navController.navigate(Screen.Overview.routePattern, navOptions)
+        Screen.Budgets.sidebarItemId -> navController.navigate(Screen.Budgets.routePattern, navOptions)
+        Screen.Savings.sidebarItemId -> navController.navigate(Screen.Savings.routePattern, navOptions)
+        Screen.Events.sidebarItemId -> navController.navigate(Screen.Events.routePattern, navOptions)
+        Screen.Recurrences.sidebarItemId -> navController.navigate(Screen.Recurrences.routePattern, navOptions)
+        Screen.Templates.sidebarItemId -> navController.navigate(Screen.Templates.routePattern, navOptions)
+        Screen.Places.sidebarItemId -> navController.navigate(Screen.Places.routePattern, navOptions)
+        Screen.People.sidebarItemId -> navController.navigate(Screen.People.routePattern, navOptions)
         "calculator" -> launchCalculatorIntent(context)
         "converter" -> launchConverterIntent(context)
         "search_atm" -> launchSearchIntent(context, "ATM")
         "search_bank" -> launchSearchIntent(context, "Bank")
-        Screen.Settings.sidebarItemId -> navController.navigate(Screen.Settings.routePattern) { launchSingleTop = true }
-        Screen.SupportDeveloper.sidebarItemId -> navController.navigate(Screen.SupportDeveloper.routePattern) { launchSingleTop = true }
-        Screen.About.sidebarItemId -> navController.navigate(Screen.About.routePattern) { launchSingleTop = true }
+        Screen.Settings.sidebarItemId -> navController.navigate(Screen.Settings.routePattern, navOptions)
+        Screen.SupportDeveloper.sidebarItemId -> navController.navigate(Screen.SupportDeveloper.routePattern, navOptions)
+        Screen.About.sidebarItemId -> navController.navigate(Screen.About.routePattern, navOptions)
         else -> {
             try {
-                navController.navigate(itemId) { launchSingleTop = true }
+                navController.navigate(itemId, navOptions)
             } catch (e: Exception) {
                 // Ignore invalid route
             }

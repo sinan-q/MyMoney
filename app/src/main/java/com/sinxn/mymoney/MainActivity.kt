@@ -2,41 +2,48 @@ package com.sinxn.mymoney
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.sinxn.mymoney.core.data.repository.RecurrenceRepository
-import com.sinxn.mymoney.core.ui.components.NavigationMenuPage
+import com.sinxn.mymoney.core.ui.components.NavigationMenuContent
 import com.sinxn.mymoney.core.ui.components.handleSidebarNavigation
+import com.sinxn.mymoney.core.ui.components.navigationMenuItems
 import com.sinxn.mymoney.core.util.Constants
 import com.sinxn.mymoney.navigation.AppNavHost
 import com.sinxn.mymoney.navigation.Screen
@@ -70,87 +77,159 @@ class MainActivity : ComponentActivity() {
                     val startDest by viewModel.startDestination.collectAsState()
                     
                     if (startDest != "loading") {
-                        val pagerState = rememberPagerState(initialPage = 1, pageCount = { 2 })
+                        var showMenu by remember { mutableStateOf(false) }
+                        var dynamicModuleItemId by remember { mutableStateOf(Screen.Overview.sidebarItemId) }
+
                         val currentBackStackEntry by navController.currentBackStackEntryAsState()
                         val currentRoute = currentBackStackEntry?.destination?.route ?: "wallet_details/${Constants.TOTAL_WALLET_ID}"
                         val currentWalletId by viewModel.currentWalletId.collectAsState()
                         
-                        val screenMetadata = androidx.compose.runtime.remember(currentRoute) {
+                        val screenMetadata = remember(currentRoute) {
                             Screen.fromRoute(currentRoute)
                         }
                         val selectedItemId = screenMetadata.selectedItemId
                         val isTopLevelScreen = screenMetadata.isTopLevel
                         val pageTitle = screenMetadata.title
-                        
-                        val coroutineScope = rememberCoroutineScope()
+                        val isTransactions = selectedItemId == Screen.Transactions.sidebarItemId
 
-                        HorizontalPager(state = pagerState) { page ->
-                            if (page == 1) {
-                                Scaffold(
-                                     contentWindowInsets = if (isTopLevelScreen) ScaffoldDefaults.contentWindowInsets else WindowInsets(0, 0, 0, 0),
-                                     topBar = {
-                                         if (isTopLevelScreen) {
-                                             TopAppBar(
-                                                 title = {
-                                                     Text(
-                                                         text = pageTitle,
-                                                         fontWeight = FontWeight.Bold
-                                                     )
-                                                 },
-                                                 navigationIcon = {
-                                                     IconButton(
-                                                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } }
-                                                     ) {
-                                                         Icon(
-                                                             imageVector = Icons.Default.Menu,
-                                                             contentDescription = "Open Sidebar"
-                                                         )
-                                                     }
-                                                 },
-                                                 colors = TopAppBarDefaults.topAppBarColors(
-                                                     containerColor = MaterialTheme.colorScheme.background
-                                                 )
-                                             )
-                                         }
-                                     },
+                        // Track active module in dynamic slot when visiting top-level non-transaction screens
+                        LaunchedEffect(selectedItemId, isTopLevelScreen) {
+                            if (!isTransactions && isTopLevelScreen && selectedItemId.isNotBlank()) {
+                                dynamicModuleItemId = selectedItemId
+                            }
+                        }
 
-                                ) { paddingValues ->
-                                    Box(modifier = Modifier.padding(paddingValues)) {
-                                        AppNavHost(
-                                            navController = navController,
-                                            startDestination = startDest,
-                                            currentWalletId = currentWalletId
+                        // Retrieve metadata for dynamic middle tab (defaults to Overview)
+                        val dynamicMenuItem = remember(dynamicModuleItemId) {
+                            navigationMenuItems.find { it.id == dynamicModuleItemId }
+                                ?: navigationMenuItems.find { it.id == Screen.Overview.sidebarItemId }
+                        }
+                        val dynamicTabTitle = dynamicMenuItem?.title ?: "Overview"
+                        val dynamicTabIcon = dynamicMenuItem?.icon ?: Icons.Default.Equalizer
+
+                        // System back handler: pressing back on the Menu tab returns to the previous view
+                        BackHandler(enabled = showMenu) {
+                            showMenu = false
+                        }
+
+                        Scaffold(
+                            contentWindowInsets = if (isTopLevelScreen) ScaffoldDefaults.contentWindowInsets else WindowInsets(0, 0, 0, 0),
+                            topBar = {
+                                if (isTopLevelScreen) {
+                                    TopAppBar(
+                                        title = {
+                                            Text(
+                                                text = if (showMenu) "Menu" else pageTitle,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        },
+                                        colors = TopAppBarDefaults.topAppBarColors(
+                                            containerColor = MaterialTheme.colorScheme.background
                                         )
-                                    }
+                                    )
                                 }
-                            } else {
-                                NavigationMenuPage(
-                                    selectedItemId = selectedItemId,
-                                    onReturnToMain = {
-                                        coroutineScope.launch { pagerState.animateScrollToPage(1) }
-                                    },
-                                    onWalletSelect = { wallet ->
-                                        coroutineScope.launch { pagerState.animateScrollToPage(1) }
-                                        navController.navigate(Screen.Transactions.createRoute(wallet.wallet.id))
-                                    },
-                                    onAddWallet = {
-                                        coroutineScope.launch { pagerState.animateScrollToPage(1) }
-                                        navController.navigate(Screen.Settings.routePattern)
-                                    },
-                                    onManageWallets = {
-                                        coroutineScope.launch { pagerState.animateScrollToPage(1) }
-                                        navController.navigate(Screen.Settings.routePattern)
-                                    },
-                                    onItemClick = { item ->
-                                        coroutineScope.launch { pagerState.animateScrollToPage(1) }
-                                        handleSidebarNavigation(
-                                            context = this@MainActivity,
-                                            navController = navController,
-                                            itemId = item.id,
-                                            currentWalletId = currentWalletId
-                                        )
-                                    }
-                                )
+                            },
+                            bottomBar = {
+                                NavigationBar(
+                                    tonalElevation = 6.dp
+                                ) {
+                                    // Tab 1: Transactions (Anchor)
+                                    NavigationBarItem(
+                                        selected = !showMenu && isTransactions,
+                                        onClick = {
+                                            showMenu = false
+                                            handleSidebarNavigation(
+                                                context = this@MainActivity,
+                                                navController = navController,
+                                                itemId = Screen.Transactions.sidebarItemId,
+                                                currentWalletId = currentWalletId
+                                            )
+                                        },
+                                        icon = {
+                                            Icon(
+                                                imageVector = Icons.Default.ShoppingCart,
+                                                contentDescription = "Transactions"
+                                            )
+                                        },
+                                        label = { Text("Transactions") }
+                                    )
+
+                                    // Tab 2: Dynamic Module (Overview / Categories / Budgets / Debts etc.)
+                                    NavigationBarItem(
+                                        selected = !showMenu && !isTransactions,
+                                        onClick = {
+                                            showMenu = false
+                                            handleSidebarNavigation(
+                                                context = this@MainActivity,
+                                                navController = navController,
+                                                itemId = dynamicModuleItemId,
+                                                currentWalletId = currentWalletId
+                                            )
+                                        },
+                                        icon = {
+                                            Icon(
+                                                imageVector = dynamicTabIcon,
+                                                contentDescription = dynamicTabTitle
+                                            )
+                                        },
+                                        label = { Text(dynamicTabTitle) }
+                                    )
+
+                                    // Tab 3: Menu (Hub)
+                                    NavigationBarItem(
+                                        selected = showMenu,
+                                        onClick = { showMenu = true },
+                                        icon = {
+                                            Icon(
+                                                imageVector = Icons.Default.Menu,
+                                                contentDescription = "Menu"
+                                            )
+                                        },
+                                        label = { Text("Menu") }
+                                    )
+                                }
+                            }
+                        ) { paddingValues ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(paddingValues)
+                            ) {
+                                if (!showMenu) {
+                                    AppNavHost(
+                                        navController = navController,
+                                        startDestination = startDest,
+                                        currentWalletId = currentWalletId
+                                    )
+                                } else {
+                                    NavigationMenuContent(
+                                        selectedItemId = selectedItemId,
+                                        onWalletSelect = { wallet ->
+                                            showMenu = false
+                                            navController.navigate(Screen.Transactions.createRoute(wallet.wallet.id))
+                                        },
+                                        onAddWallet = {
+                                            showMenu = false
+                                            navController.navigate(Screen.Settings.routePattern)
+                                        },
+                                        onManageWallets = {
+                                            showMenu = false
+                                            navController.navigate(Screen.Settings.routePattern)
+                                        },
+                                        onItemClick = { item ->
+                                            showMenu = false
+                                            if (item.id != Screen.Transactions.sidebarItemId) {
+                                                dynamicModuleItemId = item.id
+                                            }
+                                            handleSidebarNavigation(
+                                                context = this@MainActivity,
+                                                navController = navController,
+                                                itemId = item.id,
+                                                currentWalletId = currentWalletId
+                                            )
+                                        }
+                                    )
+                                }
                             }
                         }
                     } else {

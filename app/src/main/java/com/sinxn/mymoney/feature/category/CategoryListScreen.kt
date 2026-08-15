@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -25,6 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.util.CategoryType
+import kotlinx.coroutines.launch
 
 private sealed class CategoryRow {
     data class Parent(
@@ -44,7 +47,8 @@ fun CategoryListScreen(
     viewModel: CategoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: Expense, 1: Income
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
+    val coroutineScope = rememberCoroutineScope()
 
     val expenseListState = rememberLazyListState()
     val incomeListState = rememberLazyListState()
@@ -71,7 +75,7 @@ fun CategoryListScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    val targetType = if (selectedTab == 0) CategoryType.EXPENSE else CategoryType.INCOME
+                    val targetType = if (pagerState.currentPage == 0) CategoryType.EXPENSE else CategoryType.INCOME
                     onAddCategoryClick(targetType)
                 }
             ) {
@@ -92,9 +96,11 @@ fun CategoryListScreen(
                 contentAlignment = Alignment.Center
             ) {
                 TabPill(
-                    activeTab = selectedTab,
+                    activeTab = pagerState.currentPage,
                     onTabChange = { index ->
-                        selectedTab = index
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(index)
+                        }
                     }
                 )
             }
@@ -107,19 +113,12 @@ fun CategoryListScreen(
                     CircularProgressIndicator()
                 }
             } else {
-                AnimatedContent(
-                    targetState = selectedTab,
-                    transitionSpec = {
-                        if (targetState > initialState) {
-                            (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
-                                slideOutHorizontally { width -> -width } + fadeOut())
-                        } else {
-                            (slideInHorizontally { width -> -width } + fadeIn()).togetherWith(
-                                slideOutHorizontally { width -> width } + fadeOut())
-                        }
-                    },
-                    modifier = Modifier.weight(1f),
-                    label = "TabTransition"
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    key = { page -> page }
                 ) { page ->
                     val flatRows = if (page == 0) expenseFlatRows else incomeFlatRows
                     val listState = if (page == 0) expenseListState else incomeListState
