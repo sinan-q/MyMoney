@@ -135,7 +135,7 @@ fun AppNavHost(
                 }
             )
         ) {
-            com.sinxn.mymoney.feature.debt.DebtDetailsScreen(
+            com.sinxn.mymoney.feature.debt.DebtScreen(
                 onNavigateBack = { navController.navigateUp() },
                 onTransactionClick = { transactionId ->
                     navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
