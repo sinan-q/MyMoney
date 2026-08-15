@@ -127,16 +127,11 @@ fun LazyListScope.monthGroupedTransactionItems(
         val headerKey = DateUtils.formatMonthHeader(header.date)
         val isCollapsed = collapsedGroups.contains(headerKey)
 
-        val groupTransactions = groupItems.mapNotNull { (it as? TransactionListItem.Transaction)?.transaction }
-        val groupCurrencies = groupTransactions.mapNotNull { it.currencySymbol ?: it.currencyCode }.distinct()
-        val groupCurrency = if (groupCurrencies.size == 1) groupCurrencies.first() else currencyCode
-        val groupDecimals = groupTransactions.firstOrNull()?.decimals ?: decimals
-
         stickyHeader(key = "header_$headerKey") {
             TransactionHeader(
-                header = header.copy(isTotalValid = header.isTotalValid && groupCurrencies.size <= 1),
-                decimals = groupDecimals,
-                currencyCode = groupCurrency,
+                header = header,
+                decimals = decimals,
+                currencyCode = currencyCode,
                 formatterConfig = formatterConfig,
                 isCollapsed = isCollapsed,
                 onToggle = { onToggleGroup(headerKey) }
@@ -149,7 +144,7 @@ fun LazyListScope.monthGroupedTransactionItems(
                 key = { _, item ->
                     when (item) {
                         is TransactionListItem.Transaction -> item.transaction.transaction.id
-                        else -> "unknown_${System.currentTimeMillis()}"
+                        else -> "unknown_${item.hashCode()}"
                     }
                 }
             ) { index, item ->

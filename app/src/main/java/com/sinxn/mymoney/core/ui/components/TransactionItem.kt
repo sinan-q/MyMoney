@@ -20,6 +20,8 @@ import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 
+private const val TRANSFER_ICON_DATA = "{\"type\":\"color\",\"color\":\"#0284C7\",\"name\":\"⇄\"}"
+
 @Composable
 fun TransactionItem(
     item: TransactionWithCategory,
@@ -38,16 +40,16 @@ fun TransactionItem(
         !item.categoryName.isNullOrBlank() -> item.categoryName
         else -> "Uncategorized"
     }
-    val categoryIconData = if (isTransferItem) "{\"type\":\"color\",\"color\":\"#0284C7\",\"name\":\"⇄\"}" else item.categoryIcon
+    val categoryIconData = if (isTransferItem) TRANSFER_ICON_DATA else item.categoryIcon
     
     val hasDescription = !transaction.description.isNullOrBlank()
-    val primaryTitle = if (hasDescription) transaction.description else categoryDisplayName
+    val primaryTitle = if (hasDescription) transaction.description!! else categoryDisplayName
     val subtitleText = if (hasDescription) categoryDisplayName else null
 
-
-
-    val dateObj = DateUtils.parseDate(transaction.date)
-    val formattedDate = DateUtils.formatDate(dateObj, dateFormat)
+    val formattedDate = androidx.compose.runtime.remember(transaction.date, dateFormat) {
+        val dateObj = DateUtils.parseDate(transaction.date)
+        DateUtils.formatDate(dateObj, dateFormat)
+    }
 
     val isIncome = transaction.direction == 1
     val amountColor = when {
@@ -57,12 +59,14 @@ fun TransactionItem(
     }
 
     val amount = if (isIncome || isTransferItem) transaction.money else -transaction.money
-    val formattedMoney = MoneyFormatter.format(
-        amount = amount,
-        currencyCode = currencyCode,
-        decimals = decimals,
-        config = formatterConfig
-    )
+    val formattedMoney = androidx.compose.runtime.remember(amount, currencyCode, decimals, formatterConfig) {
+        MoneyFormatter.format(
+            amount = amount,
+            currencyCode = currencyCode,
+            decimals = decimals,
+            config = formatterConfig
+        )
+    }
 
     Box(
         modifier = Modifier

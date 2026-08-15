@@ -40,15 +40,21 @@ fun CategoryIcon(
     val iconData = remember(iconString, categoryName) {
         parseIconData(iconString, categoryName)
     }
-    
+
+    val fontSize = remember(iconData.text) {
+        when {
+            iconData.text.length <= 1 -> 16.sp
+            iconData.text.length == 2 -> 13.sp
+            else -> 11.sp
+        }
+    }
+
     val defaultStyle = MaterialTheme.typography.titleMedium
-    var textSize by remember { mutableStateOf(16.sp) }
-    
-    val textStyle = remember(defaultStyle, textSize) {
+    val textStyle = remember(defaultStyle, fontSize) {
         defaultStyle.copy(
-            fontSize = textSize,
+            fontSize = fontSize,
             platformStyle = PlatformTextStyle(includeFontPadding = false),
-            lineHeight = textSize,
+            lineHeight = fontSize,
             lineHeightStyle = LineHeightStyle(
                 alignment = LineHeightStyle.Alignment.Center,
                 trim = LineHeightStyle.Trim.Both
@@ -69,32 +75,33 @@ fun CategoryIcon(
             fontWeight = FontWeight.Black,
             textAlign = TextAlign.Center,
             maxLines = 1,
-            softWrap = false,
-            onTextLayout = { textLayoutResult ->
-                if (textLayoutResult.didOverflowWidth || textLayoutResult.didOverflowHeight) {
-                    val newSize = textSize * 0.9f
-                    if (newSize.value > 6f) {
-                        textSize = newSize
-                    }
-                }
-            }
+            softWrap = false
         )
     }
 }
 
 data class IconData(val color: Color, val text: String)
 
+private val iconDataCache = java.util.concurrent.ConcurrentHashMap<String, IconData>()
+private val colorCache = java.util.concurrent.ConcurrentHashMap<String, Color>()
+
 fun parseIconData(iconString: String?, categoryName: String): IconData {
+    val cacheKey = "${iconString.orEmpty()}__$categoryName"
+    iconDataCache[cacheKey]?.let { return it }
+
     val defaultText = categoryName.firstOrNull()?.toString()?.uppercase() ?: "?"
     val defaultColor = generateColor(categoryName)
 
     if (iconString.isNullOrEmpty()) {
-        return IconData(defaultColor, defaultText)
+        val result = IconData(defaultColor, defaultText)
+        iconDataCache[cacheKey] = result
+        return result
     }
 
     try {
-        if (iconString.trim().startsWith("{")) {
-            val json = JSONObject(iconString)
+        val trimmed = iconString.trim()
+        if (trimmed.startsWith("{")) {
+            val json = JSONObject(trimmed)
             val type = json.optString("type")
             
             if (type == "color") {
@@ -103,22 +110,30 @@ fun parseIconData(iconString: String?, categoryName: String): IconData {
                 
                 val color = if (colorHex.isNotEmpty()) {
                     try {
-                         Color(android.graphics.Color.parseColor(colorHex))
+                        Color(android.graphics.Color.parseColor(colorHex))
                     } catch (e: Exception) { defaultColor }
                 } else defaultColor
                 
                 val text = name.ifEmpty { defaultText }
-                return IconData(color, text)
+                val result = IconData(color, text)
+                iconDataCache[cacheKey] = result
+                return result
             }
         }
     } catch (e: Exception) {
     }
     
-    return IconData(defaultColor, defaultText)
+    val result = IconData(defaultColor, defaultText)
+    iconDataCache[cacheKey] = result
+    return result
 }
 
 fun generateColor(name: String): Color {
+    colorCache[name]?.let { return it }
     val hash = name.hashCode()
     val hue = abs(hash % 360).toFloat()
-    return Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, 0.6f, 0.8f)))
+    val color = Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, 0.6f, 0.8f)))
+    colorCache[name] = color
+    return color
 }
+

@@ -63,9 +63,33 @@ object DateUtils {
         "EEE MM/dd/yyyy"
     )
 
+    private val cachedDateFormats = object : ThreadLocal<Array<SimpleDateFormat?>>() {
+        override fun initialValue(): Array<SimpleDateFormat?> {
+            return arrayOfNulls(DATE_FORMATS.size)
+        }
+    }
+
+    private val monthFormatSameYear = object : ThreadLocal<SimpleDateFormat>() {
+        override fun initialValue(): SimpleDateFormat {
+            return SimpleDateFormat("MMMM", Locale.getDefault())
+        }
+    }
+
+    private val monthFormatDiffYear = object : ThreadLocal<SimpleDateFormat>() {
+        override fun initialValue(): SimpleDateFormat {
+            return SimpleDateFormat("MMMM, yyyy", Locale.getDefault())
+        }
+    }
+
     fun formatDate(date: Date, index: Int): String {
         val safeIndex = if (index in DATE_FORMATS.indices) index else 2 // Default to medium
-        return SimpleDateFormat(DATE_FORMATS[safeIndex], Locale.getDefault()).format(date)
+        val cache = cachedDateFormats.get() ?: return SimpleDateFormat(DATE_FORMATS[safeIndex], Locale.getDefault()).format(date)
+        var format = cache[safeIndex]
+        if (format == null) {
+            format = SimpleDateFormat(DATE_FORMATS[safeIndex], Locale.getDefault())
+            cache[safeIndex] = format
+        }
+        return format.format(date)
     }
 
     /**
@@ -100,24 +124,17 @@ object DateUtils {
     }
 
     fun formatMonthHeader(date: Date): String {
-        // ... (Existing logic can remain or be updated to show range if desired, e.g. "Dec 15 - Jan 14")
-        // For now keep simple MMMM yyyy, but maybe based on the budget start date?
-        // Standard behavior: Just show the month name of the *Start Date*.
         val calendar = Calendar.getInstance()
         calendar.time = date
         val year = calendar.get(Calendar.YEAR)
         
         val currentYear = Calendar.getInstance().get(Calendar.YEAR)
         
-        // If it's a budget cycle, user might prefer range. But legacy just shows Month. 
-        // We will stick to Month of the start date.
-        val pattern = if (year == currentYear) {
-            "MMMM"
+        return if (year == currentYear) {
+            monthFormatSameYear.get()?.format(date) ?: SimpleDateFormat("MMMM", Locale.getDefault()).format(date)
         } else {
-            "MMMM, yyyy"
+            monthFormatDiffYear.get()?.format(date) ?: SimpleDateFormat("MMMM, yyyy", Locale.getDefault()).format(date)
         }
-        
-        return SimpleDateFormat(pattern, Locale.getDefault()).format(date)
     }
 
     fun isSameMonth(date1: Date, date2: Date): Boolean {

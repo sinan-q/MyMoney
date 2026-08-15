@@ -62,6 +62,24 @@ object MoneyFormatter {
         return (money * exponential).toLong()
     }
 
+    private val threadLocalFormat = object : ThreadLocal<DecimalFormat>() {
+        override fun initialValue(): DecimalFormat {
+            return NumberFormat.getInstance() as DecimalFormat
+        }
+    }
+
+    private val currencySymbolCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    fun getCurrencySymbol(currencyCode: String): String {
+        return currencySymbolCache.getOrPut(currencyCode) {
+            try {
+                Currency.getInstance(currencyCode).symbol
+            } catch (e: Exception) {
+                currencyCode
+            }
+        }
+    }
+
     fun format(
         amount: Long, 
         currencyCode: String, 
@@ -71,13 +89,19 @@ object MoneyFormatter {
         val divider = 10.0.pow(decimals.toDouble())
         val value = amount.toDouble() / divider
         
-        val format = NumberFormat.getInstance() as DecimalFormat
+        val format = threadLocalFormat.get() ?: (NumberFormat.getInstance() as DecimalFormat)
         // Round decimals: if true, show 0 fraction digits. Else usage passed decimals.
         val fractions = if (config.roundDecimals) 0 else decimals
         
-        format.minimumFractionDigits = fractions
-        format.maximumFractionDigits = fractions
-        format.isGroupingUsed = config.groupDigits
+        if (format.minimumFractionDigits != fractions) {
+            format.minimumFractionDigits = fractions
+        }
+        if (format.maximumFractionDigits != fractions) {
+            format.maximumFractionDigits = fractions
+        }
+        if (format.isGroupingUsed != config.groupDigits) {
+            format.isGroupingUsed = config.groupDigits
+        }
         
         var formattedValue = format.format(value)
         
@@ -87,11 +111,7 @@ object MoneyFormatter {
         }
         
         if (config.showCurrency) {
-             val symbol = try {
-                Currency.getInstance(currencyCode).symbol
-            } catch (e: Exception) {
-                currencyCode
-            }
+            val symbol = getCurrencySymbol(currencyCode)
             return "$symbol $formattedValue"
         }
         

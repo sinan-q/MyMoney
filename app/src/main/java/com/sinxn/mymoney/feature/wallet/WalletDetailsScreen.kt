@@ -351,6 +351,25 @@ fun TransactionList(
 ) {
     var collapsedGroups by remember { mutableStateOf(setOf<String>()) }
     
+    val customGrouped = remember(items) {
+        val grouped = mutableListOf<Pair<TransactionListItem.Header, MutableList<TransactionListItem>>>()
+        var currentHeader: TransactionListItem.Header? = null
+        items.forEach { item ->
+            when (item) {
+                is TransactionListItem.Header -> {
+                    currentHeader = item
+                    grouped.add(item to mutableListOf())
+                }
+                is TransactionListItem.Transaction -> {
+                    currentHeader?.let {
+                        grouped.lastOrNull()?.second?.add(item)
+                    }
+                }
+            }
+        }
+        grouped
+    }
+
     LazyColumn(
         state = listState,
         contentPadding = PaddingValues(bottom = 80.dp),
@@ -393,22 +412,6 @@ fun TransactionList(
                 }
             }
         }
-        var currentHeader: TransactionListItem.Header? = null
-        val customGrouped = mutableListOf<Pair<TransactionListItem.Header, MutableList<TransactionListItem>>>()
-
-        items.forEach { item ->
-            when (item) {
-                is TransactionListItem.Header -> {
-                    currentHeader = item
-                    customGrouped.add(item to mutableListOf())
-                }
-                is TransactionListItem.Transaction -> {
-                    currentHeader?.let {
-                         customGrouped.lastOrNull()?.second?.add(item)
-                    }
-                }
-            }
-        }
 
         customGrouped.forEach { (header, groupItems) ->
             val headerKey = DateUtils.formatMonthHeader(header.date)
@@ -443,25 +446,21 @@ fun TransactionList(
                 ) { index, item ->
                     val isLastItem = index == groupItems.lastIndex
 
-                    Box(
-                        modifier = Modifier.animateItem()
-                    ) {
-                        when (item) {
-                            is TransactionListItem.Transaction -> {
-                                val trans = item.transaction
-                                TransactionItem(
-                                    item = trans,
-                                    decimals = trans.decimals,
-                                    currencyCode = trans.currencySymbol ?: trans.currencyCode ?: currencyCode,
-                                    formatterConfig = formatterConfig,
-                                    dateFormat = dateFormat,
-                                    isLastItem = isLastItem,
-                                    showDate = true,
-                                    onClick = { onTransactionClick(trans.transaction.id) }
-                                )
-                            }
-                            else -> {}
+                    when (item) {
+                        is TransactionListItem.Transaction -> {
+                            val trans = item.transaction
+                            TransactionItem(
+                                item = trans,
+                                decimals = trans.decimals,
+                                currencyCode = trans.currencySymbol ?: trans.currencyCode ?: currencyCode,
+                                formatterConfig = formatterConfig,
+                                dateFormat = dateFormat,
+                                isLastItem = isLastItem,
+                                showDate = true,
+                                onClick = { onTransactionClick(trans.transaction.id) }
+                            )
                         }
+                        else -> {}
                     }
                 }
             }
