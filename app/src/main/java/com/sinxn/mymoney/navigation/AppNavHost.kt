@@ -465,5 +465,33 @@ fun AppNavHost(
                 onNavigateBack = { navController.navigateUp() }
             )
         }
+        composable(Screen.Menu.routePattern) {
+            com.sinxn.mymoney.core.ui.components.NavigationMenuContent(
+                selectedItemId = null,
+                onWalletSelect = { wallet ->
+                    navController.navigate(Screen.Transactions.createRoute(wallet.wallet.id)) {
+                        popUpTo(navController.graph.id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onAddWallet = {
+                    navController.navigate(Screen.Settings.routePattern)
+                },
+                onManageWallets = {
+                    navController.navigate(Screen.Settings.routePattern)
+                },
+                onItemClick = { item ->
+                    handleSidebarNavigation(
+                        context = context,
+                        navController = navController,
+                        itemId = item.id,
+                        currentWalletId = currentWalletId
+                    )
+                }
+            )
+        }
     }
 }

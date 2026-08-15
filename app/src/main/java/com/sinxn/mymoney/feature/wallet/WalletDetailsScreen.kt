@@ -62,9 +62,9 @@ fun WalletDetailsScreen(
     onNavigateMenuItem: (String) -> Unit = {},
     viewModel: WalletDetailsViewModel = hiltViewModel()
 ) {
-    val wallet by viewModel.wallet.collectAsState(initial = null)
-    val allWallets by viewModel.allWallets.collectAsState(initial = emptyList())
-    val transactions by viewModel.transactions.collectAsState(initial = emptyList())
+    val wallet by viewModel.wallet.collectAsState()
+    val allWallets by viewModel.allWallets.collectAsState()
+    val transactions by viewModel.transactions.collectAsState()
     val pendingTransactions by viewModel.pendingTransactions.collectAsState()
     val settings by viewModel.formattingSettings.collectAsState()
     

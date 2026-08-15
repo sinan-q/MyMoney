@@ -98,7 +98,27 @@ class WalletHeaderViewModel @Inject constructor(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = null
+        initialValue = WalletWithBalance(
+            wallet = com.sinxn.mymoney.core.data.local.entity.WalletEntity(
+                id = Constants.TOTAL_WALLET_ID,
+                name = "Total",
+                icon = "sigma",
+                currency = "USD",
+                startMoney = 0,
+                isArchived = false,
+                note = null,
+                countInTotal = false,
+                index = -1,
+                isDeleted = false,
+                lastEdit = 0,
+                tag = null
+            ),
+            currentBalance = 0L,
+            decimals = 2,
+            currencySymbol = "$",
+            isTotalValid = true,
+            balanceBreakdown = null
+        )
     )
 
     val formatterConfig: StateFlow<MoneyFormatter.Config> = settingsRepository.formattingSettings

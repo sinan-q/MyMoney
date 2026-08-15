@@ -308,6 +308,7 @@ fun handleSidebarNavigation(
         "converter" -> launchConverterIntent(context)
         "search_atm" -> launchSearchIntent(context, "ATM")
         "search_bank" -> launchSearchIntent(context, "Bank")
+        Screen.Menu.sidebarItemId -> navController.navigate(Screen.Menu.routePattern, navOptions)
         Screen.Settings.sidebarItemId -> navController.navigate(Screen.Settings.routePattern, navOptions)
         Screen.SupportDeveloper.sidebarItemId -> navController.navigate(Screen.SupportDeveloper.routePattern, navOptions)
         Screen.About.sidebarItemId -> navController.navigate(Screen.About.routePattern, navOptions)

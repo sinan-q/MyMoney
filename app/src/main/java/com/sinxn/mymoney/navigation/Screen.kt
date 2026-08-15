@@ -30,6 +30,7 @@ sealed class Screen(
     object Overview : Screen("overview", "overview", "Overview", isTopLevel = true)
     object About : Screen("about", "about", "About", isTopLevel = true)
     object SupportDeveloper : Screen("support_developer", "support_developer", "Support Developer", isTopLevel = true)
+    object Menu : Screen("menu", "menu", "Menu", isTopLevel = true)
     object Settings : Screen("settings", "settings", "Settings", isTopLevel = false)
 
     // Sub-screens
@@ -118,7 +119,7 @@ sealed class Screen(
             get() = listOfNotNull(
                 Transactions, Categories, Debts, Budgets, Savings,
                 Events, Recurrences, Templates, Places, People,
-                Overview, About, SupportDeveloper, Settings,
+                Overview, About, SupportDeveloper, Menu, Settings,
                 DebtDetails, CategoryDetails, PersonDetails, PersonAddEdit, BudgetDetails, BudgetOverview, SavingDetails,
                 RecurrentTransactionDetails, RecurrentTransferDetails, TransactionDetails,
                 SqlConsole, Backup, Recap
@@ -164,6 +165,7 @@ sealed class Screen(
                 cleanRoute == "overview" || cleanRoute == "recap" -> ScreenMetadata(Overview.sidebarItemId, Overview.title, isTopLevel = true)
                 cleanRoute == "about" -> ScreenMetadata(About.sidebarItemId, About.title, isTopLevel = true)
                 cleanRoute == "support_developer" -> ScreenMetadata(SupportDeveloper.sidebarItemId, SupportDeveloper.title, isTopLevel = true)
+                cleanRoute == "menu" -> ScreenMetadata(Menu.sidebarItemId, Menu.title, isTopLevel = true)
                 cleanRoute == "settings" -> ScreenMetadata(Settings.sidebarItemId, Settings.title, isTopLevel = false)
 
                 else -> {

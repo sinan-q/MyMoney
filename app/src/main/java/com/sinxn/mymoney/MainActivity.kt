@@ -2,7 +2,6 @@ package com.sinxn.mymoney
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
@@ -41,7 +40,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.sinxn.mymoney.core.data.repository.RecurrenceRepository
-import com.sinxn.mymoney.core.ui.components.NavigationMenuContent
 import com.sinxn.mymoney.core.ui.components.handleSidebarNavigation
 import com.sinxn.mymoney.core.ui.components.navigationMenuItems
 import com.sinxn.mymoney.core.util.Constants
@@ -77,7 +75,6 @@ class MainActivity : ComponentActivity() {
                     val startDest by viewModel.startDestination.collectAsState()
                     
                     if (startDest != "loading") {
-                        var showMenu by remember { mutableStateOf(false) }
                         var dynamicModuleItemId by remember { mutableStateOf(Screen.Overview.sidebarItemId) }
 
                         val currentBackStackEntry by navController.currentBackStackEntryAsState()
@@ -91,10 +88,11 @@ class MainActivity : ComponentActivity() {
                         val isTopLevelScreen = screenMetadata.isTopLevel
                         val pageTitle = screenMetadata.title
                         val isTransactions = selectedItemId == Screen.Transactions.sidebarItemId
+                        val isMenu = selectedItemId == Screen.Menu.sidebarItemId
 
                         // Track active module in dynamic slot when visiting top-level non-transaction screens
                         LaunchedEffect(selectedItemId, isTopLevelScreen) {
-                            if (!isTransactions && isTopLevelScreen && selectedItemId.isNotBlank()) {
+                            if (!isTransactions && !isMenu && isTopLevelScreen && selectedItemId.isNotBlank()) {
                                 dynamicModuleItemId = selectedItemId
                             }
                         }
@@ -107,11 +105,6 @@ class MainActivity : ComponentActivity() {
                         val dynamicTabTitle = dynamicMenuItem?.title ?: "Overview"
                         val dynamicTabIcon = dynamicMenuItem?.icon ?: Icons.Default.Equalizer
 
-                        // System back handler: pressing back on the Menu tab returns to the previous view
-                        BackHandler(enabled = showMenu) {
-                            showMenu = false
-                        }
-
                         Scaffold(
                             contentWindowInsets = if (isTopLevelScreen) ScaffoldDefaults.contentWindowInsets else WindowInsets(0, 0, 0, 0),
                             topBar = {
@@ -119,7 +112,7 @@ class MainActivity : ComponentActivity() {
                                     TopAppBar(
                                         title = {
                                             Text(
-                                                text = if (showMenu) "Menu" else pageTitle,
+                                                text = pageTitle,
                                                 fontWeight = FontWeight.Bold
                                             )
                                         },
@@ -135,9 +128,8 @@ class MainActivity : ComponentActivity() {
                                 ) {
                                     // Tab 1: Transactions (Anchor)
                                     NavigationBarItem(
-                                        selected = !showMenu && isTransactions,
+                                        selected = isTransactions,
                                         onClick = {
-                                            showMenu = false
                                             handleSidebarNavigation(
                                                 context = this@MainActivity,
                                                 navController = navController,
@@ -156,9 +148,8 @@ class MainActivity : ComponentActivity() {
 
                                     // Tab 2: Dynamic Module (Overview / Categories / Budgets / Debts etc.)
                                     NavigationBarItem(
-                                        selected = !showMenu && !isTransactions,
+                                        selected = !isTransactions && !isMenu,
                                         onClick = {
-                                            showMenu = false
                                             handleSidebarNavigation(
                                                 context = this@MainActivity,
                                                 navController = navController,
@@ -177,8 +168,15 @@ class MainActivity : ComponentActivity() {
 
                                     // Tab 3: Menu (Hub)
                                     NavigationBarItem(
-                                        selected = showMenu,
-                                        onClick = { showMenu = true },
+                                        selected = isMenu,
+                                        onClick = {
+                                            handleSidebarNavigation(
+                                                context = this@MainActivity,
+                                                navController = navController,
+                                                itemId = Screen.Menu.sidebarItemId,
+                                                currentWalletId = currentWalletId
+                                            )
+                                        },
                                         icon = {
                                             Icon(
                                                 imageVector = Icons.Default.Menu,
@@ -195,41 +193,11 @@ class MainActivity : ComponentActivity() {
                                     .fillMaxSize()
                                     .padding(paddingValues)
                             ) {
-                                if (!showMenu) {
-                                    AppNavHost(
-                                        navController = navController,
-                                        startDestination = startDest,
-                                        currentWalletId = currentWalletId
-                                    )
-                                } else {
-                                    NavigationMenuContent(
-                                        selectedItemId = selectedItemId,
-                                        onWalletSelect = { wallet ->
-                                            showMenu = false
-                                            navController.navigate(Screen.Transactions.createRoute(wallet.wallet.id))
-                                        },
-                                        onAddWallet = {
-                                            showMenu = false
-                                            navController.navigate(Screen.Settings.routePattern)
-                                        },
-                                        onManageWallets = {
-                                            showMenu = false
-                                            navController.navigate(Screen.Settings.routePattern)
-                                        },
-                                        onItemClick = { item ->
-                                            showMenu = false
-                                            if (item.id != Screen.Transactions.sidebarItemId) {
-                                                dynamicModuleItemId = item.id
-                                            }
-                                            handleSidebarNavigation(
-                                                context = this@MainActivity,
-                                                navController = navController,
-                                                itemId = item.id,
-                                                currentWalletId = currentWalletId
-                                            )
-                                        }
-                                    )
-                                }
+                                AppNavHost(
+                                    navController = navController,
+                                    startDestination = startDest,
+                                    currentWalletId = currentWalletId
+                                )
                             }
                         }
                     } else {
