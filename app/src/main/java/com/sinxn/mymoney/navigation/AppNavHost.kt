@@ -19,6 +19,8 @@ import com.sinxn.mymoney.feature.budget.BudgetOverviewScreen
 import com.sinxn.mymoney.feature.category.CategoryAddEditScreen
 import com.sinxn.mymoney.feature.category.CategoryDetailsScreen
 import com.sinxn.mymoney.feature.category.CategoryListScreen
+import com.sinxn.mymoney.feature.debt.DebtAddEditScreen
+import com.sinxn.mymoney.feature.debt.DebtDetailsScreen
 import com.sinxn.mymoney.feature.debt.DebtListScreen
 import com.sinxn.mymoney.feature.event.EventListScreen
 import com.sinxn.mymoney.feature.overview.OverviewScreen
@@ -107,42 +109,45 @@ fun AppNavHost(
                     navController.navigate(Screen.DebtDetails.createRoute(debtId))
                 },
                 onAddDebt = { type ->
-                    navController.navigate(Screen.DebtDetails.createRoute("new", type))
-                },
-                onNavigateMenuItem = { itemId ->
-                    handleSidebarNavigation(
-                        context = context,
-                        navController = navController,
-                        itemId = itemId,
-                        currentWalletId = currentWalletId
-                    )
-                },
-                onNavigateToWallet = { walletId ->
-                    navController.navigate(Screen.Transactions.createRoute(walletId))
-                },
-                onNavigateToSettings = {
-                    navController.navigate(Screen.Settings.routePattern)
+                    navController.navigate(Screen.DebtAddEdit.createRoute(type = type))
                 }
             )
         }
         composable(
             Screen.DebtDetails.routePattern,
             arguments = listOf(
-                navArgument("debtId") { type = NavType.StringType },
-                navArgument("type") {
-                    type = NavType.IntType
-                    defaultValue = 0
-                }
+                navArgument("debtId") { type = NavType.StringType }
             )
         ) {
-            com.sinxn.mymoney.feature.debt.DebtScreen(
+            DebtDetailsScreen(
                 onNavigateBack = { navController.navigateUp() },
+                onEditDebtClick = { debtId ->
+                    navController.navigate(Screen.DebtAddEdit.createRoute(debtId = debtId))
+                },
                 onTransactionClick = { transactionId ->
                     navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
                 },
                 onRecordPayment = { debtId, _, debtAction ->
                     navController.navigate(Screen.TransactionDetails.createRoute("new", debtId = debtId, debtAction = debtAction))
                 }
+            )
+        }
+        composable(
+            Screen.DebtAddEdit.routePattern,
+            arguments = listOf(
+                navArgument("debtId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("type") {
+                    type = NavType.IntType
+                    defaultValue = 0
+                }
+            )
+        ) {
+            DebtAddEditScreen(
+                onNavigateBack = { navController.navigateUp() }
             )
         }
         composable(Screen.Backup.routePattern) {
@@ -191,7 +196,7 @@ fun AppNavHost(
                     navController.navigate(Screen.Debts.routePattern)
                 },
                 onAddDebt = { _, type ->
-                    navController.navigate(Screen.DebtDetails.createRoute("new", type))
+                    navController.navigate(Screen.DebtAddEdit.createRoute(type = type))
                 },
                 onDebtClick = { debtId ->
                     navController.navigate(Screen.DebtDetails.createRoute(debtId))

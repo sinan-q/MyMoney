@@ -1,7 +1,5 @@
 package com.sinxn.mymoney.feature.debt
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,20 +13,13 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Event
-import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Payment
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -61,9 +52,6 @@ fun DebtListScreen(
     onNavigateUp: () -> Unit,
     onDebtClick: (String) -> Unit,
     onAddDebt: (type: Int) -> Unit,
-    onNavigateMenuItem: (String) -> Unit = {},
-    onNavigateToWallet: (String) -> Unit = {},
-    onNavigateToSettings: () -> Unit = {},
     viewModel: DebtListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -269,9 +257,7 @@ fun DebtListBodyContent(
                                     formatterConfig = formatterConfig,
                                     dateFormat = uiState.formattingSettings.dateFormat,
                                     onClick = { onDebtClick(debtItem.debt.id) },
-                                    onQuickPayment = { onDebtClick(debtItem.debt.id) },
-                                    onToggleArchive = { onToggleArchived(debtItem.debt.id, debtItem.debt.isArchived) },
-                                    onDelete = { onDeleteDebt(debtItem.debt.id) }
+                                    onQuickPayment = { onDebtClick(debtItem.debt.id) }
                                 )
                             }
                         }
@@ -417,9 +403,7 @@ private fun DebtCardItem(
     formatterConfig: MoneyFormatter.Config,
     dateFormat: Int = 2,
     onClick: () -> Unit,
-    onQuickPayment: () -> Unit,
-    onToggleArchive: () -> Unit,
-    onDelete: () -> Unit
+    onQuickPayment: () -> Unit
 ) {
     val debt = debtWithDetails.debt
     val progress = debtWithDetails.progress

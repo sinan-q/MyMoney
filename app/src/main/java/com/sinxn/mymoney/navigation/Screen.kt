@@ -34,9 +34,16 @@ sealed class Screen(
     object Settings : Screen("settings", "settings", "Settings", isTopLevel = false)
 
     // Sub-screens
-    object DebtDetails : Screen("debt_details/{debtId}?type={type}", "debts", "Debt Details", isTopLevel = false) {
-        fun createRoute(debtId: String, type: Int? = null): String {
-            return if (type != null) "debt_details/$debtId?type=$type" else "debt_details/$debtId"
+    object DebtDetails : Screen("debt_details/{debtId}", "debts", "Debt Details", isTopLevel = false) {
+        fun createRoute(debtId: String): String = "debt_details/$debtId"
+    }
+
+    object DebtAddEdit : Screen("debt_edit?debtId={debtId}&type={type}", "debts", "Debt Edit", isTopLevel = false) {
+        fun createRoute(debtId: String? = null, type: Int? = null): String {
+            val params = mutableListOf<String>()
+            if (debtId != null) params.add("debtId=$debtId")
+            if (type != null) params.add("type=$type")
+            return if (params.isEmpty()) "debt_edit" else "debt_edit?${params.joinToString("&")}"
         }
     }
 
@@ -120,7 +127,7 @@ sealed class Screen(
                 Transactions, Categories, Debts, Budgets, Savings,
                 Events, Recurrences, Templates, Places, People,
                 Overview, About, SupportDeveloper, Menu, Settings,
-                DebtDetails, CategoryDetails, PersonDetails, PersonAddEdit, BudgetDetails, BudgetOverview, SavingDetails,
+                DebtDetails, DebtAddEdit, CategoryDetails, PersonDetails, PersonAddEdit, BudgetDetails, BudgetOverview, SavingDetails,
                 RecurrentTransactionDetails, RecurrentTransferDetails, TransactionDetails,
                 SqlConsole, Backup, Recap
             )
@@ -145,7 +152,7 @@ sealed class Screen(
                 cleanRoute.startsWith("transaction_details") ->
                     ScreenMetadata(Transactions.sidebarItemId, TransactionDetails.title, isTopLevel = false)
 
-                cleanRoute.startsWith("debts") || cleanRoute.startsWith("debt_details") ->
+                cleanRoute.startsWith("debts") || cleanRoute.startsWith("debt_") ->
                     ScreenMetadata(Debts.sidebarItemId, Debts.title, isTopLevel = cleanRoute == "debts")
 
                 cleanRoute.startsWith("budgets") || cleanRoute.startsWith("budget_") ->

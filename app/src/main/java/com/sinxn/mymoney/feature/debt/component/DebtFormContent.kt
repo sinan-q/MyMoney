@@ -47,16 +47,16 @@ import com.sinxn.mymoney.core.ui.components.FormPicker
 import com.sinxn.mymoney.core.ui.components.PeopleSelectionDialog
 import com.sinxn.mymoney.core.ui.components.PlaceSelectionDialog
 import com.sinxn.mymoney.core.ui.components.WalletSelectionDialog
-import com.sinxn.mymoney.feature.debt.DebtDetailsUiState
-import com.sinxn.mymoney.feature.debt.DebtDetailsViewModel
+import com.sinxn.mymoney.feature.debt.DebtAddEditUiState
+import com.sinxn.mymoney.feature.debt.DebtAddEditViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DebtFormContent(
     accentColor: Color,
     focusRequester: FocusRequester,
-    uiState: DebtDetailsUiState,
-    viewModel: DebtDetailsViewModel,
+    uiState: DebtAddEditUiState,
+    viewModel: DebtAddEditViewModel,
     onFocusField: () -> Unit,
     onDismissKeyboardAndNumpad: () -> Unit
 ) {

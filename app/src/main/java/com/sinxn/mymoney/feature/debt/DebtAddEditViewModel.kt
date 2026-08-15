@@ -8,10 +8,10 @@ import com.sinxn.mymoney.core.data.local.entity.PersonEntity
 import com.sinxn.mymoney.core.data.local.entity.PlaceEntity
 import com.sinxn.mymoney.core.data.local.entity.WalletEntity
 import com.sinxn.mymoney.core.data.local.model.DebtWithDetails
-import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.DebtRepository
+import com.sinxn.mymoney.core.util.Constants
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MathExpressionEvaluator
 import com.sinxn.mymoney.core.util.MoneyFormatter
@@ -29,12 +29,10 @@ import java.util.Date
 import javax.inject.Inject
 import kotlin.math.pow
 
-data class DebtDetailsUiState(
-    val debtDetails: DebtWithDetails? = null,
-    val transactions: List<TransactionWithCategory> = emptyList(),
-    val isEditMode: Boolean = false,
-    val isNewDebt: Boolean = false,
-    val isLoading: Boolean = true,
+data class DebtAddEditUiState(
+    val debtId: String? = null,
+    val isNewDebt: Boolean = true,
+    val isLoading: Boolean = false,
     val isSaving: Boolean = false,
     // Form fields
     val editType: Int = 0, // 0: DEBT, 1: CREDIT
@@ -64,18 +62,17 @@ data class DebtDetailsUiState(
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
-class DebtDetailsViewModel @Inject constructor(
+class DebtAddEditViewModel @Inject constructor(
     private val debtRepository: DebtRepository,
     private val moneyDao: MoneyDao,
     private val settingsRepository: SettingsRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val debtId: String = savedStateHandle.get<String>("debtId") ?: "new"
+    private val debtIdArg: String? = savedStateHandle.get<String>("debtId")?.takeIf { it.isNotBlank() && it != "new" }
     private val initialType: Int = savedStateHandle.get<Int>("type") ?: 0
-    private val isNewDebt = debtId == "new"
+    val isNewDebt = debtIdArg == null
 
-    private val _isEditMode = MutableStateFlow(isNewDebt)
     private val _isSaving = MutableStateFlow(false)
 
     // Form states
@@ -95,27 +92,21 @@ class DebtDetailsViewModel @Inject constructor(
         if (isNewDebt) {
             viewModelScope.launch {
                 val currentWId = settingsRepository.currentWalletId.first()
-                if (currentWId != com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID) {
+                if (currentWId != Constants.TOTAL_WALLET_ID) {
                     _editWalletId.value = currentWId
                 }
             }
         }
     }
 
-    private val debtDetailsFlow = if (isNewDebt) {
-        flowOf(null)
+    private val existingDebtFlow = if (debtIdArg != null) {
+        debtRepository.getDebtDetails(debtIdArg)
     } else {
-        debtRepository.getDebtDetails(debtId)
+        flowOf(null)
     }
 
     fun getImmediateResult(editAmount: String): String {
         return MathExpressionEvaluator.getImmediateResult(editAmount, uiState.value.currencyDecimals)
-    }
-
-    private val transactionsFlow = if (isNewDebt) {
-        flowOf(emptyList())
-    } else {
-        debtRepository.getTransactionsForDebt(debtId)
     }
 
     private val formStateFlow = combine(
@@ -151,37 +142,32 @@ class DebtDetailsViewModel @Inject constructor(
         SelectorsTuple(wallets, places, people, formatting)
     }
 
-    val uiState: StateFlow<DebtDetailsUiState> = combine(
-        debtDetailsFlow,
-        transactionsFlow,
-        _isEditMode,
+    val uiState: StateFlow<DebtAddEditUiState> = combine(
+        existingDebtFlow,
         _isSaving,
         formStateFlow,
         selectorsFlow
     ) { flows: Array<Any?> ->
         @Suppress("UNCHECKED_CAST")
-        val debtDetails = flows[0] as DebtWithDetails?
-        @Suppress("UNCHECKED_CAST")
-        val txList = flows[1] as List<TransactionWithCategory>
-        val isEdit = flows[2] as Boolean
-        val isSaving = flows[3] as Boolean
-        val form = flows[4] as FormTuple
-        val selectors = flows[5] as SelectorsTuple
+        val existingDebt = flows[0] as DebtWithDetails?
+        val isSaving = flows[1] as Boolean
+        val form = flows[2] as FormTuple
+        val selectors = flows[3] as SelectorsTuple
 
         // Auto-populate form once existing debt is loaded
-        if (!isNewDebt && debtDetails != null && _editWalletId.value.isEmpty()) {
+        if (debtIdArg != null && existingDebt != null && _editWalletId.value.isEmpty()) {
             val decimals = 2
-            val amountStr = (debtDetails.debt.money / 10.0.pow(decimals)).toString()
-            _editType.value = debtDetails.debt.type
-            _editDescription.value = debtDetails.debt.description
+            val amountStr = (existingDebt.debt.money / 10.0.pow(decimals)).toString()
+            _editType.value = existingDebt.debt.type
+            _editDescription.value = existingDebt.debt.description
             _editAmount.value = amountStr
-            _editWalletId.value = debtDetails.debt.walletId
-            _editPlaceId.value = debtDetails.debt.placeId
-            _editDate.value = debtDetails.debt.date
-            _editExpirationDate.value = debtDetails.debt.expirationDate
-            _editIcon.value = debtDetails.debt.icon
-            _editNote.value = debtDetails.debt.note ?: ""
-            _editPeopleIds.value = debtDetails.people.map { it.id }.toSet()
+            _editWalletId.value = existingDebt.debt.walletId
+            _editPlaceId.value = existingDebt.debt.placeId
+            _editDate.value = existingDebt.debt.date
+            _editExpirationDate.value = existingDebt.debt.expirationDate
+            _editIcon.value = existingDebt.debt.icon
+            _editNote.value = existingDebt.debt.note ?: ""
+            _editPeopleIds.value = existingDebt.people.map { it.id }.toSet()
         }
 
         val effectiveWalletId = if (form.walletId.isEmpty() && selectors.wallets.isNotEmpty()) {
@@ -192,10 +178,9 @@ class DebtDetailsViewModel @Inject constructor(
             form.walletId
         }
 
-        val transactionCurrencies = txList.mapNotNull { it.currencySymbol ?: it.currencyCode }.distinct()
-        val displayCurrency = debtDetails?.walletCurrency
-            ?: if (transactionCurrencies.size == 1) transactionCurrencies.first() else selectors.formatting.globalCurrency
-        val displayDecimals = debtDetails?.walletDecimals ?: txList.firstOrNull()?.decimals ?: 2
+        val selectedWallet = selectors.wallets.firstOrNull { it.id == effectiveWalletId }
+        val displayCurrency = selectedWallet?.currency ?: existingDebt?.walletCurrency ?: selectors.formatting.globalCurrency
+        val displayDecimals = existingDebt?.walletDecimals ?: 2
 
         val formatterConfig = MoneyFormatter.Config(
             showCurrency = selectors.formatting.showCurrency,
@@ -204,12 +189,10 @@ class DebtDetailsViewModel @Inject constructor(
             showPlusMinus = selectors.formatting.showPlusMinus
         )
 
-        DebtDetailsUiState(
-            debtDetails = debtDetails,
-            transactions = txList,
-            isEditMode = isEdit,
+        DebtAddEditUiState(
+            debtId = debtIdArg,
             isNewDebt = isNewDebt,
-            isLoading = !isNewDebt && debtDetails == null,
+            isLoading = debtIdArg != null && existingDebt == null,
             isSaving = isSaving,
             editType = form.type,
             editDescription = form.description,
@@ -236,12 +219,8 @@ class DebtDetailsViewModel @Inject constructor(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = DebtDetailsUiState()
+        initialValue = DebtAddEditUiState()
     )
-
-    fun setEditMode(enabled: Boolean) {
-        _isEditMode.value = enabled
-    }
 
     fun updateType(type: Int) {
         _editType.value = type
@@ -304,8 +283,9 @@ class DebtDetailsViewModel @Inject constructor(
                     )
                     onSuccess(newId)
                 } else {
+                    val currentDebtId = debtIdArg ?: return@launch
                     debtRepository.updateDebt(
-                        debtId = debtId,
+                        debtId = currentDebtId,
                         type = currentState.editType,
                         icon = currentState.editIcon,
                         description = currentState.editDescription,
@@ -317,49 +297,11 @@ class DebtDetailsViewModel @Inject constructor(
                         note = currentState.editNote.ifBlank { null },
                         peopleIds = currentState.editPeopleIds
                     )
-                    _isEditMode.value = false
-                    onSuccess(debtId)
+                    onSuccess(currentDebtId)
                 }
             } finally {
                 _isSaving.value = false
             }
-        }
-    }
-
-    fun deleteDebt(deleteTransactions: Boolean = true, onSuccess: () -> Unit) {
-        if (isNewDebt) return
-        viewModelScope.launch {
-            debtRepository.deleteDebt(debtId, deleteTransactions)
-            onSuccess()
-        }
-    }
-
-    fun toggleArchived() {
-        val current = uiState.value.debtDetails?.debt?.isArchived ?: return
-        viewModelScope.launch {
-            debtRepository.setDebtArchived(debtId, !current)
-        }
-    }
-
-    fun addPayment(
-        amount: Double,
-        walletId: String,
-        description: String? = null,
-        note: String? = null,
-        onSuccess: () -> Unit
-    ) {
-        val decimals = uiState.value.currencyDecimals
-        val moneyCents = (amount * 10.0.pow(decimals)).toLong()
-
-        viewModelScope.launch {
-            debtRepository.addDebtPayment(
-                debtId = debtId,
-                amount = moneyCents,
-                walletId = walletId,
-                description = description,
-                note = note
-            )
-            onSuccess()
         }
     }
 }
