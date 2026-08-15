@@ -1,4 +1,4 @@
-package com.sinxn.mymoney.feature.transaction.components
+package com.sinxn.mymoney.core.ui.components
 
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun TransactionCardContainer(
+fun FormCardContainer(
     modifier: Modifier = Modifier,
     horizontalPadding: Dp = 20.dp,
     containerAlpha: Float = 0.35f,

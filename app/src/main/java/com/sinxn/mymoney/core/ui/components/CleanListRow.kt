@@ -1,4 +1,4 @@
-package com.sinxn.mymoney.feature.transaction.components
+package com.sinxn.mymoney.core.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*

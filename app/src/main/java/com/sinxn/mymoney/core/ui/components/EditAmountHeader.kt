@@ -1,4 +1,4 @@
-package com.sinxn.mymoney.feature.transaction.components
+package com.sinxn.mymoney.core.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun EditTransactionAmountHeader(
+fun EditAmountHeader(
     amountText: String,
     currencySymbol: String,
     evaluatedResult: String,

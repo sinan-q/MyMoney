@@ -14,6 +14,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
+import com.sinxn.mymoney.core.ui.components.CleanListRow
+import com.sinxn.mymoney.core.ui.components.FormCardContainer
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.feature.transaction.TransactionDetailsUiState
 
@@ -33,11 +35,12 @@ fun EditTransactionFormOptions(
     onCountInTotalChange: (Boolean) -> Unit,
     onFocusField: () -> Unit
 ) {
-    TransactionCardContainer {
+    FormCardContainer {
         Column {
             // Category & Wallet Row (Hidden for transfers)
             if (!uiState.isTransfer) {
-                val activeCategory = uiState.availableCategories.find { it.id == uiState.editCategoryId }
+                val activeCategory =
+                    uiState.availableCategories.find { it.id == uiState.editCategoryId }
                 CleanListRow(
                     icon = {
                         if (activeCategory != null) {
@@ -47,7 +50,12 @@ fun EditTransactionFormOptions(
                                 modifier = Modifier.size(24.dp)
                             )
                         } else {
-                            Icon(Icons.Default.Category, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
+                            Icon(
+                                Icons.Default.Category,
+                                contentDescription = null,
+                                tint = accentColor,
+                                modifier = Modifier.size(22.dp)
+                            )
                         }
                     },
                     label = "Category",
@@ -55,7 +63,10 @@ fun EditTransactionFormOptions(
                     onClick = onCategoryClick
                 )
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
 
                 val activeWallet = uiState.availableWallets.find { it.id == uiState.editWalletId }
                 CleanListRow(
@@ -67,7 +78,12 @@ fun EditTransactionFormOptions(
                                 modifier = Modifier.size(24.dp)
                             )
                         } else {
-                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
+                            Icon(
+                                Icons.Default.AccountBalanceWallet,
+                                contentDescription = null,
+                                tint = accentColor,
+                                modifier = Modifier.size(22.dp)
+                            )
                         }
                     },
                     label = "Wallet",
@@ -75,7 +91,10 @@ fun EditTransactionFormOptions(
                     onClick = onWalletClick
                 )
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
             }
 
             // Date Row
@@ -88,14 +107,22 @@ fun EditTransactionFormOptions(
 
             CleanListRow(
                 icon = {
-                    Icon(Icons.Default.CalendarToday, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp))
+                    Icon(
+                        Icons.Default.CalendarToday,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(20.dp)
+                    )
                 },
                 label = "Date",
                 value = dateText,
                 onClick = onDateClick
             )
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
 
             // People Row
             val selectedPeople = uiState.availablePeople.filter { it.id in uiState.editPeopleIds }
@@ -110,7 +137,12 @@ fun EditTransactionFormOptions(
                             modifier = Modifier.size(24.dp)
                         )
                     } else {
-                        Icon(Icons.Default.People, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp))
+                        Icon(
+                            Icons.Default.People,
+                            contentDescription = null,
+                            tint = accentColor,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 },
                 label = "People",
@@ -118,7 +150,10 @@ fun EditTransactionFormOptions(
                 onClick = onPeopleClick
             )
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
 
             // Place Row
             val activePlace = uiState.availablePlaces.find { it.id == uiState.editPlaceId }
@@ -131,7 +166,12 @@ fun EditTransactionFormOptions(
                             modifier = Modifier.size(24.dp)
                         )
                     } else {
-                        Icon(Icons.Default.LocationOn, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp))
+                        Icon(
+                            Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = accentColor,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 },
                 label = "Place",
@@ -139,7 +179,10 @@ fun EditTransactionFormOptions(
                 onClick = onPlaceClick
             )
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
 
             // Event Row
             val activeEvent = uiState.availableEvents.find { it.id == uiState.editEventId }
@@ -152,7 +195,12 @@ fun EditTransactionFormOptions(
                             modifier = Modifier.size(24.dp)
                         )
                     } else {
-                        Icon(Icons.Default.Event, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp))
+                        Icon(
+                            Icons.Default.Event,
+                            contentDescription = null,
+                            tint = accentColor,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 },
                 label = "Event",
@@ -160,7 +208,10 @@ fun EditTransactionFormOptions(
                 onClick = onEventClick
             )
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
 
             // Note Field
             Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -176,12 +227,21 @@ fun EditTransactionFormOptions(
                             }
                         },
                     shape = RoundedCornerShape(14.dp),
-                    leadingIcon = { Icon(Icons.Default.Notes, contentDescription = null, tint = accentColor) }
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Notes,
+                            contentDescription = null,
+                            tint = accentColor
+                        )
+                    }
                 )
             }
 
             if (!settings.hideStatusAndImpact) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
 
                 // Confirmed Switch Row
                 Row(
@@ -191,14 +251,21 @@ fun EditTransactionFormOptions(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Confirmed", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Text(
+                        "Confirmed",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
                     Switch(
                         checked = uiState.editConfirmed,
                         onCheckedChange = onConfirmedChange
                     )
                 }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
 
                 // Count in Total Switch Row
                 Row(
@@ -208,7 +275,11 @@ fun EditTransactionFormOptions(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Count in Total", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Text(
+                        "Count in Total",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
                     Switch(
                         checked = uiState.editCountInTotal,
                         onCheckedChange = onCountInTotalChange

@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
+import com.sinxn.mymoney.core.ui.components.CleanListRow
+import com.sinxn.mymoney.core.ui.components.FormCardContainer
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.feature.transaction.TransactionDetailsUiState
@@ -144,46 +146,91 @@ fun ViewTransactionContent(
         }
 
         // 3. Primary Details Card (Wallet, Date & Time, People)
-        TransactionCardContainer {
+        FormCardContainer {
             Column {
                 if (uiState.isTransfer || transaction.direction == 2) {
                     CleanListRow(
-                        icon = { Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = directionColor, modifier = Modifier.size(22.dp)) },
+                        icon = {
+                            Icon(
+                                Icons.Default.AccountBalanceWallet,
+                                contentDescription = null,
+                                tint = directionColor,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        },
                         label = "From Wallet",
                         value = uiState.walletName.ifEmpty { "Source Wallet" }
                     )
 
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
 
                     CleanListRow(
-                        icon = { Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = directionColor, modifier = Modifier.size(22.dp)) },
+                        icon = {
+                            Icon(
+                                Icons.Default.AccountBalanceWallet,
+                                contentDescription = null,
+                                tint = directionColor,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        },
                         label = "To Wallet",
                         value = uiState.targetWalletName.ifEmpty { "Target Wallet" }
                     )
                 } else {
                     CleanListRow(
-                        icon = { Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = directionColor, modifier = Modifier.size(22.dp)) },
+                        icon = {
+                            Icon(
+                                Icons.Default.AccountBalanceWallet,
+                                contentDescription = null,
+                                tint = directionColor,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        },
                         label = "Wallet",
                         value = uiState.walletName.ifEmpty { "Default Wallet" }
                     )
                 }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
 
                 val parsedDate = DateUtils.parseDate(transaction.date)
                 val formattedDate = DateUtils.formatDate(parsedDate, settings.dateFormat)
-                val formattedTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(parsedDate)
+                val formattedTime =
+                    SimpleDateFormat("HH:mm", Locale.getDefault()).format(parsedDate)
 
                 CleanListRow(
-                    icon = { Icon(Icons.Default.CalendarToday, contentDescription = null, tint = directionColor, modifier = Modifier.size(20.dp)) },
+                    icon = {
+                        Icon(
+                            Icons.Default.CalendarToday,
+                            contentDescription = null,
+                            tint = directionColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    },
                     label = if (settings.hideTime) "Date" else "Date & Time",
                     value = if (settings.hideTime) formattedDate else "$formattedDate at $formattedTime"
                 )
 
                 if (uiState.people.isNotEmpty()) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
                     CleanListRow(
-                        icon = { Icon(Icons.Default.People, contentDescription = null, tint = directionColor, modifier = Modifier.size(20.dp)) },
+                        icon = {
+                            Icon(
+                                Icons.Default.People,
+                                contentDescription = null,
+                                tint = directionColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        },
                         label = "People",
                         value = uiState.people.joinToString { it.name }
                     )
@@ -201,13 +248,20 @@ fun ViewTransactionContent(
                 !settings.hideStatusAndImpact
 
         if (hasSecondaryContent) {
-            TransactionCardContainer(containerAlpha = 0.25f) {
+            FormCardContainer(containerAlpha = 0.25f) {
                 Column {
                     var hasPreviousRow = false
 
                     uiState.place?.let { place ->
                         CleanListRow(
-                            icon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = directionColor, modifier = Modifier.size(20.dp)) },
+                            icon = {
+                                Icon(
+                                    Icons.Default.LocationOn,
+                                    contentDescription = null,
+                                    tint = directionColor,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
                             label = "Place",
                             value = place.name
                         )
@@ -216,10 +270,21 @@ fun ViewTransactionContent(
 
                     uiState.event?.let { event ->
                         if (hasPreviousRow) {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(
+                                    alpha = 0.2f
+                                ), modifier = Modifier.padding(horizontal = 16.dp)
+                            )
                         }
                         CleanListRow(
-                            icon = { Icon(Icons.Default.Event, contentDescription = null, tint = directionColor, modifier = Modifier.size(20.dp)) },
+                            icon = {
+                                Icon(
+                                    Icons.Default.Event,
+                                    contentDescription = null,
+                                    tint = directionColor,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
                             label = "Event",
                             value = event.name
                         )
@@ -228,7 +293,11 @@ fun ViewTransactionContent(
 
                     if (!transaction.note.isNullOrEmpty()) {
                         if (hasPreviousRow) {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(
+                                    alpha = 0.2f
+                                ), modifier = Modifier.padding(horizontal = 16.dp)
+                            )
                         }
                         ViewStackedDetailBlock(
                             icon = Icons.Default.Notes,
@@ -241,10 +310,21 @@ fun ViewTransactionContent(
 
                     if (uiState.attachments.isNotEmpty()) {
                         if (hasPreviousRow) {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(
+                                    alpha = 0.2f
+                                ), modifier = Modifier.padding(horizontal = 16.dp)
+                            )
                         }
                         CleanListRow(
-                            icon = { Icon(Icons.Default.AttachFile, contentDescription = null, tint = directionColor, modifier = Modifier.size(20.dp)) },
+                            icon = {
+                                Icon(
+                                    Icons.Default.AttachFile,
+                                    contentDescription = null,
+                                    tint = directionColor,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
                             label = "Attachments",
                             value = "${uiState.attachments.size} files"
                         )
@@ -253,36 +333,68 @@ fun ViewTransactionContent(
 
                     if (!settings.hideStatusAndImpact) {
                         if (hasPreviousRow) {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(
+                                    alpha = 0.2f
+                                ), modifier = Modifier.padding(horizontal = 16.dp)
+                            )
                         }
 
                         // Status Row
                         CleanListRow(
-                            icon = { Icon(Icons.Default.Info, contentDescription = null, tint = directionColor, modifier = Modifier.size(20.dp)) },
+                            icon = {
+                                Icon(
+                                    Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = directionColor,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
                             label = "Status",
                             value = "",
                             trailingBadge = {
                                 Surface(
                                     shape = CircleShape,
-                                    color = if (transaction.confirmed) Color(0xFF10B981).copy(alpha = 0.15f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
-                                    border = BorderStroke(1.dp, if (transaction.confirmed) Color(0xFF10B981).copy(alpha = 0.3f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                                    color = if (transaction.confirmed) Color(0xFF10B981).copy(alpha = 0.15f) else MaterialTheme.colorScheme.outline.copy(
+                                        alpha = 0.15f
+                                    ),
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (transaction.confirmed) Color(0xFF10B981).copy(alpha = 0.3f) else MaterialTheme.colorScheme.outline.copy(
+                                            alpha = 0.3f
+                                        )
+                                    )
                                 ) {
                                     Text(
                                         text = if (transaction.confirmed) "Confirmed" else "Pending",
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = if (transaction.confirmed) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                        modifier = Modifier.padding(
+                                            horizontal = 10.dp,
+                                            vertical = 4.dp
+                                        )
                                     )
                                 }
                             }
                         )
 
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(
+                                alpha = 0.2f
+                            ), modifier = Modifier.padding(horizontal = 16.dp)
+                        )
 
                         // Impact Row
                         CleanListRow(
-                            icon = { Icon(Icons.Default.Tune, contentDescription = null, tint = directionColor, modifier = Modifier.size(20.dp)) },
+                            icon = {
+                                Icon(
+                                    Icons.Default.Tune,
+                                    contentDescription = null,
+                                    tint = directionColor,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
                             label = "Impact",
                             value = "",
                             trailingBadge = {
@@ -296,7 +408,10 @@ fun ViewTransactionContent(
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = directionColor,
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                        modifier = Modifier.padding(
+                                            horizontal = 10.dp,
+                                            vertical = 4.dp
+                                        )
                                     )
                                 }
                             }

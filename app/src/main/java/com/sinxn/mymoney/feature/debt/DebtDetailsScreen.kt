@@ -1,7 +1,6 @@
 package com.sinxn.mymoney.feature.debt
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -11,19 +10,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -44,21 +39,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.model.DebtWithDetails
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
-import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.NumpadView
 import com.sinxn.mymoney.core.ui.components.PeopleSelectionDialog
 import com.sinxn.mymoney.core.ui.components.PlaceSelectionDialog
@@ -66,14 +55,15 @@ import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.ui.components.WalletSelectionDialog
 import com.sinxn.mymoney.core.ui.components.groupTransactionsByMonth
 import com.sinxn.mymoney.core.ui.components.monthGroupedTransactionItems
-import com.sinxn.mymoney.core.util.DateUtils
+import com.sinxn.mymoney.core.ui.components.rememberNumpadFormState
 import com.sinxn.mymoney.core.util.MoneyFormatter
-import com.sinxn.mymoney.feature.transaction.components.CleanListRow
-import com.sinxn.mymoney.feature.transaction.components.EditTransactionAmountHeader
-import com.sinxn.mymoney.feature.transaction.components.TransactionCardContainer
+import com.sinxn.mymoney.core.ui.components.CleanListRow
+import com.sinxn.mymoney.core.ui.components.EditAmountHeader
+import com.sinxn.mymoney.core.ui.components.FormCardContainer
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
 
 private val DebtRoseColor = Color(0xFFE11D48)
 private val CreditEmeraldColor = Color(0xFF10B981)
@@ -88,9 +78,7 @@ fun DebtDetailsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val formatterConfig = uiState.formatterConfig
-    val focusRequester = remember { FocusRequester() }
-    val focusManager = LocalFocusManager.current
-    val keyboardController = LocalSoftwareKeyboardController.current
+    val numpadState = rememberNumpadFormState(initialNumpadVisible = uiState.isNewDebt)
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     val isDebt = if (uiState.isEditMode || uiState.isNewDebt) uiState.editType == 0
@@ -99,19 +87,16 @@ fun DebtDetailsScreen(
     val accentColor = if (isDebt) DebtRoseColor else CreditEmeraldColor
 
     val hasOperatorInAmount = remember(uiState.editAmount) {
-        val amountStr = uiState.editAmount.trim()
-        val rest = if (amountStr.startsWith("-")) amountStr.substring(1) else amountStr
-        rest.contains("+") || rest.contains("-") || rest.contains("×") || rest.contains("÷")
+        numpadState.hasOperator(uiState.editAmount)
     }
 
     val evaluatedAmountStr = remember(uiState.editAmount) {
-        viewModel.getImmediateResult(uiState.editAmount)
+        numpadState.getImmediateResult(uiState.editAmount, uiState.currencyDecimals)
     }
     val amountValue = remember(evaluatedAmountStr) {
         evaluatedAmountStr.toDoubleOrNull()
     }
     val selectedWallet = uiState.availableWallets.find { it.id == uiState.editWalletId }
-    var isNumpadVisible by remember(uiState.isNewDebt) { mutableStateOf(uiState.isNewDebt) }
 
     val formCurrency = remember(selectedWallet, uiState.currencyCode) {
         MoneyFormatter.getCurrencySymbol(selectedWallet?.currency ?: uiState.currencyCode)
@@ -126,12 +111,6 @@ fun DebtDetailsScreen(
         if (uiState.editType == 0) "Save Debt" else "Save Credit"
     } else {
         "Save Changes"
-    }
-
-    val dismissKeyboardAndNumpad = {
-        focusManager.clearFocus()
-        keyboardController?.hide()
-        isNumpadVisible = false
     }
 
     Scaffold(
@@ -246,18 +225,14 @@ fun DebtDetailsScreen(
                             Spacer(modifier = Modifier.height(4.dp))
                         }
 
-                        EditTransactionAmountHeader(
+                        EditAmountHeader(
                             amountText = uiState.editAmount,
                             currencySymbol = formCurrency,
                             evaluatedResult = evaluatedAmountStr,
                             hasOperatorInAmount = hasOperatorInAmount,
                             accentColor = accentColor,
-                            isNumpadVisible = isNumpadVisible,
-                            onHeaderClick = {
-                                focusManager.clearFocus()
-                                keyboardController?.hide()
-                                isNumpadVisible = true
-                            }
+                            isNumpadVisible = numpadState.isNumpadVisible,
+                            onHeaderClick = { numpadState.showNumpad() }
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
@@ -265,7 +240,7 @@ fun DebtDetailsScreen(
                         DebtFormContent(
                             uiState = uiState,
                             accentColor = accentColor,
-                            focusRequester = focusRequester,
+                            focusRequester = numpadState.focusRequester,
                             onDescriptionChange = viewModel::updateDescription,
                             onWalletChange = viewModel::updateWalletId,
                             onPlaceChange = viewModel::updatePlaceId,
@@ -274,8 +249,8 @@ fun DebtDetailsScreen(
                             onNoteChange = viewModel::updateNote,
                             onPersonToggle = viewModel::togglePersonSelection,
                             onInsertMasterTxChange = viewModel::updateInsertMasterTransaction,
-                            onFocusField = { isNumpadVisible = false },
-                            onDismissKeyboardAndNumpad = dismissKeyboardAndNumpad
+                            onFocusField = { numpadState.onFocusField() },
+                            onDismissKeyboardAndNumpad = { numpadState.dismiss() }
                         )
                     }
 
@@ -288,7 +263,7 @@ fun DebtDetailsScreen(
                     ) {
                         Column {
                             AnimatedVisibility(
-                                visible = isNumpadVisible,
+                                visible = numpadState.isNumpadVisible,
                                 enter = fadeIn() + expandVertically(),
                                 exit = fadeOut() + shrinkVertically()
                             ) {
@@ -296,14 +271,10 @@ fun DebtDetailsScreen(
                                     onKeyPress = viewModel::onNumpadKeyPress,
                                     onEvaluate = viewModel::evaluateMathExpression,
                                     onSave = {
-                                        dismissKeyboardAndNumpad()
+                                        numpadState.dismiss()
                                         viewModel.saveDebt { onNavigateBack() }
                                     },
-                                    onNext = {
-                                        isNumpadVisible = false
-                                        focusRequester.requestFocus()
-                                        keyboardController?.show()
-                                    },
+                                    onNext = { numpadState.onNext() },
                                     hasOperatorInAmount = hasOperatorInAmount,
                                     saveButtonText = actionBtnText,
                                     saveButtonColor = accentColor,
@@ -312,7 +283,7 @@ fun DebtDetailsScreen(
                                 )
                             }
 
-                            if (!isNumpadVisible) {
+                            if (!numpadState.isNumpadVisible) {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -320,7 +291,7 @@ fun DebtDetailsScreen(
                                 ) {
                                     Button(
                                         onClick = {
-                                            dismissKeyboardAndNumpad()
+                                            numpadState.dismiss()
                                             viewModel.saveDebt { onNavigateBack() }
                                         },
                                         enabled = isSaveEnabled,
@@ -497,7 +468,7 @@ private fun DebtViewContent(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 6.dp)
                 ) {
-                    TransactionCardContainer(horizontalPadding = 0.dp) {
+                    FormCardContainer(horizontalPadding = 0.dp) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -515,7 +486,7 @@ private fun DebtViewContent(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
 
-                                val paidAmount = kotlin.math.abs(debtDetails.progress)
+                                val paidAmount = abs(debtDetails.progress)
                                 val progressPercent = ((paidAmount.toFloat() / totalMoney.toFloat()) * 100).toInt().coerceIn(0, 100)
                                 Text(
                                     text = "$progressPercent% Repaid",
@@ -527,7 +498,7 @@ private fun DebtViewContent(
 
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            val progressFraction = (kotlin.math.abs(debtDetails.progress).toFloat() / totalMoney.toFloat()).coerceIn(0f, 1f)
+                            val progressFraction = (abs(debtDetails.progress).toFloat() / totalMoney.toFloat()).coerceIn(0f, 1f)
                             LinearProgressIndicator(
                                 progress = { progressFraction },
                                 modifier = Modifier
@@ -545,7 +516,7 @@ private fun DebtViewContent(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = "Paid: ${MoneyFormatter.format(amount = kotlin.math.abs(debtDetails.progress), currencyCode = debtDetails.walletCurrency, decimals = debtDetails.walletDecimals, config = formatterConfig)}",
+                                    text = "Paid: ${MoneyFormatter.format(amount = abs(debtDetails.progress), currencyCode = debtDetails.walletCurrency, decimals = debtDetails.walletDecimals, config = formatterConfig)}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -570,7 +541,7 @@ private fun DebtViewContent(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 6.dp)
                 ) {
-                    TransactionCardContainer(horizontalPadding = 0.dp) {
+                    FormCardContainer(horizontalPadding = 0.dp) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -601,7 +572,7 @@ private fun DebtViewContent(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 6.dp)
             ) {
-                TransactionCardContainer(horizontalPadding = 0.dp) {
+                FormCardContainer(horizontalPadding = 0.dp) {
                     Column {
                         // Wallet Row
                         if (debtDetails.walletName.isNotBlank()) {
@@ -824,7 +795,7 @@ private fun DebtFormContent(
         )
 
         // Form Fields (Wallet, Dates, People, Place)
-        TransactionCardContainer(horizontalPadding = 0.dp) {
+        FormCardContainer(horizontalPadding = 0.dp) {
             Column {
                 // Wallet Selector Row
                 CleanListRow(
