@@ -34,6 +34,7 @@ data class DebtListUiState(
     val selectedTab: Int = 0, // 0: DEBT, 1: CREDIT
     val includeArchived: Boolean = false,
     val filterWalletId: String? = null,
+    val filterWalletName: String? = null,
     val debts: List<DebtWithDetails> = emptyList(),
     val credits: List<DebtWithDetails> = emptyList(),
     val debtSummary: DebtSummaryStats = DebtSummaryStats(),
@@ -70,15 +71,29 @@ class DebtListViewModel @Inject constructor(
         debtRepository.getDebts(type = null, includeArchived = archived, walletId = actualWId)
     }
 
+    private val filterFlow = combine(_selectedTab, _includeArchived, settingsRepository.currentWalletId) { tab, archived, wId ->
+        Triple(tab, archived, wId)
+    }
+
     val uiState: StateFlow<DebtListUiState> = combine(
-        _selectedTab,
-        _includeArchived,
-        settingsRepository.currentWalletId,
+        filterFlow,
         debtsFlow,
-        settingsRepository.formattingSettings
-    ) { tab, archived, wId, allDebtsList, formatting ->
+        settingsRepository.formattingSettings,
+        allWallets
+    ) { (tab, archived, wId), allDebtsList, formatting, wallets ->
         val debts = allDebtsList.filter { it.debt.type == 0 }
         val credits = allDebtsList.filter { it.debt.type == 1 }
+
+        val actualWId = if (wId == "total") null else wId
+        val selectedWallet = if (actualWId != null) wallets.find { it.wallet.id == actualWId } else null
+
+        val activeCurrencyCode = selectedWallet?.wallet?.currency ?: formatting.globalCurrency
+        val activeDecimals = selectedWallet?.decimals ?: try {
+            java.util.Currency.getInstance(formatting.globalCurrency).defaultFractionDigits
+        } catch (e: Exception) {
+            2
+        }
+        val activeCurrencySymbol = selectedWallet?.currencySymbol ?: com.sinxn.mymoney.core.util.MoneyFormatter.getCurrencySymbol(activeCurrencyCode)
 
         fun calculateStats(list: List<DebtWithDetails>): DebtSummaryStats {
             val totalRemaining = list.sumOf { it.remainingMoney }
@@ -86,8 +101,8 @@ class DebtListViewModel @Inject constructor(
             val totalPaid = list.sumOf { kotlin.math.abs(it.progress) }
             val settled = list.count { it.remainingMoney == 0L && it.debt.money > 0 }
             val active = list.size - settled
-            val currCode = if (list.isNotEmpty()) list.first().walletCurrency else formatting.globalCurrency
-            val currDecimals = if (list.isNotEmpty()) list.first().walletDecimals else 2
+            val currCode = if (list.isNotEmpty()) list.first().walletCurrency else activeCurrencyCode
+            val currDecimals = if (list.isNotEmpty()) list.first().walletDecimals else activeDecimals
             return DebtSummaryStats(
                 totalRemainingMoney = totalRemaining,
                 totalOriginalMoney = totalOriginal,
@@ -101,20 +116,20 @@ class DebtListViewModel @Inject constructor(
 
         val debtSummary = calculateStats(debts)
         val creditSummary = calculateStats(credits)
-        val actualWId = if (wId == "total") null else wId
 
         DebtListUiState(
             selectedTab = tab,
             includeArchived = archived,
             filterWalletId = actualWId,
+            filterWalletName = selectedWallet?.wallet?.name,
             debts = debts,
             credits = credits,
             debtSummary = debtSummary,
             creditSummary = creditSummary,
             isLoading = false,
-            currencyCode = formatting.globalCurrency,
-            currencySymbol = "$",
-            currencyDecimals = 2,
+            currencyCode = activeCurrencyCode,
+            currencySymbol = activeCurrencySymbol,
+            currencyDecimals = activeDecimals,
             formattingSettings = formatting
         )
     }.stateIn(

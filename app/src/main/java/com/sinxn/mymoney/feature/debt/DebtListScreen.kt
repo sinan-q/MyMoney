@@ -224,8 +224,8 @@ fun DebtListBodyContent(
                 val listState = if (isDebt) debtListState else creditListState
                 val summary = if (isDebt) uiState.debtSummary else uiState.creditSummary
 
-                val summaryCurrency = if (currentDebts.isNotEmpty()) currentDebts.first().walletCurrency else uiState.currencyCode
-                val summaryDecimals = if (currentDebts.isNotEmpty()) currentDebts.first().walletDecimals else uiState.currencyDecimals
+                val summaryCurrency = summary.currencyCode
+                val summaryDecimals = summary.currencyDecimals
 
                 Column(modifier = Modifier.fillMaxSize()) {
                     if (showSummaryCard) {
@@ -240,6 +240,7 @@ fun DebtListBodyContent(
                             currencyCode = summaryCurrency,
                             currencyDecimals = summaryDecimals,
                             filterWalletId = uiState.filterWalletId,
+                            filterWalletName = uiState.filterWalletName,
                             includeArchived = uiState.includeArchived
                         )
                     }
@@ -284,6 +285,7 @@ private fun DebtSummaryCard(
     currencyCode: String,
     currencyDecimals: Int = 2,
     filterWalletId: String? = null,
+    filterWalletName: String? = null,
     includeArchived: Boolean = false
 ) {
     val isDebt = selectedTab == 0
@@ -334,7 +336,7 @@ private fun DebtSummaryCard(
                         if (!filterWalletId.isNullOrBlank() && filterWalletId != "total") {
                             BadgeChip(
                                 icon = Icons.Default.Wallet,
-                                text = "Wallet",
+                                text = filterWalletName ?: "Wallet",
                                 containerColor = MaterialTheme.colorScheme.surface,
                                 contentColor = accentColor
                             )
