@@ -265,7 +265,7 @@ fun DebtListBodyContent(
                             state = listState,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 88.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(currentDebts, key = { it.debt.id }) { debtItem ->
                                 DebtCardItem(
@@ -303,11 +303,6 @@ private fun DebtSummaryCard(
     val isDebt = selectedTab == 0
     val accentColor = if (isDebt) DebtRoseColor else CreditEmeraldColor
 
-    val gradientColors = listOf(
-        accentColor.copy(alpha = 0.16f),
-        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f)
-    )
-
     val animatedVerticalPadding by animateDpAsState(
         targetValue = if (isReduced) 2.dp else 6.dp,
         label = "debtSummaryVerticalPadding"
@@ -338,7 +333,7 @@ private fun DebtSummaryCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Brush.linearGradient(gradientColors))
+                .background(accentColor.copy(alpha = 0.1f))
                 .padding(animatedInnerPadding)
         ) {
             if (isReduced) {
@@ -533,15 +528,13 @@ private fun DebtCardItem(
         DateUtils.formatDate(dateObj, dateFormat)
     }
 
-    var showMenu by remember { mutableStateOf(false) }
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
         ),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
     ) {
