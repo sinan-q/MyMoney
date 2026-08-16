@@ -1,24 +1,18 @@
 package com.sinxn.mymoney.core.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.util.DateUtils
@@ -51,7 +45,7 @@ fun TransactionItem(
     val primaryTitle = if (hasDescription) transaction.description else categoryDisplayName
     val subtitleText = if (hasDescription) categoryDisplayName else null
 
-    val formattedDate = androidx.compose.runtime.remember(transaction.date, dateFormat) {
+    val formattedDate = remember(transaction.date, dateFormat) {
         val dateObj = DateUtils.parseDate(transaction.date)
         DateUtils.formatDate(dateObj, dateFormat)
     }
@@ -64,7 +58,7 @@ fun TransactionItem(
     }
 
     val amount = if (isIncome || isTransferItem) transaction.money else -transaction.money
-    val formattedMoney = androidx.compose.runtime.remember(amount, currencyCode, decimals, formatterConfig) {
+    val formattedMoney = remember(amount, currencyCode, decimals, formatterConfig) {
         MoneyFormatter.format(
             amount = amount,
             currencyCode = currencyCode,
@@ -73,94 +67,45 @@ fun TransactionItem(
         )
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 3.dp)
-            .clickable(onClick = onClick)
-    ) {
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (isTransferItem) {
-                    val isIncomeTransfer = transaction.direction == 1
-                    val transferAccentColor = if (isIncomeTransfer) CreditEmeraldColor else DebtRoseColor
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(transferAccentColor.copy(alpha = 0.12f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = if (isIncomeTransfer) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
-                            contentDescription = null,
-                            tint = transferAccentColor,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CategoryIcon(
-                            iconString = categoryIconData,
-                            categoryName = categoryDisplayName,
-                            modifier = Modifier.size(44.dp)
-                        )
-                    }
-                }
-                
-                Spacer(modifier = Modifier.width(12.dp))
-                
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = primaryTitle,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+    FinanceListItem(
+        icon = {
+            if (isTransferItem) {
+                val isIncomeTransfer = transaction.direction == 1
+                val transferAccentColor = if (isIncomeTransfer) CreditEmeraldColor else DebtRoseColor
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(transferAccentColor.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isIncomeTransfer) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
+                        contentDescription = null,
+                        tint = transferAccentColor,
+                        modifier = Modifier.size(22.dp)
                     )
-                    
-                    if (!subtitleText.isNullOrEmpty()) {
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = subtitleText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
                 }
-                
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = (if (isIncome && !formattedMoney.startsWith("+")) "+" else "") + formattedMoney,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = amountColor,
-                        fontWeight = FontWeight.Bold
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CategoryIcon(
+                        iconString = categoryIconData,
+                        categoryName = categoryDisplayName,
+                        modifier = Modifier.size(44.dp)
                     )
-                    if (showDate) {
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = formattedDate,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                 }
             }
-
-    }
+        },
+        title = primaryTitle,
+        subtitle = subtitleText,
+        amountText = (if (isIncome && !formattedMoney.startsWith("+")) "+" else "") + formattedMoney,
+        amountColor = amountColor,
+        subAmountText = if (showDate) formattedDate else null,
+        onClick = onClick
+    )
 }

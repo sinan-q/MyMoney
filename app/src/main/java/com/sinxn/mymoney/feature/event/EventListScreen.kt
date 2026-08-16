@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.entity.EventEntity
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
+import com.sinxn.mymoney.core.ui.components.FinanceListItem
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 
@@ -52,16 +53,6 @@ fun EventListScreen(
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        topBar = {
-            TopAppBar(
-                title = { Text("Events", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                }
-            )
-        },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddEventClick) {
                 Icon(Icons.Default.Add, contentDescription = "Add Event")
@@ -158,7 +149,7 @@ fun EventListScreen(
                             EventListItem(
                                 item = item,
                                 formatterConfig = uiState.formatterConfig,
-                                dateFormat = uiState.dateFormat,
+                                dateFormat = 3,
                                 onClick = { onEventClick(item.event.id) }
                             )
                         }
@@ -204,18 +195,8 @@ private fun EventListItem(
         )
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 3.dp)
-            .clickable(onClick = onClick)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+    FinanceListItem(
+        icon = {
             Box(
                 modifier = Modifier
                     .size(44.dp)
@@ -228,49 +209,13 @@ private fun EventListItem(
                     modifier = Modifier.size(44.dp)
                 )
             }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = event.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = formattedDateRange,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = (if (isPositive && !formattedMoney.startsWith("+")) "+" else "") + formattedMoney,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = amountColor,
-                    fontWeight = FontWeight.Bold
-                )
-                if (item.transactionCount > 0) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "${item.transactionCount} ${if (item.transactionCount == 1) "tx" else "txs"}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-    }
+        },
+        title = event.name,
+        subtitle = formattedDateRange,
+        amountText = (if (isPositive && !formattedMoney.startsWith("+")) "+" else "") + formattedMoney,
+        amountColor = amountColor,
+        onClick = onClick
+    )
 }
 
 
