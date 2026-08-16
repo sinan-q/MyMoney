@@ -58,16 +58,14 @@ class SavingRepository @Inject constructor(
      * Get list of savings goals enriched with progress and wallet details.
      */
     fun getSavings(walletId: String? = null, isComplete: Boolean = false): Flow<List<SavingWithDetails>> {
-        val maxDate = DateUtils.getSQLDateTimeString(Date())
-        return moneyDao.getSavingsWithDetails(walletId = walletId, isComplete = isComplete, maxDate = maxDate)
+        return moneyDao.getSavingsWithDetails(walletId = walletId, isComplete = isComplete)
     }
 
     /**
      * Get single saving goal details by ID.
      */
     fun getSavingDetails(savingId: String): Flow<SavingWithDetails?> {
-        val maxDate = DateUtils.getSQLDateTimeString(Date())
-        return moneyDao.getSavingWithDetailsById(savingId, maxDate)
+        return moneyDao.getSavingWithDetailsById(savingId)
     }
 
     /**

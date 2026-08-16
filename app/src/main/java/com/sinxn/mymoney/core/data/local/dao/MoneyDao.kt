@@ -595,7 +595,6 @@ interface MoneyDao {
                      AND t.isDeleted = 0 
                      AND t.confirmed = 1 
                      AND (c.tag IS NULL OR c.tag NOT IN ('system::debt', 'system::credit'))
-                     AND t.date <= :maxDate
                ), 0) as progress
         FROM debts d
         INNER JOIN wallets w ON d.walletId = w.id
@@ -613,8 +612,7 @@ interface MoneyDao {
     fun getDebtsWithDetails(
         type: Int?, 
         includeArchived: Boolean, 
-        walletId: String? = null,
-        maxDate: String
+        walletId: String? = null
     ): Flow<List<DebtWithDetails>>
 
     @androidx.room.Transaction
@@ -631,7 +629,6 @@ interface MoneyDao {
                      AND t.isDeleted = 0 
                      AND t.confirmed = 1 
                      AND (c.tag IS NULL OR c.tag NOT IN ('system::debt', 'system::credit'))
-                     AND t.date <= :maxDate
                ), 0) as progress
         FROM debts d
         INNER JOIN wallets w ON d.walletId = w.id
@@ -639,7 +636,7 @@ interface MoneyDao {
         LEFT JOIN places p ON d.placeId = p.id
         WHERE d.id = :debtId AND d.isDeleted = 0
     """)
-    fun getDebtWithDetailsById(debtId: String, maxDate: String): Flow<DebtWithDetails?>
+    fun getDebtWithDetailsById(debtId: String): Flow<DebtWithDetails?>
 
     @androidx.room.Transaction
     @Query("""
@@ -913,7 +910,6 @@ interface MoneyDao {
                    LEFT JOIN categories c ON t.categoryId = c.id
                    WHERE t.savingId = s.id AND t.isDeleted = 0 AND t.confirmed = 1
                      AND (c.tag = 'system::deposit' OR c.tag = 'system::withdraw')
-                     AND t.date <= :maxDate
                ), 0) as progress
         FROM savings s
         INNER JOIN wallets w ON s.walletId = w.id AND w.isDeleted = 0
@@ -925,7 +921,7 @@ interface MoneyDao {
           )
         ORDER BY s.id DESC
     """)
-    fun getSavingsWithDetails(walletId: String? = null, isComplete: Boolean = false, maxDate: String): Flow<List<SavingWithDetails>>
+    fun getSavingsWithDetails(walletId: String? = null, isComplete: Boolean = false): Flow<List<SavingWithDetails>>
 
     @androidx.room.Transaction
     @Query("""
@@ -938,13 +934,12 @@ interface MoneyDao {
                    LEFT JOIN categories c ON t.categoryId = c.id
                    WHERE t.savingId = s.id AND t.isDeleted = 0 AND t.confirmed = 1
                      AND (c.tag = 'system::deposit' OR c.tag = 'system::withdraw')
-                     AND t.date <= :maxDate
                ), 0) as progress
         FROM savings s
         INNER JOIN wallets w ON s.walletId = w.id AND w.isDeleted = 0
         WHERE s.id = :savingId AND s.isDeleted = 0
     """)
-    fun getSavingWithDetailsById(savingId: String, maxDate: String): Flow<SavingWithDetails?>
+    fun getSavingWithDetailsById(savingId: String): Flow<SavingWithDetails?>
 
     @androidx.room.Transaction
     @Query("""
