@@ -1,5 +1,9 @@
 package com.sinxn.mymoney.feature.debt
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -227,6 +231,12 @@ fun DebtListBodyContent(
                 val summaryCurrency = summary.currencyCode
                 val summaryDecimals = summary.currencyDecimals
 
+                val isHeaderReduced by remember(listState) {
+                    derivedStateOf {
+                        listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 20
+                    }
+                }
+
                 Column(modifier = Modifier.fillMaxSize()) {
                     if (showSummaryCard) {
                         DebtSummaryCard(
@@ -241,7 +251,8 @@ fun DebtListBodyContent(
                             currencyDecimals = summaryDecimals,
                             filterWalletId = uiState.filterWalletId,
                             filterWalletName = uiState.filterWalletName,
-                            includeArchived = uiState.includeArchived
+                            includeArchived = uiState.includeArchived,
+                            isReduced = isHeaderReduced
                         )
                     }
 
@@ -286,7 +297,8 @@ private fun DebtSummaryCard(
     currencyDecimals: Int = 2,
     filterWalletId: String? = null,
     filterWalletName: String? = null,
-    includeArchived: Boolean = false
+    includeArchived: Boolean = false,
+    isReduced: Boolean = false
 ) {
     val isDebt = selectedTab == 0
     val accentColor = if (isDebt) DebtRoseColor else CreditEmeraldColor
@@ -296,11 +308,30 @@ private fun DebtSummaryCard(
         MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f)
     )
 
+    val animatedVerticalPadding by animateDpAsState(
+        targetValue = if (isReduced) 2.dp else 6.dp,
+        label = "debtSummaryVerticalPadding"
+    )
+    val animatedCornerRadius by animateDpAsState(
+        targetValue = if (isReduced) 16.dp else 24.dp,
+        label = "debtSummaryCornerRadius"
+    )
+    val animatedInnerPadding by animateDpAsState(
+        targetValue = if (isReduced) 12.dp else 20.dp,
+        label = "debtSummaryInnerPadding"
+    )
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        shape = RoundedCornerShape(24.dp),
+            .padding(horizontal = 16.dp, vertical = animatedVerticalPadding)
+            .animateContentSize(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                )
+            ),
+        shape = RoundedCornerShape(animatedCornerRadius),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
         border = BorderStroke(1.dp, accentColor.copy(alpha = 0.2f))
     ) {
@@ -308,94 +339,159 @@ private fun DebtSummaryCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Brush.linearGradient(gradientColors))
-                .padding(20.dp)
+                .padding(animatedInnerPadding)
         ) {
-            Column {
-                // Header Label + Filter Badges
+            if (isReduced) {
+                // Compact / Reduced Single-Row Layout
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = if (isDebt) "Total Outstanding Debt" else "Total Pending Credit",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.SemiBold
-                    )
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        if (includeArchived) {
-                            BadgeChip(
-                                icon = Icons.Default.Archive,
-                                text = "Archived",
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    Column(
+                        modifier = Modifier.weight(1f, fill = false),
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = if (isDebt) "Outstanding Debt" else "Pending Credit",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
+                            if (includeArchived) {
+                                BadgeChip(
+                                    icon = Icons.Default.Archive,
+                                    text = "Archived",
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            if (!filterWalletId.isNullOrBlank() && filterWalletId != "total") {
+                                BadgeChip(
+                                    icon = Icons.Default.Wallet,
+                                    text = filterWalletName ?: "Wallet",
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    contentColor = accentColor
+                                )
+                            }
                         }
-                        if (!filterWalletId.isNullOrBlank() && filterWalletId != "total") {
-                            BadgeChip(
-                                icon = Icons.Default.Wallet,
-                                text = filterWalletName ?: "Wallet",
-                                containerColor = MaterialTheme.colorScheme.surface,
-                                contentColor = accentColor
-                            )
+                        Text(
+                            text = "$activeCount active" + if (settledCount > 0) " • $settledCount settled" else "",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = MoneyFormatter.format(
+                            amount = totalRemainingMoney,
+                            currencyCode = currencyCode,
+                            decimals = currencyDecimals,
+                            config = formatterConfig
+                        ),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Black,
+                        color = accentColor,
+                        maxLines = 1
+                    )
+                }
+            } else {
+                // Full Expanded Layout
+                Column {
+                    // Header Label + Filter Badges
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isDebt) "Total Outstanding Debt" else "Total Pending Credit",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            if (includeArchived) {
+                                BadgeChip(
+                                    icon = Icons.Default.Archive,
+                                    text = "Archived",
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            if (!filterWalletId.isNullOrBlank() && filterWalletId != "total") {
+                                BadgeChip(
+                                    icon = Icons.Default.Wallet,
+                                    text = filterWalletName ?: "Wallet",
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    contentColor = accentColor
+                                )
+                            }
                         }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
-                // Hero Money Amount
-                Text(
-                    text = MoneyFormatter.format(
-                        amount = totalRemainingMoney,
-                        currencyCode = currencyCode,
-                        decimals = currencyDecimals,
-                        config = formatterConfig
-                    ),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Black,
-                    color = accentColor,
-                    letterSpacing = (-0.5).sp
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Progress Bar
-                if (totalOriginalMoney > 0) {
-                    val progressFraction = (totalPaidMoney.toFloat() / totalOriginalMoney.toFloat()).coerceIn(0f, 1f)
-                    LinearProgressIndicator(
-                        progress = { progressFraction },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(CircleShape),
-                        color = accentColor,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-
-                // Subtitle Info Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                    // Hero Money Amount
                     Text(
-                        text = "$activeCount active" + if (settledCount > 0) " • $settledCount settled" else "",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
+                        text = MoneyFormatter.format(
+                            amount = totalRemainingMoney,
+                            currencyCode = currencyCode,
+                            decimals = currencyDecimals,
+                            config = formatterConfig
+                        ),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Black,
+                        color = accentColor,
+                        letterSpacing = (-0.5).sp
                     )
 
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Progress Bar
                     if (totalOriginalMoney > 0) {
-                        Text(
-                            text = "Total: ${MoneyFormatter.format(amount = totalOriginalMoney, currencyCode = currencyCode, decimals = currencyDecimals, config = formatterConfig)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        val progressFraction = (totalPaidMoney.toFloat() / totalOriginalMoney.toFloat()).coerceIn(0f, 1f)
+                        LinearProgressIndicator(
+                            progress = { progressFraction },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(CircleShape),
+                            color = accentColor,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                         )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
+                    // Subtitle Info Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "$activeCount active" + if (settledCount > 0) " • $settledCount settled" else "",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
+                        )
+
+                        if (totalOriginalMoney > 0) {
+                            Text(
+                                text = "Total: ${MoneyFormatter.format(amount = totalOriginalMoney, currencyCode = currencyCode, decimals = currencyDecimals, config = formatterConfig)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
                     }
                 }
             }
