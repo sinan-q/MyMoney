@@ -486,6 +486,21 @@ interface MoneyDao {
     """)
     fun getTransactionsForEvent(eventId: String): Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory>>
 
+    @androidx.room.Transaction
+    @Query("""
+        SELECT t.*, c.name as categoryName, c.icon as categoryIcon,
+               COALESCE(curr.decimals, 2) as decimals, curr.symbol as currencySymbol,
+               w.currency as currencyCode
+        FROM transactions t
+        LEFT JOIN categories c ON t.categoryId = c.id
+        INNER JOIN wallets w ON t.walletId = w.id
+        LEFT JOIN currencies curr ON w.currency = curr.iso
+        WHERE t.eventId IS NOT NULL AND t.isDeleted = 0
+        ORDER BY t.date DESC
+    """)
+    fun getAllEventTransactions(): Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory>>
+
+
     // People
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPerson(person: com.sinxn.mymoney.core.data.local.entity.PersonEntity)

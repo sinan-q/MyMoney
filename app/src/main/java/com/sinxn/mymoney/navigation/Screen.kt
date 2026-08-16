@@ -141,6 +141,16 @@ sealed class Screen(
         }
     }
 
+    object EventDetails : Screen("event_details/{eventId}", "events", "Event Details", isTopLevel = false) {
+        fun createRoute(eventId: String): String = "event_details/$eventId"
+    }
+
+    object EventAddEdit : Screen("event_edit?eventId={eventId}", "events", "Event Edit", isTopLevel = false) {
+        fun createRoute(eventId: String? = null): String {
+            return if (eventId != null) "event_edit?eventId=$eventId" else "event_edit"
+        }
+    }
+
     object SqlConsole : Screen("sql_console", "settings", "SQL Console", isTopLevel = false)
     object Backup : Screen("backup", "settings", "Backup", isTopLevel = false)
     object Recap : Screen("recap", "overview", "Year Recap", isTopLevel = false)
@@ -151,10 +161,12 @@ sealed class Screen(
                 Transactions, Categories, Debts, Budgets, Savings,
                 Events, Recurrences, Templates, Places, People,
                 Overview, About, SupportDeveloper, Menu, Settings,
-                DebtDetails, DebtAddEdit, CategoryDetails, PersonDetails, PersonAddEdit, BudgetDetails, BudgetOverview, SavingDetails,
+                DebtDetails, DebtAddEdit, CategoryDetails, PersonDetails, PersonAddEdit, EventDetails, EventAddEdit, BudgetDetails, BudgetOverview, SavingDetails,
                 RecurrentTransactionDetails, RecurrentTransferDetails, TransactionDetails, TransactionAddEdit, TransferAddEdit,
                 SqlConsole, Backup, Recap
             )
+
+
 
         fun fromSidebarId(id: String): Screen? = ALL.find { it.sidebarItemId == id }
 

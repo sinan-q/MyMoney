@@ -24,6 +24,10 @@ class EventRepository @Inject constructor(
         return moneyDao.getTransactionsForEvent(eventId)
     }
 
+    fun getAllEventTransactions(): Flow<List<TransactionWithCategory>> {
+        return moneyDao.getAllEventTransactions()
+    }
+
     suspend fun saveEvent(
         id: String?,
         name: String,

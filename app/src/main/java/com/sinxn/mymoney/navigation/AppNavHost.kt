@@ -22,6 +22,8 @@ import com.sinxn.mymoney.feature.category.CategoryListScreen
 import com.sinxn.mymoney.feature.debt.DebtAddEditScreen
 import com.sinxn.mymoney.feature.debt.DebtDetailsScreen
 import com.sinxn.mymoney.feature.debt.DebtListScreen
+import com.sinxn.mymoney.feature.event.EventAddEditScreen
+import com.sinxn.mymoney.feature.event.EventDetailsScreen
 import com.sinxn.mymoney.feature.event.EventListScreen
 import com.sinxn.mymoney.feature.overview.OverviewScreen
 import com.sinxn.mymoney.feature.people.PeopleListScreen
@@ -499,9 +501,38 @@ fun AppNavHost(
         }
         composable(Screen.Events.routePattern) {
             EventListScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onAddEventClick = {
+                    navController.navigate(Screen.EventAddEdit.createRoute())
+                },
+                onEventClick = { eventId ->
+                    navController.navigate(Screen.EventDetails.createRoute(eventId))
+                }
+            )
+        }
+        composable(Screen.EventDetails.routePattern) {
+            EventDetailsScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onTransactionClick = { transactionId ->
+                    navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
+                },
+                onEditEventClick = { eventId ->
+                    navController.navigate(Screen.EventAddEdit.createRoute(eventId))
+                }
+            )
+        }
+        composable(
+            Screen.EventAddEdit.routePattern,
+            arguments = listOf(
+                navArgument("eventId") { type = NavType.StringType; nullable = true; defaultValue = null }
+            )
+        ) {
+            EventAddEditScreen(
                 onNavigateBack = { navController.navigateUp() }
             )
         }
+
+
         composable(Screen.Templates.routePattern) {
             TemplateListScreen(
                 onNavigateBack = { navController.navigateUp() }
