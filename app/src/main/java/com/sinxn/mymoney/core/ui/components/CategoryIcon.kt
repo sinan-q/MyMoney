@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.text.PlatformTextStyle
 
 import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.core.graphics.toColorInt
 
 @Composable
 fun CategoryIcon(
@@ -110,7 +111,7 @@ fun parseIconData(iconString: String?, categoryName: String): IconData {
                 
                 val color = if (colorHex.isNotEmpty()) {
                     try {
-                        Color(android.graphics.Color.parseColor(colorHex))
+                        Color(colorHex.toColorInt())
                     } catch (e: Exception) { defaultColor }
                 } else defaultColor
                 
