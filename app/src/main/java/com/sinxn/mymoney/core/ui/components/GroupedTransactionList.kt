@@ -44,7 +44,7 @@ fun groupTransactionsByMonth(
         var expense = 0L
 
         transactionsInGroup.forEach { (t, _) ->
-            if (t.transaction.direction == 1 || t.transaction.type == 1) {
+            if (t.transaction.direction == 1) {
                 total += t.transaction.money
                 income += t.transaction.money
             } else {

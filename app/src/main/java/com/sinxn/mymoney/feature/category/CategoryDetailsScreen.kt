@@ -394,7 +394,7 @@ private fun CategoryTransactionItemCard(
     item: TransactionWithCategory,
     onClick: () -> Unit
 ) {
-    val isIncome = item.transaction.direction == 1 || item.transaction.type == 1
+    val isIncome = item.transaction.direction == 1
     val currency = item.currencySymbol ?: item.currencyCode ?: "$"
 
     Card(

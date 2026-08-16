@@ -5,6 +5,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -20,7 +24,8 @@ import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 
-private const val TRANSFER_ICON_DATA = "{\"type\":\"color\",\"color\":\"#0284C7\",\"name\":\"⇄\"}"
+private val DebtRoseColor = Color(0xFFE11D48)
+private val CreditEmeraldColor = Color(0xFF10B981)
 
 @Composable
 fun TransactionItem(
@@ -34,13 +39,13 @@ fun TransactionItem(
     onClick: () -> Unit = {}
 ) {
     val transaction = item.transaction
-    val isTransferItem = transaction.direction == 2 || transaction.type == 1 || transaction.type == 2 || item.categoryName.equals("Transfer", ignoreCase = true)
+    val isTransferItem = transaction.type == 1 || item.categoryName.equals("Transfer", ignoreCase = true)
     val categoryDisplayName = when {
         isTransferItem -> "Transfer"
         !item.categoryName.isNullOrBlank() -> item.categoryName
         else -> "Uncategorized"
     }
-    val categoryIconData = if (isTransferItem) TRANSFER_ICON_DATA else item.categoryIcon
+    val categoryIconData = item.categoryIcon
     
     val hasDescription = !transaction.description.isNullOrBlank()
     val primaryTitle = if (hasDescription) transaction.description else categoryDisplayName
@@ -81,17 +86,36 @@ fun TransactionItem(
                     .padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CategoryIcon(
-                        iconString = categoryIconData,
-                        categoryName = categoryDisplayName,
-                        modifier = Modifier.size(44.dp)
-                    )
+                if (isTransferItem) {
+                    val isIncomeTransfer = transaction.direction == 1
+                    val transferAccentColor = if (isIncomeTransfer) CreditEmeraldColor else DebtRoseColor
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(transferAccentColor.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (isIncomeTransfer) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
+                            contentDescription = null,
+                            tint = transferAccentColor,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CategoryIcon(
+                            iconString = categoryIconData,
+                            categoryName = categoryDisplayName,
+                            modifier = Modifier.size(44.dp)
+                        )
+                    }
                 }
                 
                 Spacer(modifier = Modifier.width(12.dp))

@@ -92,7 +92,7 @@ class TransactionDetailsViewModel @Inject constructor(
         val toTx = if (transfer != null) transactionRepository.getTransactionById(transfer.transactionToId) else null
         val targetWallet = if (toTx != null) wallets.find { it.wallet.id == toTx.walletId } else null
 
-        val isTransfer = transfer != null || transaction?.transaction?.direction == 2 || transaction?.transaction?.type == 1 || transaction?.transaction?.type == 2
+        val isTransfer = transfer != null || transaction?.transaction?.type == 1
 
         TransactionDetailsUiState(
             transaction = transaction,

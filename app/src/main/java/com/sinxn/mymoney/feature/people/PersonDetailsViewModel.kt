@@ -72,10 +72,10 @@ class PersonDetailsViewModel @Inject constructor(
                 var totalIncome = 0L
 
                 transactions.forEach { item ->
-                    if (item.transaction.direction == 0 || item.transaction.type == 0) {
-                        totalExpense += item.transaction.money
-                    } else if (item.transaction.direction == 1 || item.transaction.type == 1) {
+                    if (item.transaction.direction == 1) {
                         totalIncome += item.transaction.money
+                    } else {
+                        totalExpense += item.transaction.money
                     }
                 }
 

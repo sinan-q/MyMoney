@@ -37,7 +37,7 @@ fun ViewTransactionContent(
     val transaction = uiState.transaction?.transaction ?: return
     val scrollState = rememberScrollState()
 
-    val isTransfer = uiState.isTransfer || transaction.direction == 2 || transaction.type == 1 || transaction.type == 2
+    val isTransfer = uiState.isTransfer || transaction.type == 1
     val (categoryName, parentCategoryName) = if (isTransfer) {
         "Transfer" to null
     } else {
@@ -148,7 +148,7 @@ fun ViewTransactionContent(
         // 3. Primary Details Card (Wallet, Date & Time, People)
         FormCardContainer {
             Column {
-                if (uiState.isTransfer || transaction.direction == 2) {
+                if (uiState.isTransfer) {
                     CleanListRow(
                         icon = {
                             Icon(
