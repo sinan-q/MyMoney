@@ -1,327 +1,391 @@
- package com.sinxn.mymoney.feature.recurrence
+package com.sinxn.mymoney.feature.recurrence
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.R
-import com.sinxn.mymoney.core.util.CategoryType
-import com.sinxn.mymoney.core.util.Direction
+import com.sinxn.mymoney.core.ui.components.CategoryIcon
+import com.sinxn.mymoney.core.ui.components.CleanListRow
+import com.sinxn.mymoney.core.ui.components.FormCardContainer
+import com.sinxn.mymoney.core.util.DateUtils
+import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.core.util.RecurrenceSetting
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecurrentTransactionDetailsScreen(
     onNavigateBack: () -> Unit,
+    onEditClick: (String) -> Unit,
     viewModel: RecurrentTransactionDetailsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val scrollState = rememberScrollState()
+    val settings by viewModel.formattingSettings.collectAsState()
     val context = LocalContext.current
-    var showRecurrencePicker by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            TopAppBar(
-                title = { Text(if (uiState.isNew) "New Recurrence" else "Edit Recurrence") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back"
+                    )
+                }
+
+                Text(
+                    text = "Recurrence Details",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                IconButton(onClick = { showDeleteConfirmation = true }) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        },
+        floatingActionButton = {
+            if (!uiState.isLoading && uiState.item != null) {
+                ExtendedFloatingActionButton(
+                    onClick = { onEditClick(viewModel.recurrenceId) },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = RoundedCornerShape(18.dp),
+                    icon = { Icon(Icons.Default.Edit, contentDescription = "Edit") },
+                    text = { Text("Edit Recurrence", fontWeight = FontWeight.Bold) }
+                )
+            }
+        }
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            if (uiState.isLoading) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            } else {
+                val item = uiState.item
+                if (item == null) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "Recurrence not found",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    val rt = item.recurrentTransaction
+                    val isIncome = rt.direction == 1
+                    val directionColor = if (isIncome) Color(0xFF10B981) else Color(0xFFE11D48)
+
+                    val startDate = remember(rt.startDate) { DateUtils.parseDate(rt.startDate) }
+                    val setting = remember(rt.startDate, rt.rule) {
+                        RecurrenceSetting.fromStringOrFallback(startDate, rt.rule)
+                    }
+
+                    val formattedAmountValue = remember(rt.money, settings) {
+                        MoneyFormatter.format(
+                            amount = rt.money,
+                            currencyCode = "",
+                            decimals = 2,
+                            config = MoneyFormatter.Config(
+                                showCurrency = false,
+                                groupDigits = settings.groupDigits,
+                                roundDecimals = settings.roundDecimals,
+                                showPlusMinus = false
+                            )
+                        )
+                    }
+
+                    val formattedStartDate = remember(rt.startDate, settings.dateFormat) {
+                        DateUtils.formatDate(startDate, settings.dateFormat)
+                    }
+
+                    val finishedHint = stringResource(R.string.hint_recurrence_finished)
+                    val formattedNextOccurrence = remember(rt.nextOccurrence, settings.dateFormat, finishedHint) {
+                        rt.nextOccurrence?.let { next ->
+                            val nextDate = DateUtils.parseDate(next)
+                            DateUtils.formatDate(nextDate, settings.dateFormat)
+                        } ?: finishedHint
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(scrollState)
+                            .padding(bottom = 100.dp)
+                    ) {
+                        // 1. Centered Hero Amount Display
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = item.wallet.currency,
+                                    fontSize = 32.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = directionColor
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = (if (isIncome) "+" else "-") + formattedAmountValue,
+                                    fontSize = 48.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    letterSpacing = (-1.5).sp
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = if (isIncome) "Recurrent Income" else "Recurrent Expense",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = directionColor,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        // 2. Schedule Card Container
+                        FormCardContainer {
+                            CleanListRow(
+                                icon = {
+                                    Icon(
+                                        Icons.Default.Repeat,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                },
+                                label = "Frequency",
+                                value = setting.getUserReadableString(context)
+                            )
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                            CleanListRow(
+                                icon = {
+                                    Icon(
+                                        Icons.Default.Event,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                },
+                                label = "Next Occurrence",
+                                value = formattedNextOccurrence
+                            )
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                            CleanListRow(
+                                icon = {
+                                    Icon(
+                                        Icons.Default.CalendarToday,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                },
+                                label = "Start Date",
+                                value = formattedStartDate
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // 3. Core Attributes Container
+                        FormCardContainer {
+                            CleanListRow(
+                                icon = {
+                                    CategoryIcon(
+                                        iconString = item.category.icon,
+                                        categoryName = item.category.name,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                },
+                                label = "Category",
+                                value = item.category.name
+                            )
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                            CleanListRow(
+                                icon = {
+                                    Icon(
+                                        Icons.Default.AccountBalanceWallet,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                },
+                                label = "Wallet",
+                                value = item.wallet.name
+                            )
+                        }
+
+                        // 4. Details Container (if description, note, place, event present)
+                        val hasDetails = !rt.description.isNullOrBlank() || !rt.note.isNullOrBlank() || item.place != null || item.event != null
+                        if (hasDetails) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            FormCardContainer {
+                                var isFirst = true
+
+                                if (!rt.description.isNullOrBlank()) {
+                                    CleanListRow(
+                                        icon = {
+                                            Icon(
+                                                Icons.Default.Description,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        },
+                                        label = "Description",
+                                        value = rt.description
+                                    )
+                                    isFirst = false
+                                }
+
+                                if (!rt.note.isNullOrBlank()) {
+                                    if (!isFirst) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                                    CleanListRow(
+                                        icon = {
+                                            Icon(
+                                                Icons.Default.Notes,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        },
+                                        label = "Note",
+                                        value = rt.note
+                                    )
+                                    isFirst = false
+                                }
+
+                                if (item.place != null) {
+                                    if (!isFirst) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                                    CleanListRow(
+                                        icon = {
+                                            Icon(
+                                                Icons.Default.Place,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        },
+                                        label = "Place",
+                                        value = item.place.name
+                                    )
+                                    isFirst = false
+                                }
+
+                                if (item.event != null) {
+                                    if (!isFirst) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                                    CleanListRow(
+                                        icon = {
+                                            Icon(
+                                                Icons.Default.Event,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        },
+                                        label = "Event",
+                                        value = item.event.name
+                                    )
+                                }
+                            }
+                        }
+
+                        // 5. Impact & Status Container
+                        Spacer(modifier = Modifier.height(12.dp))
+                        FormCardContainer {
+                            CleanListRow(
+                                icon = {
+                                    Icon(
+                                        if (rt.confirmed) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                                        contentDescription = null,
+                                        tint = if (rt.confirmed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                },
+                                label = "Auto Confirmed",
+                                value = if (rt.confirmed) "Confirmed automatically" else "Requires manual confirmation"
+                            )
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                            CleanListRow(
+                                icon = {
+                                    Icon(
+                                        Icons.Default.QueryStats,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                },
+                                label = "Count in Total",
+                                value = if (rt.countInTotal) "Included in reports" else "Excluded from reports"
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (showDeleteConfirmation) {
+            AlertDialog(
+                onDismissRequest = { showDeleteConfirmation = false },
+                title = { Text("Delete Recurrence?") },
+                text = { Text("Historical transactions will be preserved without recurrence link.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showDeleteConfirmation = false
+                            viewModel.delete { onNavigateBack() }
+                        },
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Delete")
                     }
                 },
-                actions = {
-                    IconButton(onClick = { viewModel.save(onSuccess = onNavigateBack) }) {
-                        Icon(Icons.Default.Check, contentDescription = "Save")
+                dismissButton = {
+                    TextButton(onClick = { showDeleteConfirmation = false }) {
+                        Text("Cancel")
                     }
                 }
             )
         }
-    ) { innerPadding ->
-        if (uiState.isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .verticalScroll(scrollState)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Direction Segmented Button (Expense / Income)
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    SegmentedButton(
-                        selected = uiState.direction == Direction.EXPENSE,
-                        onClick = { viewModel.onDirectionChanged(Direction.EXPENSE) },
-                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
-                    ) {
-                        Text("Expense")
-                    }
-                    SegmentedButton(
-                        selected = uiState.direction == Direction.INCOME,
-                        onClick = { viewModel.onDirectionChanged(Direction.INCOME) },
-                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
-                    ) {
-                        Text("Income")
-                    }
-                }
-
-                // Money Amount
-                OutlinedTextField(
-                    value = uiState.moneyStr,
-                    onValueChange = viewModel::onMoneyChanged,
-                    label = { Text("Amount") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                // Description
-                OutlinedTextField(
-                    value = uiState.description,
-                    onValueChange = viewModel::onDescriptionChanged,
-                    label = { Text("Description") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                // Category Dropdown
-                var catExpanded by remember { mutableStateOf(false) }
-                val filteredCategories = remember(uiState.direction, uiState.availableCategories) {
-                    val targetType = if (uiState.direction == Direction.INCOME) CategoryType.INCOME else CategoryType.EXPENSE
-                    uiState.availableCategories.filter { it.type == targetType }
-                }
-                val selectedCategoryName = uiState.availableCategories.find { it.id == uiState.categoryId }?.name ?: ""
-
-                ExposedDropdownMenuBox(
-                    expanded = catExpanded,
-                    onExpandedChange = { catExpanded = !catExpanded }
-                ) {
-                    OutlinedTextField(
-                        value = selectedCategoryName,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Category") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = catExpanded) },
-                        modifier = Modifier
-                            .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
-                            .fillMaxWidth()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = catExpanded,
-                        onDismissRequest = { catExpanded = false }
-                    ) {
-                        filteredCategories.forEach { cat ->
-                            DropdownMenuItem(
-                                text = { Text(cat.name) },
-                                onClick = {
-                                    viewModel.onCategoryChanged(cat.id)
-                                    catExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                // Wallet Dropdown
-                var walletExpanded by remember { mutableStateOf(false) }
-                val selectedWalletName = uiState.availableWallets.find { it.id == uiState.walletId }?.name ?: ""
-
-                ExposedDropdownMenuBox(
-                    expanded = walletExpanded,
-                    onExpandedChange = { walletExpanded = !walletExpanded }
-                ) {
-                    OutlinedTextField(
-                        value = selectedWalletName,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Wallet") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = walletExpanded) },
-                        modifier = Modifier
-                            .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
-                            .fillMaxWidth()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = walletExpanded,
-                        onDismissRequest = { walletExpanded = false }
-                    ) {
-                        uiState.availableWallets.forEach { w ->
-                            DropdownMenuItem(
-                                text = { Text(w.name) },
-                                onClick = {
-                                    viewModel.onWalletChanged(w.id)
-                                    walletExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                // Recurrence Rule Picker Button Card
-                val setting = remember(uiState.startDate, uiState.rule) {
-                    RecurrenceSetting.fromStringOrFallback(uiState.startDate, uiState.rule)
-                }
-
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showRecurrencePicker = true },
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.Repeat, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Recurrence Rule", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(setting.getUserReadableString(context), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                        }
-                    }
-                }
-
-                // Place Dropdown (Optional)
-                if (uiState.availablePlaces.isNotEmpty()) {
-                    var placeExpanded by remember { mutableStateOf(false) }
-                    val selectedPlaceName = uiState.availablePlaces.find { it.id == uiState.placeId }?.name ?: "None"
-
-                    ExposedDropdownMenuBox(
-                        expanded = placeExpanded,
-                        onExpandedChange = { placeExpanded = !placeExpanded }
-                    ) {
-                        OutlinedTextField(
-                            value = selectedPlaceName,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Place (Optional)") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = placeExpanded) },
-                            modifier = Modifier
-                                .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
-                                .fillMaxWidth()
-                        )
-                        ExposedDropdownMenu(
-                            expanded = placeExpanded,
-                            onDismissRequest = { placeExpanded = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("None") },
-                                onClick = {
-                                    viewModel.onPlaceChanged(null)
-                                    placeExpanded = false
-                                }
-                            )
-                            uiState.availablePlaces.forEach { p ->
-                                DropdownMenuItem(
-                                    text = { Text(p.name) },
-                                    onClick = {
-                                        viewModel.onPlaceChanged(p.id)
-                                        placeExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Event Dropdown (Optional)
-                if (uiState.availableEvents.isNotEmpty()) {
-                    var eventExpanded by remember { mutableStateOf(false) }
-                    val selectedEventName = uiState.availableEvents.find { it.id == uiState.eventId }?.name ?: "None"
-
-                    ExposedDropdownMenuBox(
-                        expanded = eventExpanded,
-                        onExpandedChange = { eventExpanded = !eventExpanded }
-                    ) {
-                        OutlinedTextField(
-                            value = selectedEventName,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Event (Optional)") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = eventExpanded) },
-                            modifier = Modifier
-                                .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
-                                .fillMaxWidth()
-                        )
-                        ExposedDropdownMenu(
-                            expanded = eventExpanded,
-                            onDismissRequest = { eventExpanded = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("None") },
-                                onClick = {
-                                    viewModel.onEventChanged(null)
-                                    eventExpanded = false
-                                }
-                            )
-                            uiState.availableEvents.forEach { ev ->
-                                DropdownMenuItem(
-                                    text = { Text(ev.name) },
-                                    onClick = {
-                                        viewModel.onEventChanged(ev.id)
-                                        eventExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Note
-                OutlinedTextField(
-                    value = uiState.note,
-                    onValueChange = viewModel::onNoteChanged,
-                    label = { Text("Note") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                // Switches (Confirmed & Count in total)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Confirmed")
-                    Switch(checked = uiState.confirmed, onCheckedChange = viewModel::onConfirmedChanged)
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Count in total")
-                    Switch(checked = uiState.countInTotal, onCheckedChange = viewModel::onCountInTotalChanged)
-                }
-            }
-        }
-    }
-
-    if (showRecurrencePicker) {
-        RecurrencePickerDialog(
-            initialStartDate = uiState.startDate,
-            initialRule = uiState.rule,
-            onDismiss = { showRecurrencePicker = false },
-            onConfirm = { startDate, rule ->
-                viewModel.onRecurrenceRuleUpdated(startDate, rule)
-                showRecurrencePicker = false
-            }
-        )
     }
 }

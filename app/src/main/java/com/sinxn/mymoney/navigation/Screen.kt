@@ -60,11 +60,19 @@ sealed class Screen(
     }
 
     object RecurrentTransactionDetails : Screen("recurrent_transaction_details/{id}", "recurrences", "Recurrent Transaction Details", isTopLevel = false) {
-        fun createRoute(id: String = "new"): String = "recurrent_transaction_details/$id"
+        fun createRoute(id: String): String = "recurrent_transaction_details/$id"
+    }
+
+    object RecurrentTransactionAddEdit : Screen("recurrent_transaction_edit?id={id}", "recurrences", "Recurrent Transaction Edit", isTopLevel = false) {
+        fun createRoute(id: String? = null): String = if (id != null) "recurrent_transaction_edit?id=$id" else "recurrent_transaction_edit"
     }
 
     object RecurrentTransferDetails : Screen("recurrent_transfer_details/{id}", "recurrences", "Recurrent Transfer Details", isTopLevel = false) {
-        fun createRoute(id: String = "new"): String = "recurrent_transfer_details/$id"
+        fun createRoute(id: String): String = "recurrent_transfer_details/$id"
+    }
+
+    object RecurrentTransferAddEdit : Screen("recurrent_transfer_edit?id={id}", "recurrences", "Recurrent Transfer Edit", isTopLevel = false) {
+        fun createRoute(id: String? = null): String = if (id != null) "recurrent_transfer_edit?id=$id" else "recurrent_transfer_edit"
     }
 
     object TransactionDetails : Screen("transaction_details/{transactionId}", "transactions", "Transaction Details", isTopLevel = false) {
@@ -162,7 +170,7 @@ sealed class Screen(
                 Events, Recurrences, Templates, Places, People,
                 Overview, About, SupportDeveloper, Menu, Settings,
                 DebtDetails, DebtAddEdit, CategoryDetails, PersonDetails, PersonAddEdit, EventDetails, EventAddEdit, BudgetDetails, BudgetOverview, SavingDetails,
-                RecurrentTransactionDetails, RecurrentTransferDetails, TransactionDetails, TransactionAddEdit, TransferAddEdit,
+                RecurrentTransactionDetails, RecurrentTransactionAddEdit, RecurrentTransferDetails, RecurrentTransferAddEdit, TransactionDetails, TransactionAddEdit, TransferAddEdit,
                 SqlConsole, Backup, Recap
             )
 

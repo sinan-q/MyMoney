@@ -32,7 +32,9 @@ import com.sinxn.mymoney.feature.people.PersonDetailsScreen
 import com.sinxn.mymoney.feature.place.PlaceListScreen
 import com.sinxn.mymoney.feature.recap.YearRecapScreen
 import com.sinxn.mymoney.feature.recurrence.RecurrenceScreen
+import com.sinxn.mymoney.feature.recurrence.RecurrentTransactionAddEditScreen
 import com.sinxn.mymoney.feature.recurrence.RecurrentTransactionDetailsScreen
+import com.sinxn.mymoney.feature.recurrence.RecurrentTransferAddEditScreen
 import com.sinxn.mymoney.feature.recurrence.RecurrentTransferDetailsScreen
 import com.sinxn.mymoney.feature.saving.SavingDetailsScreen
 import com.sinxn.mymoney.feature.saving.SavingListScreen
@@ -73,10 +75,10 @@ fun AppNavHost(
             RecurrenceScreen(
                 onNavigateUp = { navController.navigateUp() },
                 onAddRecurrentTransaction = {
-                    navController.navigate(Screen.RecurrentTransactionDetails.createRoute("new"))
+                    navController.navigate(Screen.RecurrentTransactionAddEdit.createRoute())
                 },
                 onAddRecurrentTransfer = {
-                    navController.navigate(Screen.RecurrentTransferDetails.createRoute("new"))
+                    navController.navigate(Screen.RecurrentTransferAddEdit.createRoute())
                 },
                 onRecurrentTransactionClick = { id ->
                     navController.navigate(Screen.RecurrentTransactionDetails.createRoute(id))
@@ -93,6 +95,23 @@ fun AppNavHost(
             )
         ) {
             RecurrentTransactionDetailsScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onEditClick = { id ->
+                    navController.navigate(Screen.RecurrentTransactionAddEdit.createRoute(id))
+                }
+            )
+        }
+        composable(
+            Screen.RecurrentTransactionAddEdit.routePattern,
+            arguments = listOf(
+                navArgument("id") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) {
+            RecurrentTransactionAddEditScreen(
                 onNavigateBack = { navController.navigateUp() }
             )
         }
@@ -103,6 +122,23 @@ fun AppNavHost(
             )
         ) {
             RecurrentTransferDetailsScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onEditClick = { id ->
+                    navController.navigate(Screen.RecurrentTransferAddEdit.createRoute(id))
+                }
+            )
+        }
+        composable(
+            Screen.RecurrentTransferAddEdit.routePattern,
+            arguments = listOf(
+                navArgument("id") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) {
+            RecurrentTransferAddEditScreen(
                 onNavigateBack = { navController.navigateUp() }
             )
         }
