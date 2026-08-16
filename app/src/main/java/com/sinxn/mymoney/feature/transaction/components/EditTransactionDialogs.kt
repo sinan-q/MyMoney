@@ -36,23 +36,11 @@ fun EditTransactionDialogs(
         }
         FormPicker.Wallet -> {
             WalletSelectionDialog(
-                title = "Select From Wallet",
+                title = "Select Wallet",
                 wallets = uiState.availableWallets,
                 selectedWalletId = uiState.editWalletId,
                 onWalletSelected = { wallet ->
                     viewModel.onWalletIdChange(wallet.id)
-                    onDismiss()
-                },
-                onDismissRequest = onDismiss
-            )
-        }
-        FormPicker.TargetWallet -> {
-            WalletSelectionDialog(
-                title = "Select To Wallet",
-                wallets = uiState.availableWallets.filter { it.id != uiState.editWalletId },
-                selectedWalletId = uiState.targetWalletId ?: "",
-                onWalletSelected = { wallet ->
-                    viewModel.onTargetWalletIdChange(wallet.id)
                     onDismiss()
                 },
                 onDismissRequest = onDismiss

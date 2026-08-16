@@ -1,4 +1,4 @@
-package com.sinxn.mymoney.feature.transaction.components
+package com.sinxn.mymoney.feature.transfer.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
@@ -16,13 +16,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.sinxn.mymoney.core.data.local.entity.WalletEntity
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CleanListRow
-import com.sinxn.mymoney.feature.transaction.TransactionAddEditUiState
 
 @Composable
-fun EditTransactionTransferWallets(
-    uiState: TransactionAddEditUiState,
+fun EditTransferWallets(
+    availableWallets: List<WalletEntity>,
+    fromWalletId: String,
+    toWalletId: String?,
+    targetAmount: String,
+    transferFee: String,
+    sourceCurrency: String,
+    targetCurrency: String,
     accentColor: Color,
     onFromWalletClick: () -> Unit,
     onToWalletClick: () -> Unit,
@@ -30,8 +36,8 @@ fun EditTransactionTransferWallets(
     onTargetAmountChange: (String) -> Unit,
     onTransferFeeChange: (String) -> Unit
 ) {
-    val activeFromWallet = uiState.availableWallets.find { it.id == uiState.editWalletId }
-    val activeToWallet = uiState.availableWallets.find { it.id == uiState.targetWalletId }
+    val activeFromWallet = availableWallets.find { it.id == fromWalletId }
+    val activeToWallet = availableWallets.find { it.id == toWalletId }
 
     // From Wallet Card
     Card(
@@ -62,7 +68,7 @@ fun EditTransactionTransferWallets(
                 }
             },
             label = "From Wallet",
-            value = activeFromWallet?.name ?: uiState.walletName.ifEmpty { "Select Source Wallet" },
+            value = activeFromWallet?.name ?: "Select Source Wallet",
             onClick = onFromWalletClick
         )
     }
@@ -129,8 +135,7 @@ fun EditTransactionTransferWallets(
                 }
             },
             label = "To Wallet",
-            value = activeToWallet?.name
-                ?: uiState.targetWalletName.ifEmpty { "Select Target Wallet" },
+            value = activeToWallet?.name ?: "Select Target Wallet",
             onClick = onToWalletClick
         )
     }
@@ -150,10 +155,10 @@ fun EditTransactionTransferWallets(
         ) {
             Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
                 OutlinedTextField(
-                    value = uiState.editTargetAmount,
+                    value = targetAmount,
                     onValueChange = onTargetAmountChange,
-                    label = { Text("Destination Amount (${uiState.targetWalletCurrency})") },
-                    placeholder = { Text("Received in ${uiState.targetWalletCurrency}") },
+                    label = { Text("Destination Amount ($targetCurrency)") },
+                    placeholder = { Text("Received in $targetCurrency") },
                     leadingIcon = { Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -177,9 +182,9 @@ fun EditTransactionTransferWallets(
     ) {
         Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
             OutlinedTextField(
-                value = uiState.editTransferFee,
+                value = transferFee,
                 onValueChange = onTransferFeeChange,
-                label = { Text("Transfer Fee / Tax (${uiState.currencyCode})") },
+                label = { Text("Transfer Fee / Tax ($sourceCurrency)") },
                 placeholder = { Text("0.00") },
                 leadingIcon = { Icon(Icons.Default.Tune, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
                 modifier = Modifier.fillMaxWidth(),

@@ -94,6 +94,25 @@ sealed class Screen(
         }
     }
 
+    object TransferAddEdit : Screen(
+        "transfer_edit?transactionId={transactionId}&transferId={transferId}&walletId={walletId}",
+        "transactions",
+        "Transfer Edit",
+        isTopLevel = false
+    ) {
+        fun createRoute(
+            transactionId: String? = null,
+            transferId: String? = null,
+            walletId: String? = null
+        ): String {
+            val params = mutableListOf<String>()
+            if (transactionId != null && transactionId != "new") params.add("transactionId=$transactionId")
+            if (transferId != null && transferId != "new") params.add("transferId=$transferId")
+            if (walletId != null) params.add("walletId=$walletId")
+            return if (params.isEmpty()) "transfer_edit" else "transfer_edit?${params.joinToString("&")}"
+        }
+    }
+
     object CategoryDetails : Screen("category_details/{categoryId}", "categories", "Category Details", isTopLevel = false) {
         fun createRoute(categoryId: String): String = "category_details/$categoryId"
     }
@@ -133,7 +152,7 @@ sealed class Screen(
                 Events, Recurrences, Templates, Places, People,
                 Overview, About, SupportDeveloper, Menu, Settings,
                 DebtDetails, DebtAddEdit, CategoryDetails, PersonDetails, PersonAddEdit, BudgetDetails, BudgetOverview, SavingDetails,
-                RecurrentTransactionDetails, RecurrentTransferDetails, TransactionDetails, TransactionAddEdit,
+                RecurrentTransactionDetails, RecurrentTransferDetails, TransactionDetails, TransactionAddEdit, TransferAddEdit,
                 SqlConsole, Backup, Recap
             )
 
@@ -154,7 +173,7 @@ sealed class Screen(
                 cleanRoute == "home" || cleanRoute.startsWith("wallet_details") ->
                     ScreenMetadata(Transactions.sidebarItemId, Transactions.title, isTopLevel = true)
 
-                cleanRoute.startsWith("transaction_details") || cleanRoute.startsWith("transaction_edit") ->
+                cleanRoute.startsWith("transaction_details") || cleanRoute.startsWith("transaction_edit") || cleanRoute.startsWith("transfer_edit") ->
                     ScreenMetadata(Transactions.sidebarItemId, TransactionDetails.title, isTopLevel = false)
 
                 cleanRoute.startsWith("debts") || cleanRoute.startsWith("debt_") ->

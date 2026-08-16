@@ -9,7 +9,6 @@ import com.sinxn.mymoney.core.data.local.entity.EventEntity
 import com.sinxn.mymoney.core.data.local.entity.PersonEntity
 import com.sinxn.mymoney.core.data.local.entity.PlaceEntity
 import com.sinxn.mymoney.core.data.local.entity.TransactionEntity
-import com.sinxn.mymoney.core.data.local.entity.TransferEntity
 import com.sinxn.mymoney.core.data.local.entity.WalletEntity
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
@@ -22,14 +21,12 @@ import com.sinxn.mymoney.core.util.CategoryType
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.Direction
 import com.sinxn.mymoney.core.util.MathExpressionEvaluator
-import com.sinxn.mymoney.core.util.TransactionType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -44,7 +41,6 @@ data class TransactionAddEditUiState(
     val isNewTransaction: Boolean = false,
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
-    // Fields for editing
     val editAmount: String = "",
     val editNote: String = "",
     val editDescription: String = "",
@@ -57,7 +53,6 @@ data class TransactionAddEditUiState(
     val editPeopleIds: Set<String> = emptySet(),
     val editConfirmed: Boolean = true,
     val editCountInTotal: Boolean = true,
-    // Available items for selectors
     val availableWallets: List<WalletEntity> = emptyList(),
     val availableCategories: List<CategoryEntity> = emptyList(),
     val availableIncomeCategories: List<CategoryEntity> = emptyList(),
@@ -65,21 +60,11 @@ data class TransactionAddEditUiState(
     val availablePlaces: List<PlaceEntity> = emptyList(),
     val availableEvents: List<EventEntity> = emptyList(),
     val availablePeople: List<PersonEntity> = emptyList(),
-    // Currency info for formatting
     val currencyCode: String = "USD",
     val currencySymbol: String = "$",
     val currencyDecimals: Int = 2,
-    // Transfer Fields
     val walletName: String = "",
-    val categoryColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Gray,
-    val isTransfer: Boolean = false,
-    val targetWalletId: String? = null,
-    val targetWalletName: String = "",
-    val editTargetAmount: String = "",
-    val editTransferFee: String = "",
-    val targetWalletCurrency: String = "",
-    val targetWalletDecimals: Int = 2,
-    val transferEntity: TransferEntity? = null
+    val categoryColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Gray
 )
 
 @HiltViewModel
@@ -97,7 +82,6 @@ class TransactionAddEditViewModel @Inject constructor(
 
     private val _isSaving = MutableStateFlow(false)
 
-    // Single unified state flow for edit form fields
     private val _formState = MutableStateFlow(
         TransactionFormState(
             date = if (isNewTransaction) DateUtils.getSQLDateTimeString(Date()) else "",
@@ -177,13 +161,10 @@ class TransactionAddEditViewModel @Inject constructor(
         val txId = transactionIdArg ?: return
         viewModelScope.launch {
             val tx = transactionRepository.getTransactionById(txId)
-            val transfer = transactionRepository.getTransferByTransactionId(txId)
             val people = transactionRepository.getPeopleForTransaction(txId).firstOrNull() ?: emptyList()
 
             if (tx != null) {
-                val decimals = 2 // Default or will be updated from wallet
-                val isTransferMode = transfer != null || tx.type == 1 || tx.type == 2 || tx.direction == 2
-
+                val decimals = 2
                 _formState.update { form ->
                     form.copy(
                         amount = tx.money.toDecimalString(decimals),
@@ -196,59 +177,11 @@ class TransactionAddEditViewModel @Inject constructor(
                         peopleIds = people.map { it.id }.toSet(),
                         confirmed = tx.confirmed,
                         countInTotal = tx.countInTotal,
-                        isTransfer = isTransferMode,
-                        direction = if (isTransferMode) Direction.TRANSFER else tx.direction,
+                        direction = tx.direction,
                         walletId = tx.walletId,
                         debtId = tx.debtId,
                         savingId = tx.savingId
                     )
-                }
-            }
-
-            if (transfer != null) {
-                val fromTx = transactionRepository.getTransactionById(transfer.transactionFromId)
-                val toTx = transactionRepository.getTransactionById(transfer.transactionToId)
-                _formState.update { current ->
-                    current.copy(
-                        isTransfer = true,
-                        transferEntity = transfer,
-                        walletId = fromTx?.walletId ?: current.walletId,
-                        targetWalletId = toTx?.walletId ?: current.targetWalletId
-                    )
-                }
-            } else if (tx != null && tx.debtId == null && (tx.type == 1 || tx.type == 2 || tx.direction == 2)) {
-                val siblingTx = transactionRepository.findSiblingTransferTransaction(tx.money, tx.date, tx.id)
-                if (siblingTx != null) {
-                    val fromTx = if (tx.direction == Direction.EXPENSE) tx else siblingTx
-                    val toTx = if (tx.direction == Direction.INCOME) tx else siblingTx
-
-                    val autoTransfer = TransferEntity(
-                        id = UUID.randomUUID().toString(),
-                        description = tx.description,
-                        date = tx.date,
-                        transactionFromId = fromTx.id,
-                        transactionToId = toTx.id,
-                        transactionTaxId = null,
-                        note = tx.note,
-                        placeId = tx.placeId,
-                        eventId = tx.eventId,
-                        recurrenceId = null,
-                        confirmed = tx.confirmed,
-                        countInTotal = tx.countInTotal,
-                        isDeleted = false,
-                        lastEdit = System.currentTimeMillis(),
-                        tag = null
-                    )
-                    moneyDao.insertTransfer(autoTransfer)
-                    _formState.update { current ->
-                        current.copy(
-                            isTransfer = true,
-                            direction = Direction.TRANSFER,
-                            walletId = fromTx.walletId,
-                            targetWalletId = toTx.walletId,
-                            transferEntity = autoTransfer
-                        )
-                    }
                 }
             }
         }
@@ -268,7 +201,6 @@ class TransactionAddEditViewModel @Inject constructor(
         settingsRepository.currentWalletId,
         listsFlow
     ) { isSaving, form, currentWalletId, lists ->
-        // For new transactions, set default wallet if unselected
         if (isNewTransaction && form.walletId.isEmpty() && lists.wallets.isNotEmpty()) {
             val preferredWallet = lists.wallets.find { it.wallet.id == currentWalletId }
                 ?: lists.wallets.firstOrNull { !it.wallet.isArchived }
@@ -281,12 +213,8 @@ class TransactionAddEditViewModel @Inject constructor(
 
         val activeWalletId = form.walletId
         val activeWallet = lists.wallets.find { it.wallet.id == activeWalletId }
-        val targetWallet = lists.wallets.find { it.wallet.id == form.targetWalletId }
 
-        val activeWalletIds = setOfNotNull(
-            form.walletId.takeIf { it.isNotEmpty() },
-            form.targetWalletId
-        )
+        val activeWalletIds = setOfNotNull(form.walletId.takeIf { it.isNotEmpty() })
 
         val selectedCatId = form.categoryId
         val selectedCat = lists.categories.find { it.id == selectedCatId }
@@ -335,15 +263,7 @@ class TransactionAddEditViewModel @Inject constructor(
             editDirection = form.direction,
             editPeopleIds = form.peopleIds,
             editConfirmed = form.confirmed,
-            editCountInTotal = form.countInTotal,
-            isTransfer = form.isTransfer,
-            targetWalletId = form.targetWalletId,
-            targetWalletName = targetWallet?.wallet?.name ?: "",
-            editTargetAmount = form.targetAmount,
-            editTransferFee = form.transferFee,
-            targetWalletCurrency = targetWallet?.wallet?.currency ?: "",
-            targetWalletDecimals = targetWallet?.decimals ?: 2,
-            transferEntity = form.transferEntity
+            editCountInTotal = form.countInTotal
         )
     }.stateIn(
         scope = viewModelScope,
@@ -387,36 +307,6 @@ class TransactionAddEditViewModel @Inject constructor(
         _formState.update { it.copy(date = DateUtils.getSQLDateTimeString(cal.time)) }
     }
 
-    fun onTransferToggle(isTransfer: Boolean) {
-        _formState.update { current ->
-            val targetId = if (isTransfer && current.targetWalletId.isNullOrEmpty()) {
-                uiState.value.availableWallets.firstOrNull { it.id != current.walletId }?.id
-            } else current.targetWalletId
-
-            current.copy(
-                isTransfer = isTransfer,
-                direction = if (isTransfer) Direction.TRANSFER else Direction.EXPENSE,
-                targetWalletId = targetId
-            )
-        }
-    }
-
-    fun onTargetWalletIdChange(walletId: String) {
-        _formState.update { it.copy(targetWalletId = walletId) }
-    }
-
-    fun swapTransferWallets() {
-        _formState.update { current ->
-            val from = current.walletId
-            val to = current.targetWalletId
-            if (!to.isNullOrEmpty()) {
-                current.copy(walletId = to, targetWalletId = from)
-            } else current
-        }
-    }
-
-    fun onTargetAmountChange(value: String) { _formState.update { it.copy(targetAmount = value) } }
-    fun onTransferFeeChange(value: String) { _formState.update { it.copy(transferFee = value) } }
     fun onNoteChange(value: String) { _formState.update { it.copy(note = value) } }
     fun onDescriptionChange(value: String) { _formState.update { it.copy(description = value) } }
     fun onConfirmedChange(value: Boolean) { _formState.update { it.copy(confirmed = value) } }
@@ -434,12 +324,7 @@ class TransactionAddEditViewModel @Inject constructor(
     }
 
     fun onWalletIdChange(value: String) {
-        _formState.update { current ->
-            val newTarget = if (current.targetWalletId == value) {
-                uiState.value.availableWallets.firstOrNull { it.id != value }?.id
-            } else current.targetWalletId
-            current.copy(walletId = value, targetWalletId = newTarget)
-        }
+        _formState.update { current -> current.copy(walletId = value) }
     }
 
     fun onPlaceIdChange(value: String?) { _formState.update { it.copy(placeId = value) } }
@@ -488,14 +373,9 @@ class TransactionAddEditViewModel @Inject constructor(
             try {
                 val decimals = uiState.value.currencyDecimals
                 val form = _formState.value
-
-                if (form.isTransfer) {
-                    saveTransfer(form, decimals)
-                } else {
-                    saveSingleTransaction(form, decimals)
-                }
+                saveSingleTransaction(form, decimals)
                 onSuccess()
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Handle error
             } finally {
                 _isSaving.value = false
@@ -503,145 +383,31 @@ class TransactionAddEditViewModel @Inject constructor(
         }
     }
 
-    private suspend fun saveTransfer(form: TransactionFormState, defaultDecimals: Int) {
-        val walletFromId = form.walletId
-        val walletToId = form.targetWalletId ?: form.walletId
-        val walletFrom = moneyDao.getWalletById(walletFromId)
-        val walletTo = moneyDao.getWalletById(walletToId)
-
-        val fromDecimals = walletFrom?.currency?.let { moneyDao.getCurrencyByIso(it)?.decimals } ?: defaultDecimals
-        val toDecimals = walletTo?.currency?.let { moneyDao.getCurrencyByIso(it)?.decimals } ?: defaultDecimals
-
-        val fromMoneyValue = parseAmountToLong(getImmediateResult(form.amount), fromDecimals)
-        val toMoneyValue = if (walletFrom?.currency != null && walletTo?.currency != null &&
-            !walletFrom.currency.equals(walletTo.currency, ignoreCase = true) && form.targetAmount.isNotBlank()) {
-            parseAmountToLong(getImmediateResult(form.targetAmount), toDecimals)
-        } else fromMoneyValue
-
-        val feeValue = if (form.transferFee.isNotBlank()) parseAmountToLong(getImmediateResult(form.transferFee), fromDecimals) else 0L
-
-        val existingTransfer = form.transferEntity
-        val transferId = existingTransfer?.id ?: UUID.randomUUID().toString()
-        val fromTxId = existingTransfer?.transactionFromId ?: if (isNewTransaction) UUID.randomUUID().toString() else (transactionIdArg ?: UUID.randomUUID().toString())
-        val toTxId = existingTransfer?.transactionToId ?: UUID.randomUUID().toString()
-
-        val transferCategory = uiState.value.availableCategories.find {
-            it.tag == "transfer" || it.name.equals("Transfer", ignoreCase = true)
-        }?.id ?: form.categoryId
-
-        val fromTx = buildTransactionEntity(
-            id = fromTxId,
-            money = fromMoneyValue,
-            date = form.date,
-            categoryId = transferCategory,
-            walletId = walletFromId,
-            note = form.note,
-            description = form.description,
-            placeId = form.placeId,
-            eventId = form.eventId,
-            direction = Direction.EXPENSE,
-            confirmed = form.confirmed,
-            countInTotal = form.countInTotal,
-            type = TransactionType.TRANSFER
-        )
-
-        val toTx = buildTransactionEntity(
-            id = toTxId,
-            money = toMoneyValue,
-            date = form.date,
-            categoryId = transferCategory,
-            walletId = walletToId,
-            note = form.note,
-            description = form.description,
-            placeId = form.placeId,
-            eventId = form.eventId,
-            direction = Direction.INCOME,
-            confirmed = form.confirmed,
-            countInTotal = form.countInTotal,
-            type = TransactionType.TRANSFER
-        )
-
-        var existingTaxIdToRemove: String? = null
-        val taxTx = if (feeValue > 0) {
-            val taxId = existingTransfer?.transactionTaxId ?: UUID.randomUUID().toString()
-            val taxCategory = uiState.value.availableCategories.find {
-                it.tag == "system::transfer_tax" || it.tag == "transfer_tax" || it.name.contains("Tax", ignoreCase = true) || it.name.contains("Fee", ignoreCase = true)
-            }?.id ?: transferCategory
-
-            buildTransactionEntity(
-                id = taxId,
-                money = feeValue,
-                date = form.date,
-                categoryId = taxCategory,
-                walletId = walletFromId,
-                note = "Transfer fee",
-                description = form.description.ifEmpty { "Transfer Fee" },
-                placeId = form.placeId,
-                eventId = form.eventId,
-                direction = Direction.EXPENSE,
-                confirmed = form.confirmed,
-                countInTotal = form.countInTotal,
-                type = TransactionType.TRANSFER
-            )
-        } else {
-            existingTaxIdToRemove = existingTransfer?.transactionTaxId
-            null
-        }
-
-        val newTransfer = TransferEntity(
-            id = transferId,
-            description = form.description.takeIf { it.isNotEmpty() },
-            date = form.date,
-            transactionFromId = fromTxId,
-            transactionToId = toTxId,
-            transactionTaxId = taxTx?.id ?: existingTransfer?.transactionTaxId,
-            note = form.note.takeIf { it.isNotEmpty() },
-            placeId = form.placeId,
-            eventId = form.eventId,
-            recurrenceId = null,
-            confirmed = form.confirmed,
-            countInTotal = form.countInTotal,
-            isDeleted = false,
-            lastEdit = System.currentTimeMillis(),
-            tag = null
-        )
-
-        transactionRepository.saveTransferTransaction(
-            fromTx = fromTx,
-            toTx = toTx,
-            transfer = newTransfer,
-            taxTx = taxTx,
-            existingTaxIdToRemove = existingTaxIdToRemove,
-            isNewTransfer = isNewTransaction && existingTransfer == null,
-            peopleIds = form.peopleIds
-        )
-
-        _formState.update { it.copy(transferEntity = newTransfer) }
-    }
-
     private suspend fun saveSingleTransaction(form: TransactionFormState, decimals: Int) {
         val targetId = if (isNewTransaction) UUID.randomUUID().toString() else (transactionIdArg ?: UUID.randomUUID().toString())
         val moneyValue = parseAmountToLong(getImmediateResult(form.amount), decimals)
 
-        val txEntity = buildTransactionEntity(
+        val txEntity = TransactionEntity(
             id = targetId,
             money = moneyValue,
             date = form.date,
             categoryId = form.categoryId,
             walletId = form.walletId,
-            note = form.note,
-            description = form.description,
+            note = form.note.takeIf { it.isNotEmpty() },
+            description = form.description.takeIf { it.isNotEmpty() },
             placeId = form.placeId,
             eventId = form.eventId,
             direction = form.direction,
             confirmed = form.confirmed,
             countInTotal = form.countInTotal,
             type = if (form.debtId != null) 2 else 0,
+            isDeleted = false,
             debtId = form.debtId,
-            savingId = form.savingId
+            savingId = form.savingId,
+            recurrenceId = null,
+            tag = null,
+            lastEdit = System.currentTimeMillis()
         )
-
-        val previousTransfer = if (!isNewTransaction) form.transferEntity else null
 
         transactionRepository.saveSingleTransaction(
             transaction = txEntity,
@@ -649,51 +415,7 @@ class TransactionAddEditViewModel @Inject constructor(
             savingId = form.savingId,
             isSavingCompleted = form.savingCompletedOnSave,
             peopleIds = form.peopleIds,
-            previousTransfer = previousTransfer
-        )
-
-        if (previousTransfer != null) {
-            _formState.update { it.copy(transferEntity = null) }
-        }
-    }
-
-    private fun buildTransactionEntity(
-        id: String,
-        money: Long,
-        date: String,
-        categoryId: String?,
-        walletId: String,
-        note: String?,
-        description: String?,
-        placeId: String?,
-        eventId: String?,
-        direction: Int,
-        confirmed: Boolean,
-        countInTotal: Boolean,
-        type: Int,
-        debtId: String? = null,
-        savingId: String? = null
-    ): TransactionEntity {
-        return TransactionEntity(
-            id = id,
-            money = money,
-            date = date,
-            categoryId = categoryId,
-            walletId = walletId,
-            note = note?.takeIf { it.isNotEmpty() },
-            description = description?.takeIf { it.isNotEmpty() },
-            placeId = placeId,
-            eventId = eventId,
-            direction = direction,
-            confirmed = confirmed,
-            countInTotal = countInTotal,
-            type = type,
-            isDeleted = false,
-            debtId = debtId,
-            savingId = savingId,
-            recurrenceId = null,
-            tag = null,
-            lastEdit = System.currentTimeMillis()
+            previousTransfer = null
         )
     }
 

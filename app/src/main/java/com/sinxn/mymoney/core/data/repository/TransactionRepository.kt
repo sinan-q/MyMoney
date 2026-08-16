@@ -38,6 +38,10 @@ class TransactionRepository @Inject constructor(
         return moneyDao.getTransferByTransactionId(id)
     }
 
+    suspend fun getTransferById(id: String): TransferEntity? {
+        return moneyDao.getTransferById(id)
+    }
+
     suspend fun findSiblingTransferTransaction(money: Long, date: String, excludeId: String): TransactionEntity? {
         return moneyDao.findSiblingTransferTransaction(money, date, excludeId)
     }

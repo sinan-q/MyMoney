@@ -37,65 +37,64 @@ fun EditTransactionFormOptions(
 ) {
     FormCardContainer {
         Column {
-            // Category & Wallet Row (Hidden for transfers)
-            if (!uiState.isTransfer) {
-                val activeCategory =
-                    uiState.availableCategories.find { it.id == uiState.editCategoryId }
-                CleanListRow(
-                    icon = {
-                        if (activeCategory != null) {
-                            CategoryIcon(
-                                iconString = activeCategory.icon,
-                                categoryName = activeCategory.name,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        } else {
-                            Icon(
-                                Icons.Default.Category,
-                                contentDescription = null,
-                                tint = accentColor,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    },
-                    label = "Category",
-                    value = activeCategory?.name?.replace("  ↳ ", "") ?: "Select Category",
-                    onClick = onCategoryClick
-                )
+            // Category Row
+            val activeCategory =
+                uiState.availableCategories.find { it.id == uiState.editCategoryId }
+            CleanListRow(
+                icon = {
+                    if (activeCategory != null) {
+                        CategoryIcon(
+                            iconString = activeCategory.icon,
+                            categoryName = activeCategory.name,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.Category,
+                            contentDescription = null,
+                            tint = accentColor,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                },
+                label = "Category",
+                value = activeCategory?.name?.replace("  ↳ ", "") ?: "Select Category",
+                onClick = onCategoryClick
+            )
 
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
 
-                val activeWallet = uiState.availableWallets.find { it.id == uiState.editWalletId }
-                CleanListRow(
-                    icon = {
-                        if (activeWallet != null) {
-                            CategoryIcon(
-                                iconString = activeWallet.icon,
-                                categoryName = activeWallet.name,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        } else {
-                            Icon(
-                                Icons.Default.AccountBalanceWallet,
-                                contentDescription = null,
-                                tint = accentColor,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    },
-                    label = "Wallet",
-                    value = activeWallet?.name ?: "Select Wallet",
-                    onClick = onWalletClick
-                )
+            // Wallet Row
+            val activeWallet = uiState.availableWallets.find { it.id == uiState.editWalletId }
+            CleanListRow(
+                icon = {
+                    if (activeWallet != null) {
+                        CategoryIcon(
+                            iconString = activeWallet.icon,
+                            categoryName = activeWallet.name,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.AccountBalanceWallet,
+                            contentDescription = null,
+                            tint = accentColor,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                },
+                label = "Wallet",
+                value = activeWallet?.name ?: "Select Wallet",
+                onClick = onWalletClick
+            )
 
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-            }
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
 
             // Date Row
             val parsedDate = DateUtils.parseDate(uiState.editDate)

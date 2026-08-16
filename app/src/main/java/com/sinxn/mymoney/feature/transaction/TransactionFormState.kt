@@ -1,6 +1,5 @@
 package com.sinxn.mymoney.feature.transaction
 
-import com.sinxn.mymoney.core.data.local.entity.TransferEntity
 import com.sinxn.mymoney.core.util.Direction
 
 data class TransactionFormState(
@@ -16,12 +15,6 @@ data class TransactionFormState(
     val peopleIds: Set<String> = emptySet(),
     val confirmed: Boolean = true,
     val countInTotal: Boolean = true,
-    // Transfer specific fields
-    val isTransfer: Boolean = false,
-    val targetWalletId: String? = null,
-    val targetAmount: String = "",
-    val transferFee: String = "",
-    val transferEntity: TransferEntity? = null,
     // Saving & Debt arguments
     val savingId: String? = null,
     val savingCompletedOnSave: Boolean = false,

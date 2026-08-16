@@ -39,12 +39,8 @@ fun EditTransactionContent(
     var activePicker by remember { mutableStateOf<FormPicker?>(null) }
 
     // Direction Accent Color
-    val accentColor = remember(uiState.isTransfer, uiState.editDirection) {
-        when {
-            uiState.isTransfer || uiState.editDirection == Direction.TRANSFER -> Color(0xFF0284C7)
-            uiState.editDirection == Direction.INCOME -> Color(0xFF10B981)
-            else -> Color(0xFFE11D48)
-        }
+    val accentColor = remember(uiState.editDirection) {
+        if (uiState.editDirection == Direction.INCOME) Color(0xFF10B981) else Color(0xFFE11D48)
     }
 
     val hasOperatorInAmount = remember(uiState.editAmount) {
@@ -57,14 +53,14 @@ fun EditTransactionContent(
     val amountValue = remember(evaluatedAmountStr) {
         evaluatedAmountStr.toDoubleOrNull()
     }
-    val isCategorySelected = !uiState.editCategoryId.isNullOrBlank() || uiState.isTransfer
-    val isWalletSelected = uiState.editWalletId.isNotBlank() && (!uiState.isTransfer || !uiState.targetWalletId.isNullOrBlank())
+    val isCategorySelected = !uiState.editCategoryId.isNullOrBlank()
+    val isWalletSelected = uiState.editWalletId.isNotBlank()
     val isAmountNonNegative = amountValue != null && amountValue >= 0.0
 
     val isSaveEnabled = !uiState.isSaving && isCategorySelected && isWalletSelected && isAmountNonNegative
 
     val actionBtnText = if (uiState.isNewTransaction) {
-        val dirName = if (uiState.isTransfer || uiState.editDirection == Direction.TRANSFER) "Transfer" else if (uiState.editDirection == Direction.INCOME) "Income" else "Expense"
+        val dirName = if (uiState.editDirection == Direction.INCOME) "Income" else "Expense"
         "Add $dirName"
     } else {
         "Save Changes"
@@ -77,18 +73,6 @@ fun EditTransactionContent(
                 .verticalScroll(scrollState)
                 .padding(bottom = 16.dp)
         ) {
-            // Mode Switcher (Transaction vs Transfer)
-            if (uiState.isNewTransaction) {
-                TabPill(
-                    tabs = listOf("Transaction" to accentColor, "Transfer" to Color(0xFF0284C7)),
-                    activeTab = if (uiState.isTransfer) 1 else 0,
-                    onTabChange = { index ->
-                        viewModel.onTransferToggle(index == 1)
-                    }
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-            }
-
             // 1. Amount Header Display
             EditAmountHeader(
                 amountText = uiState.editAmount,
@@ -113,26 +97,6 @@ fun EditTransactionContent(
             )
 
             Spacer(modifier = Modifier.height(10.dp))
-
-            // 2.5 Transfer Wallets Section
-            if (uiState.isTransfer) {
-                EditTransactionTransferWallets(
-                    uiState = uiState,
-                    accentColor = accentColor,
-                    onFromWalletClick = {
-                        numpadState.dismiss()
-                        activePicker = FormPicker.Wallet
-                    },
-                    onToWalletClick = {
-                        numpadState.dismiss()
-                        activePicker = FormPicker.TargetWallet
-                    },
-                    onSwapWallets = viewModel::swapTransferWallets,
-                    onTargetAmountChange = viewModel::onTargetAmountChange,
-                    onTransferFeeChange = viewModel::onTransferFeeChange
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-            }
 
             // 3. Options Card
             EditTransactionFormOptions(

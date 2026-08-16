@@ -1,51 +1,51 @@
 package com.sinxn.mymoney.feature.transaction
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.util.Direction
 import com.sinxn.mymoney.feature.transaction.components.EditTransactionContent
+import com.sinxn.mymoney.feature.transfer.TransferAddEditViewModel
+import com.sinxn.mymoney.feature.transfer.components.EditTransferContent
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionAddEditScreen(
     onNavigateBack: () -> Unit,
-    viewModel: TransactionAddEditViewModel = hiltViewModel()
+    viewModel: TransactionAddEditViewModel = hiltViewModel(),
+    transferViewModel: TransferAddEditViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val settings by viewModel.formattingSettings.collectAsState()
 
-    val isTransfer = uiState.isTransfer || uiState.editDirection == Direction.TRANSFER
+    val transferUiState by transferViewModel.uiState.collectAsState()
+    val transferSettings by transferViewModel.formattingSettings.collectAsState()
+
+    val coroutineScope = rememberCoroutineScope()
+    val pagerState = rememberPagerState(pageCount = { 2 })
+
+    val txAccentColor = remember(uiState.editDirection) {
+        if (uiState.editDirection == Direction.INCOME) Color(0xFF10B981) else Color(0xFFE11D48)
+    }
+    val transferAccentColor = Color(0xFF0284C7)
 
     val titleText = if (uiState.isNewTransaction) {
-        if (isTransfer) "New Transfer" else "New Transaction"
+        if (pagerState.currentPage == 1) "New Transfer" else "New Transaction"
     } else {
-        if (isTransfer) "Edit Transfer" else "Edit Transaction"
+        "Edit Transaction"
     }
 
     Scaffold(
@@ -85,13 +85,52 @@ fun TransactionAddEditScreen(
         ) {
             if (uiState.isLoading) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            } else {
+            } else if (!uiState.isNewTransaction) {
+                // Editing existing transaction
                 EditTransactionContent(
                     uiState = uiState,
                     settings = settings,
                     viewModel = viewModel,
                     onNavigateBack = onNavigateBack
                 )
+            } else {
+                // Creating new item: Swipeable HorizontalPager between Transaction and Transfer
+                Column(modifier = Modifier.fillMaxSize()) {
+                    TabPill(
+                        tabs = listOf(
+                            "Transaction" to txAccentColor,
+                            "Transfer" to transferAccentColor
+                        ),
+                        activeTab = pagerState.currentPage,
+                        onTabChange = { index ->
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(index)
+                            }
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.weight(1f)
+                    ) { page ->
+                        if (page == 0) {
+                            EditTransactionContent(
+                                uiState = uiState,
+                                settings = settings,
+                                viewModel = viewModel,
+                                onNavigateBack = onNavigateBack
+                            )
+                        } else {
+                            EditTransferContent(
+                                uiState = transferUiState,
+                                settings = transferSettings,
+                                viewModel = transferViewModel,
+                                onNavigateBack = onNavigateBack
+                            )
+                        }
+                    }
+                }
             }
         }
     }

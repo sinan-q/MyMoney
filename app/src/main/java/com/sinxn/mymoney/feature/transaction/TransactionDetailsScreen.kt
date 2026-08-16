@@ -44,7 +44,7 @@ import com.sinxn.mymoney.feature.transaction.components.ViewTransactionContent
 @Composable
 fun TransactionDetailsScreen(
     onNavigateBack: () -> Unit,
-    onEditClick: (String) -> Unit,
+    onEditClick: (String, Boolean) -> Unit,
     viewModel: TransactionDetailsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -87,13 +87,14 @@ fun TransactionDetailsScreen(
         },
         floatingActionButton = {
             if (!uiState.isLoading && uiState.transaction != null) {
+                val fabText = if (uiState.isTransfer) "Edit Transfer" else "Edit Transaction"
                 ExtendedFloatingActionButton(
-                    onClick = { onEditClick(viewModel.transactionId) },
+                    onClick = { onEditClick(viewModel.transactionId, uiState.isTransfer) },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     shape = RoundedCornerShape(18.dp),
                     icon = { Icon(Icons.Default.Edit, contentDescription = "Edit") },
-                    text = { Text("Edit Transaction", fontWeight = FontWeight.Bold) }
+                    text = { Text(fabText, fontWeight = FontWeight.Bold) }
                 )
             }
         }
@@ -110,7 +111,7 @@ fun TransactionDetailsScreen(
                 ViewTransactionContent(
                     uiState = uiState,
                     settings = settings,
-                    onEditClick = { onEditClick(viewModel.transactionId) }
+                    onEditClick = { onEditClick(viewModel.transactionId, uiState.isTransfer) }
                 )
             }
         }

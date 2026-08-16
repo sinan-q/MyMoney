@@ -41,6 +41,7 @@ import com.sinxn.mymoney.feature.support.SupportDeveloperScreen
 import com.sinxn.mymoney.feature.template.TemplateListScreen
 import com.sinxn.mymoney.feature.transaction.TransactionAddEditScreen
 import com.sinxn.mymoney.feature.transaction.TransactionDetailsScreen
+import com.sinxn.mymoney.feature.transfer.TransferAddEditScreen
 import com.sinxn.mymoney.feature.wallet.WalletDetailsScreen
 
 @Composable
@@ -238,8 +239,12 @@ fun AppNavHost(
         ) {
             TransactionDetailsScreen(
                 onNavigateBack = { navController.navigateUp() },
-                onEditClick = { transactionId ->
-                    navController.navigate(Screen.TransactionAddEdit.createRoute(transactionId = transactionId))
+                onEditClick = { transactionId, isTransfer ->
+                    if (isTransfer) {
+                        navController.navigate(Screen.TransferAddEdit.createRoute(transactionId = transactionId))
+                    } else {
+                        navController.navigate(Screen.TransactionAddEdit.createRoute(transactionId = transactionId))
+                    }
                 }
             )
         }
@@ -274,6 +279,30 @@ fun AppNavHost(
             )
         ) {
             TransactionAddEditScreen(
+                onNavigateBack = { navController.navigateUp() }
+            )
+        }
+        composable(
+            Screen.TransferAddEdit.routePattern,
+            arguments = listOf(
+                navArgument("transactionId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("transferId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("walletId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) {
+            TransferAddEditScreen(
                 onNavigateBack = { navController.navigateUp() }
             )
         }
