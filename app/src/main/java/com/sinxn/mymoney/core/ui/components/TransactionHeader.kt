@@ -107,27 +107,27 @@ fun TransactionHeader(
                     fontWeight = FontWeight.Bold
                 )
             }
-            VerticalDivider(thickness = 2.dp)
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = if (header.isTotalValid) formattedTotal else "Multi-Currency",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = if (!header.isTotalValid) {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    } else if (header.totalAmount >= 0) {
-                        Color(0xFF2E7D32)
-                    } else {
-                        Color(0xFFC62828)
-                    }
-                )
+            if (header.transactionCount > 1) {
+                VerticalDivider(thickness = 2.dp)
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = if (header.isTotalValid) formattedTotal else "Multi-Currency",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (!header.isTotalValid) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else if (header.totalAmount >= 0) {
+                            Color(0xFF2E7D32)
+                        } else {
+                            Color(0xFFC62828)
+                        }
+                    )
 
-                if (header.isTotalValid) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        if (header.income > 0) {
+                    if (header.isTotalValid && header.income > 0 && header.expense > 0) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
                                 color = Color(0xFF43A047).copy(alpha = 0.15f)
@@ -140,8 +140,6 @@ fun TransactionHeader(
                                     fontWeight = FontWeight.Bold
                                 )
                             }
-                        }
-                        if (header.expense > 0) {
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
                                 color = Color(0xFFE53935).copy(alpha = 0.15f)
@@ -155,22 +153,22 @@ fun TransactionHeader(
                                 )
                             }
                         }
-                    }
-                } else {
-                    if (!header.balanceBreakdown.isNullOrEmpty()) {
+                    } else if (!header.isTotalValid) {
+                        if (!header.balanceBreakdown.isNullOrEmpty()) {
+                            Text(
+                                text = header.balanceBreakdown,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.SemiBold,
+                                textAlign = TextAlign.End
+                            )
+                        }
                         Text(
-                            text = header.balanceBreakdown,
+                            text = "Mixed currencies",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.SemiBold,
-                            textAlign = TextAlign.End
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
                     }
-                    Text(
-                        text = "Mixed currencies",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                    )
                 }
             }
         }

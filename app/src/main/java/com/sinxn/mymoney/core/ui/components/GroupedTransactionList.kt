@@ -60,7 +60,8 @@ fun groupTransactionsByMonth(
                 income = income,
                 expense = expense,
                 isTotalValid = true,
-                balanceBreakdown = null
+                balanceBreakdown = null,
+                transactionCount = transactionsInGroup.size
             )
         )
 

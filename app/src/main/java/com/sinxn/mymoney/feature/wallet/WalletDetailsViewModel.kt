@@ -209,7 +209,7 @@ class WalletDetailsViewModel @Inject constructor(
                         }.joinToString(", ")
                 } else null
 
-                result.add(TransactionListItem.Header(monthDate, total, income, expense, isTotalValid, monthBreakdown))
+                result.add(TransactionListItem.Header(monthDate, total, income, expense, isTotalValid, monthBreakdown, transactionsInGroup.size))
                 
                 transactionsInGroup.forEach { (t, _) ->
                     result.add(TransactionListItem.Transaction(t))

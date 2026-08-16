@@ -9,7 +9,8 @@ sealed class TransactionListItem {
         val income: Long,
         val expense: Long,
         val isTotalValid: Boolean = true,
-        val balanceBreakdown: String? = null
+        val balanceBreakdown: String? = null,
+        val transactionCount: Int = 0
     ) : TransactionListItem()
 
     data class Transaction(
