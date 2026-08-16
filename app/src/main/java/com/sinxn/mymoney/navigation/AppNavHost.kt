@@ -111,7 +111,10 @@ fun AppNavHost(
                 },
                 onAddDebt = { type ->
                     navController.navigate(Screen.DebtAddEdit.createRoute(type = type))
-                }
+                },
+                onQuickPayment = { debtId ->
+                    navController.navigate(Screen.TransactionAddEdit.createRoute(debtId = debtId))
+                },
             )
         }
         composable(

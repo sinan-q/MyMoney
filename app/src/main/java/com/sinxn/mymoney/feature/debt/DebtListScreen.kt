@@ -50,6 +50,7 @@ private val CreditEmeraldColor = Color(0xFF10B981)
 @Composable
 fun DebtListScreen(
     onNavigateUp: () -> Unit,
+    onQuickPayment: (String) -> Unit,
     onDebtClick: (String) -> Unit,
     onAddDebt: (type: Int) -> Unit,
     viewModel: DebtListViewModel = hiltViewModel()
@@ -99,6 +100,7 @@ fun DebtListScreen(
     DebtListContent(
         uiState = uiState,
         onNavigateUp = onNavigateUp,
+        onQuickPayment = onQuickPayment,
         onToggleIncludeArchived = { viewModel.setIncludeArchived(!uiState.includeArchived) },
         onDebtClick = onDebtClick,
         onAddDebt = onAddDebt,
@@ -111,6 +113,7 @@ fun DebtListScreen(
 @Composable
 private fun DebtListContent(
     uiState: DebtListUiState,
+    onQuickPayment: (String) -> Unit,
     onNavigateUp: () -> Unit,
     onToggleIncludeArchived: () -> Unit,
     onDebtClick: (String) -> Unit,
@@ -144,6 +147,7 @@ private fun DebtListContent(
             pagerState = pagerState,
             modifier = Modifier.padding(paddingValues),
             showSummaryCard = true,
+            onQuickPayment = onQuickPayment,
             onDebtClick = onDebtClick,
             onAddDebt = onAddDebt,
             onToggleArchived = onToggleArchived,
@@ -160,6 +164,7 @@ fun DebtListBodyContent(
     showSummaryCard: Boolean = true,
     onTabSelected: (Int) -> Unit = {},
     onDebtClick: (String) -> Unit,
+    onQuickPayment: (String) -> Unit,
     onAddDebt: (type: Int) -> Unit = {},
     onToggleArchived: (String, Boolean) -> Unit,
     onDeleteDebt: (String) -> Unit
@@ -241,8 +246,7 @@ fun DebtListBodyContent(
 
                     if (currentDebts.isEmpty()) {
                         EmptyDebtState(
-                            selectedTab = page,
-                            onAddDebt = { onAddDebt(page) }
+                            selectedTab = page
                         )
                     } else {
                         LazyColumn(
@@ -257,7 +261,7 @@ fun DebtListBodyContent(
                                     formatterConfig = formatterConfig,
                                     dateFormat = uiState.formattingSettings.dateFormat,
                                     onClick = { onDebtClick(debtItem.debt.id) },
-                                    onQuickPayment = { onDebtClick(debtItem.debt.id) }
+                                    onQuickPayment = { onQuickPayment(debtItem.debt.id) }
                                 )
                             }
                         }
@@ -650,7 +654,6 @@ private fun BadgeChip(
 @Composable
 private fun EmptyDebtState(
     selectedTab: Int,
-    onAddDebt: () -> Unit
 ) {
     val isDebt = selectedTab == 0
     val accentColor = if (isDebt) DebtRoseColor else CreditEmeraldColor
@@ -694,28 +697,6 @@ private fun EmptyDebtState(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = onAddDebt,
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = accentColor,
-                    contentColor = Color.White
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = if (isDebt) "Add Debt" else "Add Credit",
-                    fontWeight = FontWeight.Bold
-                )
-            }
         }
     }
 }
