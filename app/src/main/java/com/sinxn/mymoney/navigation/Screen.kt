@@ -67,25 +67,30 @@ sealed class Screen(
         fun createRoute(id: String = "new"): String = "recurrent_transfer_details/$id"
     }
 
-    object TransactionDetails : Screen(
-        "transaction_details/{transactionId}?savingId={savingId}&action={action}&debtId={debtId}&debtAction={debtAction}",
+    object TransactionDetails : Screen("transaction_details/{transactionId}", "transactions", "Transaction Details", isTopLevel = false) {
+        fun createRoute(transactionId: String): String = "transaction_details/$transactionId"
+    }
+
+    object TransactionAddEdit : Screen(
+        "transaction_edit?transactionId={transactionId}&savingId={savingId}&action={action}&debtId={debtId}&debtAction={debtAction}",
         "transactions",
-        "Transaction Details",
+        "Transaction Edit",
         isTopLevel = false
     ) {
         fun createRoute(
-            transactionId: String = "new",
+            transactionId: String? = null,
             savingId: String? = null,
             action: String? = null,
             debtId: String? = null,
             debtAction: String? = null
         ): String {
             val params = mutableListOf<String>()
+            if (transactionId != null && transactionId != "new") params.add("transactionId=$transactionId")
             if (savingId != null) params.add("savingId=$savingId")
             if (action != null) params.add("action=$action")
             if (debtId != null) params.add("debtId=$debtId")
             if (debtAction != null) params.add("debtAction=$debtAction")
-            return if (params.isEmpty()) "transaction_details/$transactionId" else "transaction_details/$transactionId?${params.joinToString("&")}"
+            return if (params.isEmpty()) "transaction_edit" else "transaction_edit?${params.joinToString("&")}"
         }
     }
 
@@ -128,7 +133,7 @@ sealed class Screen(
                 Events, Recurrences, Templates, Places, People,
                 Overview, About, SupportDeveloper, Menu, Settings,
                 DebtDetails, DebtAddEdit, CategoryDetails, PersonDetails, PersonAddEdit, BudgetDetails, BudgetOverview, SavingDetails,
-                RecurrentTransactionDetails, RecurrentTransferDetails, TransactionDetails,
+                RecurrentTransactionDetails, RecurrentTransferDetails, TransactionDetails, TransactionAddEdit,
                 SqlConsole, Backup, Recap
             )
 
@@ -149,7 +154,7 @@ sealed class Screen(
                 cleanRoute == "home" || cleanRoute.startsWith("wallet_details") ->
                     ScreenMetadata(Transactions.sidebarItemId, Transactions.title, isTopLevel = true)
 
-                cleanRoute.startsWith("transaction_details") ->
+                cleanRoute.startsWith("transaction_details") || cleanRoute.startsWith("transaction_edit") ->
                     ScreenMetadata(Transactions.sidebarItemId, TransactionDetails.title, isTopLevel = false)
 
                 cleanRoute.startsWith("debts") || cleanRoute.startsWith("debt_") ->

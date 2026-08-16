@@ -11,45 +11,42 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.sinxn.mymoney.feature.transaction.components.ViewTransactionContent
+import com.sinxn.mymoney.core.util.Direction
+import com.sinxn.mymoney.feature.transaction.components.EditTransactionContent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TransactionDetailsScreen(
+fun TransactionAddEditScreen(
     onNavigateBack: () -> Unit,
-    onEditClick: (String) -> Unit,
-    viewModel: TransactionDetailsViewModel = hiltViewModel()
+    viewModel: TransactionAddEditViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val settings by viewModel.formattingSettings.collectAsState()
-    var showDeleteConfirmation by remember { mutableStateOf(false) }
+
+    val isTransfer = uiState.isTransfer || uiState.editDirection == Direction.TRANSFER
+
+    val titleText = if (uiState.isNewTransaction) {
+        if (isTransfer) "New Transfer" else "New Transaction"
+    } else {
+        if (isTransfer) "Edit Transfer" else "Edit Transaction"
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -70,31 +67,13 @@ fun TransactionDetailsScreen(
                 }
 
                 Text(
-                    text = if (uiState.isTransfer) "Transfer Details" else "Transaction Details",
+                    text = titleText,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                IconButton(onClick = { showDeleteConfirmation = true }) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-        },
-        floatingActionButton = {
-            if (!uiState.isLoading && uiState.transaction != null) {
-                ExtendedFloatingActionButton(
-                    onClick = { onEditClick(viewModel.transactionId) },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    shape = RoundedCornerShape(18.dp),
-                    icon = { Icon(Icons.Default.Edit, contentDescription = "Edit") },
-                    text = { Text("Edit Transaction", fontWeight = FontWeight.Bold) }
-                )
+                Spacer(modifier = Modifier.width(48.dp))
             }
         }
     ) { padding ->
@@ -107,36 +86,13 @@ fun TransactionDetailsScreen(
             if (uiState.isLoading) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else {
-                ViewTransactionContent(
+                EditTransactionContent(
                     uiState = uiState,
                     settings = settings,
-                    onEditClick = { onEditClick(viewModel.transactionId) }
+                    viewModel = viewModel,
+                    onNavigateBack = onNavigateBack
                 )
             }
-        }
-
-        if (showDeleteConfirmation) {
-            AlertDialog(
-                onDismissRequest = { showDeleteConfirmation = false },
-                title = { Text("Delete Transaction") },
-                text = { Text("Are you sure you want to delete this transaction?") },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            showDeleteConfirmation = false
-                            viewModel.deleteTransaction { onNavigateBack() }
-                        },
-                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                    ) {
-                        Text("Delete")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteConfirmation = false }) {
-                        Text("Cancel")
-                    }
-                }
-            )
         }
     }
 }

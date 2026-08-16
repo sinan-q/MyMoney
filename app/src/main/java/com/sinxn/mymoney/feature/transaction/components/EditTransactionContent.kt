@@ -23,15 +23,15 @@ import com.sinxn.mymoney.core.ui.components.NumpadView
 import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.ui.components.rememberNumpadFormState
 import com.sinxn.mymoney.core.util.Direction
-import com.sinxn.mymoney.feature.transaction.TransactionDetailsUiState
-import com.sinxn.mymoney.feature.transaction.TransactionDetailsViewModel
+import com.sinxn.mymoney.feature.transaction.TransactionAddEditUiState
+import com.sinxn.mymoney.feature.transaction.TransactionAddEditViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditTransactionContent(
-    uiState: TransactionDetailsUiState,
+    uiState: TransactionAddEditUiState,
     settings: FormattingSettings,
-    viewModel: TransactionDetailsViewModel,
+    viewModel: TransactionAddEditViewModel,
     onNavigateBack: () -> Unit
 ) {
     val scrollState = rememberScrollState()
@@ -194,8 +194,9 @@ fun EditTransactionContent(
                         onEvaluate = viewModel::evaluateMathExpression,
                         onSave = {
                             numpadState.dismiss()
-                            viewModel.saveChanges()
-                            onNavigateBack()
+                            viewModel.saveChanges {
+                                onNavigateBack()
+                            }
                         },
                         onNext = { numpadState.onNext() },
                         hasOperatorInAmount = hasOperatorInAmount,
@@ -215,8 +216,9 @@ fun EditTransactionContent(
                         Button(
                             onClick = {
                                 numpadState.dismiss()
-                                viewModel.saveChanges()
-                                onNavigateBack()
+                                viewModel.saveChanges {
+                                    onNavigateBack()
+                                }
                             },
                             enabled = isSaveEnabled,
                             shape = RoundedCornerShape(20.dp),

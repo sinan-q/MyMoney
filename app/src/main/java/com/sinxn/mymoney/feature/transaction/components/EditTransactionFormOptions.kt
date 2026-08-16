@@ -17,11 +17,11 @@ import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CleanListRow
 import com.sinxn.mymoney.core.ui.components.FormCardContainer
 import com.sinxn.mymoney.core.util.DateUtils
-import com.sinxn.mymoney.feature.transaction.TransactionDetailsUiState
+import com.sinxn.mymoney.feature.transaction.TransactionAddEditUiState
 
 @Composable
 fun EditTransactionFormOptions(
-    uiState: TransactionDetailsUiState,
+    uiState: TransactionAddEditUiState,
     settings: FormattingSettings,
     accentColor: Color,
     onCategoryClick: () -> Unit,

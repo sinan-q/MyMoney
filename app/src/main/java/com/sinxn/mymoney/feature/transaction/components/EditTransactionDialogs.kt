@@ -10,13 +10,13 @@ import com.sinxn.mymoney.core.ui.components.PlaceSelectionDialog
 import com.sinxn.mymoney.core.ui.components.WalletSelectionDialog
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.Direction
-import com.sinxn.mymoney.feature.transaction.TransactionDetailsUiState
-import com.sinxn.mymoney.feature.transaction.TransactionDetailsViewModel
+import com.sinxn.mymoney.feature.transaction.TransactionAddEditUiState
+import com.sinxn.mymoney.feature.transaction.TransactionAddEditViewModel
 
 @Composable
 fun EditTransactionDialogs(
-    uiState: TransactionDetailsUiState,
-    viewModel: TransactionDetailsViewModel,
+    uiState: TransactionAddEditUiState,
+    viewModel: TransactionAddEditViewModel,
     activePicker: FormPicker?,
     onDismiss: () -> Unit
 ) {

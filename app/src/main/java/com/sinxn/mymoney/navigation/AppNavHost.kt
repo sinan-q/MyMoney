@@ -39,6 +39,7 @@ import com.sinxn.mymoney.feature.settings.SettingsScreen
 import com.sinxn.mymoney.feature.settings.SqlConsoleScreen
 import com.sinxn.mymoney.feature.support.SupportDeveloperScreen
 import com.sinxn.mymoney.feature.template.TemplateListScreen
+import com.sinxn.mymoney.feature.transaction.TransactionAddEditScreen
 import com.sinxn.mymoney.feature.transaction.TransactionDetailsScreen
 import com.sinxn.mymoney.feature.wallet.WalletDetailsScreen
 
@@ -128,7 +129,7 @@ fun AppNavHost(
                     navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
                 },
                 onRecordPayment = { debtId, _, debtAction ->
-                    navController.navigate(Screen.TransactionDetails.createRoute("new", debtId = debtId, debtAction = debtAction))
+                    navController.navigate(Screen.TransactionAddEdit.createRoute(debtId = debtId, debtAction = debtAction))
                 }
             )
         }
@@ -190,7 +191,7 @@ fun AppNavHost(
                     navController.navigate(Screen.Recap.routePattern)
                 },
                 onAddTransaction = {
-                    navController.navigate(Screen.TransactionDetails.createRoute("new"))
+                    navController.navigate(Screen.TransactionAddEdit.createRoute())
                 },
                 onNavigateToDebts = { _ ->
                     navController.navigate(Screen.Debts.routePattern)
@@ -226,7 +227,27 @@ fun AppNavHost(
         composable(
             Screen.TransactionDetails.routePattern,
             arguments = listOf(
-                navArgument("transactionId") { type = NavType.StringType },
+                navArgument("transactionId") { type = NavType.StringType }
+            ),
+            deepLinks = listOf(
+                navDeepLink { uriPattern = "mymoney://transaction/{transactionId}" }
+            )
+        ) {
+            TransactionDetailsScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onEditClick = { transactionId ->
+                    navController.navigate(Screen.TransactionAddEdit.createRoute(transactionId = transactionId))
+                }
+            )
+        }
+        composable(
+            Screen.TransactionAddEdit.routePattern,
+            arguments = listOf(
+                navArgument("transactionId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
                 navArgument("savingId") {
                     type = NavType.StringType
                     nullable = true
@@ -247,12 +268,9 @@ fun AppNavHost(
                     nullable = true
                     defaultValue = null
                 }
-            ),
-            deepLinks = listOf(
-                navDeepLink { uriPattern = "mymoney://transaction/{transactionId}" }
             )
         ) {
-            TransactionDetailsScreen(
+            TransactionAddEditScreen(
                 onNavigateBack = { navController.navigateUp() }
             )
         }
@@ -321,13 +339,13 @@ fun AppNavHost(
                     navController.navigate(Screen.SavingDetails.createRoute("new"))
                 },
                 onDeposit = { savingId ->
-                    navController.navigate(Screen.TransactionDetails.createRoute("new", savingId = savingId, action = "deposit"))
+                    navController.navigate(Screen.TransactionAddEdit.createRoute(savingId = savingId, action = "deposit"))
                 },
                 onWithdraw = { savingId ->
-                    navController.navigate(Screen.TransactionDetails.createRoute("new", savingId = savingId, action = "withdraw"))
+                    navController.navigate(Screen.TransactionAddEdit.createRoute(savingId = savingId, action = "withdraw"))
                 },
                 onWithdrawEverything = { savingId ->
-                    navController.navigate(Screen.TransactionDetails.createRoute("new", savingId = savingId, action = "withdraw_everything"))
+                    navController.navigate(Screen.TransactionAddEdit.createRoute(savingId = savingId, action = "withdraw_everything"))
                 },
                 onNavigateMenuItem = { itemId ->
                     handleSidebarNavigation(

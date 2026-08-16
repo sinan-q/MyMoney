@@ -18,11 +18,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CleanListRow
-import com.sinxn.mymoney.feature.transaction.TransactionDetailsUiState
+import com.sinxn.mymoney.feature.transaction.TransactionAddEditUiState
 
 @Composable
 fun EditTransactionTransferWallets(
-    uiState: TransactionDetailsUiState,
+    uiState: TransactionAddEditUiState,
     accentColor: Color,
     onFromWalletClick: () -> Unit,
     onToWalletClick: () -> Unit,
