@@ -67,6 +67,12 @@ class TransactionRepository @Inject constructor(
         val now = System.currentTimeMillis()
         moneyDao.updateTransfer(transfer.copy(isDeleted = true, lastEdit = now))
 
+        val fromTxId = transfer.transactionFromId
+        val fromTx = moneyDao.getTransactionById(fromTxId)
+        if (fromTx != null) {
+            moneyDao.updateTransaction(fromTx.copy(isDeleted = true, lastEdit = now))
+        }
+
         val siblingTxId = transfer.transactionToId
         val siblingTx = moneyDao.getTransactionById(siblingTxId)
         if (siblingTx != null) {

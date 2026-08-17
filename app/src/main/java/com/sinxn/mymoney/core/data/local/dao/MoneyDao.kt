@@ -58,7 +58,7 @@ interface MoneyDao {
     @Update
     suspend fun updateTransfer(transfer: com.sinxn.mymoney.core.data.local.entity.TransferEntity)
 
-    @Query("SELECT * FROM transfers WHERE (transactionFromId = :transactionId OR transactionToId = :transactionId) AND isDeleted = 0 LIMIT 1")
+    @Query("SELECT * FROM transfers WHERE (transactionFromId = :transactionId OR transactionToId = :transactionId OR transactionTaxId = :transactionId) AND isDeleted = 0 LIMIT 1")
     suspend fun getTransferByTransactionId(transactionId: String): com.sinxn.mymoney.core.data.local.entity.TransferEntity?
 
     @Query("SELECT * FROM transactions WHERE type = 2 AND money = :money AND date = :date AND id != :transactionId AND isDeleted = 0 LIMIT 1")
