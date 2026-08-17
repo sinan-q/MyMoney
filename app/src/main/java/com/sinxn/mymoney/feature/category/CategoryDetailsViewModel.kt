@@ -164,6 +164,13 @@ class CategoryDetailsViewModel @Inject constructor(
         }
     }
 
+    fun toggleArchive() {
+        val cat = _uiState.value.category ?: return
+        viewModelScope.launch {
+            categoryRepository.updateCategoryArchived(categoryId, !cat.isArchived)
+        }
+    }
+
     fun deleteCategory() {
         viewModelScope.launch {
             categoryRepository.deleteCategory(categoryId)

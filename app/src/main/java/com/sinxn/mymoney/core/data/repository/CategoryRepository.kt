@@ -67,6 +67,7 @@ class CategoryRepository @Inject constructor(
 
     suspend fun deleteCategory(categoryId: String) {
         val now = System.currentTimeMillis()
+        moneyDao.unlinkSubcategoriesForParent(categoryId, now)
         moneyDao.softDeleteCategory(categoryId, now)
     }
 }

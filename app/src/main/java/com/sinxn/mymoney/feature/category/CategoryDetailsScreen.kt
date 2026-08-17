@@ -11,12 +11,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -103,7 +105,14 @@ fun CategoryDetailsScreen(
                     }
                 },
                 actions = {
-                    if (uiState.category != null && uiState.category?.tag == null) {
+                    val cat = uiState.category
+                    if (cat != null && cat.tag == null) {
+                        IconButton(onClick = viewModel::toggleArchive) {
+                            Icon(
+                                imageVector = if (cat.isArchived) Icons.Default.Unarchive else Icons.Default.Archive,
+                                contentDescription = if (cat.isArchived) "Unarchive Category" else "Archive Category"
+                            )
+                        }
                         IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
