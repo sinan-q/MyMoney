@@ -81,6 +81,14 @@ class SavingAddEditViewModel @Inject constructor(
                 savingRepository.getSavingDetails(savingIdArg).collect { details ->
                     if (details != null) {
                         val saving = details.saving
+                        val wallet = wallets.firstOrNull { it.id == saving.walletId }
+                        val curr = wallet?.currency ?: details.walletCurrency.ifBlank { formatting?.globalCurrency ?: "USD" }
+                        val decimals = try {
+                            java.util.Currency.getInstance(curr).defaultFractionDigits.coerceAtLeast(0)
+                        } catch (e: Exception) {
+                            2
+                        }
+
                         val targetFormatted = if (saving.endMoney > 0) {
                             val divisor = Math.pow(10.0, decimals.toDouble())
                             val doubleVal = saving.endMoney / divisor
@@ -92,9 +100,6 @@ class SavingAddEditViewModel @Inject constructor(
                             val doubleVal = saving.startMoney / divisor
                             if (decimals == 0) doubleVal.toLong().toString() else doubleVal.toString()
                         } else ""
-
-                        val wallet = wallets.firstOrNull { it.id == saving.walletId }
-                        val curr = wallet?.currency ?: details.walletCurrency.ifBlank { formatting?.globalCurrency ?: "USD" }
 
                         _uiState.update { state ->
                             state.copy(
@@ -123,6 +128,11 @@ class SavingAddEditViewModel @Inject constructor(
                     ?: wallets.firstOrNull()
 
                 val defaultCurrency = defaultWallet?.currency ?: formatting?.globalCurrency ?: "USD"
+                val defaultDecimals = try {
+                    java.util.Currency.getInstance(defaultCurrency).defaultFractionDigits.coerceAtLeast(0)
+                } catch (e: Exception) {
+                    2
+                }
                 val defaultWalletId = defaultWallet?.id ?: ""
 
                 _uiState.update { state ->
@@ -132,7 +142,7 @@ class SavingAddEditViewModel @Inject constructor(
                         availableWallets = wallets,
                         currencyCode = defaultCurrency,
                         currencySymbol = MoneyFormatter.getCurrencySymbol(defaultCurrency),
-                        currencyDecimals = decimals,
+                        currencyDecimals = defaultDecimals,
                         isLoading = false
                     )
                 }
@@ -216,11 +226,17 @@ class SavingAddEditViewModel @Inject constructor(
     fun updateWalletId(walletId: String) {
         val wallet = _uiState.value.availableWallets.firstOrNull { it.id == walletId }
         val curr = wallet?.currency ?: _uiState.value.currencyCode
+        val decimals = try {
+            java.util.Currency.getInstance(curr).defaultFractionDigits.coerceAtLeast(0)
+        } catch (e: Exception) {
+            2
+        }
         _uiState.update {
             it.copy(
                 editWalletId = walletId,
                 currencyCode = curr,
                 currencySymbol = MoneyFormatter.getCurrencySymbol(curr),
+                currencyDecimals = decimals,
                 errorMessage = null
             )
         }
