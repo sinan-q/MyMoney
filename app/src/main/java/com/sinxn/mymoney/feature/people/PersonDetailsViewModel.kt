@@ -144,6 +144,13 @@ class PersonDetailsViewModel @Inject constructor(
         }
     }
 
+    fun toggleArchive() {
+        val currentPerson = _uiState.value.person ?: return
+        viewModelScope.launch {
+            personRepository.updatePersonArchived(personId, !currentPerson.isArchived)
+        }
+    }
+
     fun deletePerson() {
         viewModelScope.launch {
             personRepository.deletePerson(personId)

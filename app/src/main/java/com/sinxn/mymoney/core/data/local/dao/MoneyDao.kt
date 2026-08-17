@@ -625,6 +625,18 @@ interface MoneyDao {
     @Query("UPDATE people SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :personId")
     suspend fun softDeletePerson(personId: String, lastEdit: Long)
 
+    @Query("UPDATE transaction_people SET isDeleted = 1, lastEdit = :lastEdit WHERE personId = :personId")
+    suspend fun unlinkTransactionsForPerson(personId: String, lastEdit: Long)
+
+    @Query("UPDATE transfer_people SET isDeleted = 1, lastEdit = :lastEdit WHERE personId = :personId")
+    suspend fun unlinkTransfersForPerson(personId: String, lastEdit: Long)
+
+    @Query("UPDATE debt_people SET isDeleted = 1, lastEdit = :lastEdit WHERE personId = :personId")
+    suspend fun unlinkDebtsForPerson(personId: String, lastEdit: Long)
+
+    @Query("UPDATE event_people SET isDeleted = 1, lastEdit = :lastEdit WHERE personId = :personId")
+    suspend fun unlinkEventsForPerson(personId: String, lastEdit: Long)
+
     @Query("SELECT * FROM people WHERE isDeleted = 0")
     fun getPeople(): Flow<List<com.sinxn.mymoney.core.data.local.entity.PersonEntity>>
 

@@ -57,6 +57,10 @@ class PersonRepository @Inject constructor(
 
     suspend fun deletePerson(personId: String) {
         val now = System.currentTimeMillis()
+        moneyDao.unlinkTransactionsForPerson(personId, now)
+        moneyDao.unlinkTransfersForPerson(personId, now)
+        moneyDao.unlinkDebtsForPerson(personId, now)
+        moneyDao.unlinkEventsForPerson(personId, now)
         moneyDao.softDeletePerson(personId, now)
     }
 }
