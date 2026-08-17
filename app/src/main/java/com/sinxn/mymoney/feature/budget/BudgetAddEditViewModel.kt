@@ -99,15 +99,19 @@ class BudgetAddEditViewModel @Inject constructor(
                         val cat = categories.firstOrNull { it.id == budget.categoryId }
                         val customTag = budget.tag?.takeIf { !it.startsWith("period::") } ?: ""
 
-                        val decimals = 2
+                        val firstWallet = details.wallets.firstOrNull()
+                        val curr = firstWallet?.currency ?: budget.currency.ifBlank { formatting?.globalCurrency ?: "USD" }
+                        val decimals = try {
+                            java.util.Currency.getInstance(curr).defaultFractionDigits.coerceAtLeast(0)
+                        } catch (e: Exception) {
+                            2
+                        }
+
                         val moneyFormatted = if (budget.money > 0) {
                             val divisor = Math.pow(10.0, decimals.toDouble())
                             val doubleVal = budget.money / divisor
                             if (decimals == 0) doubleVal.toLong().toString() else doubleVal.toString()
                         } else ""
-
-                        val firstWallet = details.wallets.firstOrNull()
-                        val curr = firstWallet?.currency ?: budget.currency.ifBlank { formatting?.globalCurrency ?: "USD" }
 
                         _uiState.update { state ->
                             state.copy(
@@ -141,7 +145,11 @@ class BudgetAddEditViewModel @Inject constructor(
                     ?: wallets.firstOrNull()
 
                 val defaultCurrency = defaultWallet?.currency ?: formatting?.globalCurrency ?: "USD"
-                val defaultDecimals = 2
+                val defaultDecimals = try {
+                    java.util.Currency.getInstance(defaultCurrency).defaultFractionDigits.coerceAtLeast(0)
+                } catch (e: Exception) {
+                    2
+                }
                 val defaultWalletIds = if (defaultWallet != null) setOf(defaultWallet.id) else emptySet()
 
                 val cal = Calendar.getInstance()
