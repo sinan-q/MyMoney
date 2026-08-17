@@ -3,10 +3,11 @@ package com.sinxn.mymoney.feature.saving
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.sinxn.mymoney.core.data.local.dao.MoneyDao
-import com.sinxn.mymoney.core.data.local.entity.WalletEntity
 import com.sinxn.mymoney.core.data.local.model.SavingWithDetails
+import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
+import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.SavingRepository
+import com.sinxn.mymoney.core.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,42 +15,37 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class SavingDetailsUiState(
-    val savingId: String = "new",
-    val isEditing: Boolean = false,
-    val description: String = "",
-    val icon: String = "ic_saving",
-    val startMoneyInput: String = "0",
-    val targetMoneyInput: String = "0",
-    val walletId: String = "",
-    val endDate: String? = null,
-    val note: String = "",
-    val availableWallets: List<WalletEntity> = emptyList(),
+    val savingId: String = "",
     val savingWithDetails: SavingWithDetails? = null,
+    val transactions: List<TransactionWithCategory> = emptyList(),
+    val formatterConfig: MoneyFormatter.Config = MoneyFormatter.Config(),
+    val dateFormat: Int = 0,
+    val globalCurrency: String = "USD",
     val isLoading: Boolean = true,
     val errorMessage: String? = null
 )
 
 sealed interface SavingDetailsEvent {
-    object Saved : SavingDetailsEvent
     object Deleted : SavingDetailsEvent
+    object StatusUpdated : SavingDetailsEvent
 }
 
 @HiltViewModel
 class SavingDetailsViewModel @Inject constructor(
     private val savingRepository: SavingRepository,
-    private val moneyDao: MoneyDao,
+    private val settingsRepository: SettingsRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    val savingId: String = savedStateHandle.get<String>("savingId") ?: "new"
+    val savingId: String = savedStateHandle.get<String>("savingId") ?: ""
 
-    private val _uiState = MutableStateFlow(SavingDetailsUiState(savingId = savingId, isEditing = savingId != "new"))
+    private val _uiState = MutableStateFlow(SavingDetailsUiState(savingId = savingId))
     val uiState: StateFlow<SavingDetailsUiState> = _uiState.asStateFlow()
 
     private val _eventFlow = MutableSharedFlow<SavingDetailsEvent>()
@@ -60,114 +56,49 @@ class SavingDetailsViewModel @Inject constructor(
     }
 
     private fun loadData() {
-        viewModelScope.launch {
-            val wallets = moneyDao.getWallets().firstOrNull() ?: emptyList()
+        if (savingId.isBlank() || savingId == "new") return
 
-            if (savingId != "new") {
-                savingRepository.getSavingDetails(savingId).collect { details ->
-                    if (details != null) {
-                        _uiState.update { state ->
-                            state.copy(
-                                description = details.saving.description ?: "",
-                                icon = details.saving.icon,
-                                startMoneyInput = (details.saving.startMoney / 100.0).toString(),
-                                targetMoneyInput = (details.saving.endMoney / 100.0).toString(),
-                                walletId = details.saving.walletId,
-                                endDate = details.saving.endDate,
-                                note = details.saving.note ?: "",
-                                availableWallets = wallets,
-                                savingWithDetails = details,
-                                isLoading = false
-                            )
-                        }
-                    }
-                }
-            } else {
-                val defaultWallet = wallets.firstOrNull { it.countInTotal } ?: wallets.firstOrNull()
+        viewModelScope.launch {
+            combine(
+                savingRepository.getSavingDetails(savingId),
+                savingRepository.getTransactionsForSaving(savingId),
+                settingsRepository.formattingSettings
+            ) { savingDetails, transactions, formatting ->
+                val formatterConfig = MoneyFormatter.Config(
+                    showCurrency = formatting.showCurrency,
+                    groupDigits = formatting.groupDigits,
+                    roundDecimals = formatting.roundDecimals,
+                    showPlusMinus = formatting.showPlusMinus
+                )
+
                 _uiState.update { state ->
                     state.copy(
-                        walletId = defaultWallet?.id ?: "",
-                        availableWallets = wallets,
+                        savingWithDetails = savingDetails,
+                        transactions = transactions,
+                        formatterConfig = formatterConfig,
+                        dateFormat = formatting.dateFormat,
+                        globalCurrency = formatting.globalCurrency,
                         isLoading = false
                     )
                 }
-            }
+            }.collect {}
         }
     }
 
-    fun setDescription(desc: String) {
-        _uiState.update { it.copy(description = desc) }
-    }
-
-    fun setIcon(icon: String) {
-        _uiState.update { it.copy(icon = icon) }
-    }
-
-    fun setStartMoneyInput(input: String) {
-        _uiState.update { it.copy(startMoneyInput = input) }
-    }
-
-    fun setTargetMoneyInput(input: String) {
-        _uiState.update { it.copy(targetMoneyInput = input) }
-    }
-
-    fun setWalletId(wId: String) {
-        _uiState.update { it.copy(walletId = wId) }
-    }
-
-    fun setEndDate(date: String?) {
-        _uiState.update { it.copy(endDate = date) }
-    }
-
-    fun setNote(note: String) {
-        _uiState.update { it.copy(note = note) }
-    }
-
-    fun saveSaving() {
+    fun toggleComplete() {
         viewModelScope.launch {
-            val currentState = _uiState.value
-
-            if (currentState.description.isBlank()) {
-                _uiState.update { it.copy(errorMessage = "Please enter a description for the saving goal.") }
-                return@launch
-            }
-
-            if (currentState.walletId.isBlank()) {
-                _uiState.update { it.copy(errorMessage = "Please select a wallet.") }
-                return@launch
-            }
-
-            val targetMoney = (currentState.targetMoneyInput.toDoubleOrNull() ?: 0.0) * 100.0
-            val startMoney = (currentState.startMoneyInput.toDoubleOrNull() ?: 0.0) * 100.0
-
-            if (targetMoney <= 0) {
-                _uiState.update { it.copy(errorMessage = "Please enter a valid target goal amount.") }
-                return@launch
-            }
-
-            try {
-                savingRepository.saveSaving(
-                    id = if (savingId != "new") savingId else null,
-                    description = currentState.description,
-                    icon = currentState.icon,
-                    startMoney = startMoney.toLong(),
-                    endMoney = targetMoney.toLong(),
-                    walletId = currentState.walletId,
-                    endDate = currentState.endDate,
-                    note = currentState.note.ifBlank { null }
-                )
-                _eventFlow.emit(SavingDetailsEvent.Saved)
-            } catch (e: Exception) {
-                _uiState.update { it.copy(errorMessage = e.message ?: "Failed to save goal") }
-            }
+            val current = _uiState.value.savingWithDetails?.saving ?: return@launch
+            savingRepository.setSavingComplete(savingId, !current.isComplete)
+            _eventFlow.emit(SavingDetailsEvent.StatusUpdated)
         }
     }
 
-    fun deleteSaving(deleteTransactions: Boolean = true) {
+    fun deleteSaving(deleteTransactions: Boolean, onSuccess: () -> Unit) {
         viewModelScope.launch {
-            if (savingId != "new") {
+            if (savingId.isNotBlank()) {
                 savingRepository.deleteSaving(savingId, deleteTransactions)
                 _eventFlow.emit(SavingDetailsEvent.Deleted)
+                onSuccess()
             }
         }
     }

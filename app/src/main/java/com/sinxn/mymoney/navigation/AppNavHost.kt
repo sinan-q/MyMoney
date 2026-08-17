@@ -38,6 +38,7 @@ import com.sinxn.mymoney.feature.recurrence.RecurrentTransactionAddEditScreen
 import com.sinxn.mymoney.feature.recurrence.RecurrentTransactionDetailsScreen
 import com.sinxn.mymoney.feature.recurrence.RecurrentTransferAddEditScreen
 import com.sinxn.mymoney.feature.recurrence.RecurrentTransferDetailsScreen
+import com.sinxn.mymoney.feature.saving.SavingAddEditScreen
 import com.sinxn.mymoney.feature.saving.SavingDetailsScreen
 import com.sinxn.mymoney.feature.saving.SavingListScreen
 import com.sinxn.mymoney.feature.settings.BackupScreen
@@ -436,7 +437,10 @@ fun AppNavHost(
                     navController.navigate(Screen.SavingDetails.createRoute(savingId))
                 },
                 onAddSaving = {
-                    navController.navigate(Screen.SavingDetails.createRoute("new"))
+                    navController.navigate(Screen.SavingAddEdit.createRoute())
+                },
+                onEditSaving = { savingId ->
+                    navController.navigate(Screen.SavingAddEdit.createRoute(savingId))
                 },
                 onDeposit = { savingId ->
                     navController.navigate(Screen.TransactionAddEdit.createRoute(savingId = savingId, action = "deposit"))
@@ -470,6 +474,31 @@ fun AppNavHost(
             )
         ) {
             SavingDetailsScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onEditSavingClick = { savingId ->
+                    navController.navigate(Screen.SavingAddEdit.createRoute(savingId))
+                },
+                onTransactionClick = { transactionId ->
+                    navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
+                },
+                onDeposit = { savingId ->
+                    navController.navigate(Screen.TransactionAddEdit.createRoute(savingId = savingId, action = "deposit"))
+                },
+                onWithdraw = { savingId ->
+                    navController.navigate(Screen.TransactionAddEdit.createRoute(savingId = savingId, action = "withdraw"))
+                },
+                onWithdrawEverything = { savingId ->
+                    navController.navigate(Screen.TransactionAddEdit.createRoute(savingId = savingId, action = "withdraw_everything"))
+                }
+            )
+        }
+        composable(
+            Screen.SavingAddEdit.routePattern,
+            arguments = listOf(
+                navArgument("savingId") { type = NavType.StringType; nullable = true; defaultValue = null }
+            )
+        ) {
+            SavingAddEditScreen(
                 onNavigateBack = { navController.navigateUp() }
             )
         }

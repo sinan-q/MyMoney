@@ -8,6 +8,7 @@ import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.SavingRepository
 import com.sinxn.mymoney.core.util.DateUtils
+import com.sinxn.mymoney.core.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,7 +24,10 @@ data class SavingListUiState(
     val selectedTab: Int = 0, // 0: IN_PROGRESS, 1: COMPLETED
     val filterWalletId: String? = null,
     val savings: List<SavingWithDetails> = emptyList(),
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val formatterConfig: MoneyFormatter.Config = MoneyFormatter.Config(),
+    val dateFormat: Int = 0,
+    val globalCurrency: String = "USD"
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -53,14 +57,24 @@ class SavingListViewModel @Inject constructor(
     val uiState: StateFlow<SavingListUiState> = combine(
         _selectedTab,
         settingsRepository.currentWalletId,
-        savingsFlow
-    ) { tab, wId, list ->
+        savingsFlow,
+        settingsRepository.formattingSettings
+    ) { tab, wId, list, formatting ->
         val actualWId = if (wId == "total") null else wId
+        val formatterConfig = MoneyFormatter.Config(
+            showCurrency = formatting.showCurrency,
+            groupDigits = formatting.groupDigits,
+            roundDecimals = formatting.roundDecimals,
+            showPlusMinus = formatting.showPlusMinus
+        )
         SavingListUiState(
             selectedTab = tab,
             filterWalletId = actualWId,
             savings = list,
-            isLoading = false
+            isLoading = false,
+            formatterConfig = formatterConfig,
+            dateFormat = formatting.dateFormat,
+            globalCurrency = formatting.globalCurrency
         )
     }.stateIn(
         scope = viewModelScope,

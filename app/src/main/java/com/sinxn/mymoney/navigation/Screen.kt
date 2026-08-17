@@ -63,6 +63,10 @@ sealed class Screen(
         fun createRoute(savingId: String): String = "saving_details/$savingId"
     }
 
+    object SavingAddEdit : Screen("saving_edit?savingId={savingId}", "savings", "Savings Goal Edit", isTopLevel = false) {
+        fun createRoute(savingId: String? = null): String = if (savingId != null) "saving_edit?savingId=$savingId" else "saving_edit"
+    }
+
     object RecurrentTransactionDetails : Screen("recurrent_transaction_details/{id}", "recurrences", "Recurrent Transaction Details", isTopLevel = false) {
         fun createRoute(id: String): String = "recurrent_transaction_details/$id"
     }
@@ -199,7 +203,7 @@ sealed class Screen(
                 Overview, About, SupportDeveloper, Menu, Settings,
                 DebtDetails, DebtAddEdit, CategoryDetails, PersonDetails, PersonAddEdit, EventDetails, EventAddEdit,
                 PlaceDetails, PlaceAddEdit,
-                BudgetDetails, BudgetAddEdit, BudgetOverview, SavingDetails,
+                BudgetDetails, BudgetAddEdit, BudgetOverview, SavingDetails, SavingAddEdit,
                 RecurrentTransactionDetails, RecurrentTransactionAddEdit, RecurrentTransferDetails, RecurrentTransferAddEdit, TransactionDetails, TransactionAddEdit, TransferAddEdit,
                 TemplateDetails, TemplateAddEdit,
                 SqlConsole, Backup, Recap
