@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.collectLatest
 fun TemplateDetailsScreen(
     onNavigateBack: () -> Unit,
     onEditTemplateClick: (String, Boolean) -> Unit,
+    onUseInTransactionClick: (String, Boolean) -> Unit,
     viewModel: TemplateDetailsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -138,63 +139,73 @@ fun TemplateDetailsScreen(
                 val isTransfer = uiState.isTransfer
 
                 val title = if (isTransfer) {
-                    tr?.model?.description?.takeIf { it.isNotBlank() } ?: "Transfer"
+                    tr?.model?.description?.takeIf { it.isNotBlank() } ?: "Transfer Template"
                 } else {
-                    tx?.model?.description?.takeIf { it.isNotBlank() } ?: (tx?.categoryName ?: "Transaction")
+                    tx?.model?.description?.takeIf { it.isNotBlank() } ?: tx?.categoryName ?: "Template"
+                }
+
+                val typeLabel = if (isTransfer) {
+                    "Transfer"
+                } else if (isIncome) {
+                    "Income"
+                } else {
+                    "Expense"
+                }
+
+                val bannerColor = if (isTransfer) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else if (isIncome) {
+                    Color(0xFFE8F5E9)
+                } else {
+                    Color(0xFFFFEBEE)
+                }
+
+                val amountColor = if (isTransfer) {
+                    MaterialTheme.colorScheme.primary
+                } else if (isIncome) {
+                    Color(0xFF2E7D32)
+                } else {
+                    Color(0xFFC62828)
                 }
 
                 val formattedAmount = if (isTransfer) {
-                    tr?.let {
-                        MoneyFormatter.format(it.model.moneyFrom, it.walletFromCurrency, it.walletFromDecimals)
-                    } ?: ""
+                    val fromStr = MoneyFormatter.format(tr?.model?.moneyFrom ?: 0L, tr?.walletFromCurrency ?: "USD", tr?.walletFromDecimals ?: 2)
+                    val toStr = MoneyFormatter.format(tr?.model?.moneyTo ?: 0L, tr?.walletToCurrency ?: "USD", tr?.walletToDecimals ?: 2)
+                    if (tr?.walletFromCurrency == tr?.walletToCurrency) fromStr else "$fromStr -> $toStr"
                 } else {
-                    tx?.let {
-                        val prefix = if (isIncome) "+" else "-"
-                        prefix + MoneyFormatter.format(it.model.money, it.walletCurrency, it.walletDecimals)
-                    } ?: ""
+                    MoneyFormatter.format(tx?.model?.money ?: 0L, tx?.walletCurrency ?: "USD", tx?.walletDecimals ?: 2)
                 }
 
-                val amountColor = when {
-                    isIncome -> Color(0xFF2E7D32)
-                    isExpense -> Color(0xFFC62828)
-                    else -> Color(0xFF1565C0)
-                }
-
-                val typeLabel = when {
-                    isIncome -> "Income Template"
-                    isExpense -> "Expense Template"
-                    else -> "Transfer Template"
-                }
-
-                val note = if (isTransfer) tr?.model?.note else tx?.model?.note
-                val tag = if (isTransfer) tr?.model?.tag else tx?.model?.tag
                 val placeName = if (isTransfer) tr?.placeName else tx?.placeName
                 val eventName = if (isTransfer) tr?.eventName else tx?.eventName
+                val note = if (isTransfer) tr?.model?.note else tx?.model?.note
+                val tag = if (isTransfer) tr?.model?.tag else tx?.model?.tag
                 val confirmed = if (isTransfer) tr?.model?.confirmed ?: true else tx?.model?.confirmed ?: true
                 val countInTotal = if (isTransfer) tr?.model?.countInTotal ?: true else tx?.model?.countInTotal ?: true
 
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 88.dp, top = 8.dp)
+                    contentPadding = PaddingValues(bottom = 80.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Header Card
+                    // Header Banner Card
                     item {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-                            ),
-                            shape = RoundedCornerShape(20.dp)
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(containerColor = bannerColor)
                         ) {
                             Column(
-                                modifier = Modifier.padding(16.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(20.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 Row(
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                                 ) {
                                     Box(
                                         modifier = Modifier
@@ -276,12 +287,13 @@ fun TemplateDetailsScreen(
                         }
                     }
 
-                    // Apply Button Card
+                    // Action Buttons Card
                     item {
-                        Box(
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Button(
                                 onClick = viewModel::applyTemplate,
@@ -300,6 +312,22 @@ fun TemplateDetailsScreen(
                                     text = if (uiState.isApplying) "Applying..." else "Apply Template Now",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            OutlinedButton(
+                                onClick = { onUseInTransactionClick(uiState.templateId, uiState.isTransfer) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(50.dp),
+                                shape = RoundedCornerShape(14.dp)
+                            ) {
+                                Icon(if (uiState.isTransfer) Icons.Default.SwapHoriz else Icons.Default.EditNote, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = if (uiState.isTransfer) "Create Transfer from Template" else "Create Transaction from Template",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
                         }

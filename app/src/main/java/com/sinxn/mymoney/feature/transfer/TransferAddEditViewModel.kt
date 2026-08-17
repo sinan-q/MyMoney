@@ -13,6 +13,7 @@ import com.sinxn.mymoney.core.data.local.entity.WalletEntity
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
+import com.sinxn.mymoney.core.data.repository.TemplateRepository
 import com.sinxn.mymoney.core.data.repository.TransactionRepository
 import com.sinxn.mymoney.core.util.AmountUtils.parseAmountToLong
 import com.sinxn.mymoney.core.util.AmountUtils.toDecimalString
@@ -71,11 +72,13 @@ class TransferAddEditViewModel @Inject constructor(
     private val transactionRepository: TransactionRepository,
     private val moneyDao: MoneyDao,
     private val settingsRepository: SettingsRepository,
+    private val templateRepository: TemplateRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val transactionIdArg: String? = savedStateHandle.get<String>("transactionId")?.takeIf { it.isNotBlank() && it != "new" }
     private val transferIdArg: String? = savedStateHandle.get<String>("transferId")?.takeIf { it.isNotBlank() && it != "new" }
+    private val templateIdArg: String? = savedStateHandle.get<String>("templateId")?.takeIf { it.isNotBlank() && it != "new" }
     val isNewTransfer = transactionIdArg == null && transferIdArg == null
 
     private val _isSaving = MutableStateFlow(false)
@@ -89,6 +92,39 @@ class TransferAddEditViewModel @Inject constructor(
     init {
         if (!isNewTransfer) {
             initExistingTransfer()
+        } else if (!templateIdArg.isNullOrBlank()) {
+            initFromTemplate(templateIdArg)
+        }
+    }
+
+    private fun initFromTemplate(templateId: String) {
+        viewModelScope.launch {
+            val template = templateRepository.getTransferModelById(templateId)
+            if (template != null) {
+                val wallets = moneyDao.getWalletsList()
+                val fromWallet = wallets.find { it.id == template.walletFromId }
+                val toWallet = wallets.find { it.id == template.walletToId }
+                val fromCurr = fromWallet?.let { moneyDao.getCurrencyByIso(it.currency) }
+                val toCurr = toWallet?.let { moneyDao.getCurrencyByIso(it.currency) }
+                val fromDecimals = fromCurr?.decimals ?: 2
+                val toDecimals = toCurr?.decimals ?: 2
+
+                _formState.update { form ->
+                    form.copy(
+                        amount = template.moneyFrom.toDecimalString(fromDecimals),
+                        targetAmount = template.moneyTo.toDecimalString(toDecimals),
+                        transferFee = template.moneyTax?.toDecimalString(fromDecimals) ?: "",
+                        walletId = template.walletFromId,
+                        targetWalletId = template.walletToId,
+                        description = template.description ?: "",
+                        note = template.note ?: "",
+                        placeId = template.placeId,
+                        eventId = template.eventId,
+                        confirmed = template.confirmed,
+                        countInTotal = template.countInTotal
+                    )
+                }
+            }
         }
     }
 
@@ -106,8 +142,13 @@ class TransferAddEditViewModel @Inject constructor(
                 val taxTx = transfer.transactionTaxId?.let { transactionRepository.getTransactionById(it) }
                 val people = transactionRepository.getPeopleForTransaction(transfer.transactionFromId).firstOrNull() ?: emptyList()
 
-                val fromDecimals = 2
-                val toDecimals = 2
+                val wallets = moneyDao.getWalletsList()
+                val fromWallet = wallets.find { it.id == fromTx?.walletId }
+                val toWallet = wallets.find { it.id == toTx?.walletId }
+                val fromCurr = fromWallet?.let { moneyDao.getCurrencyByIso(it.currency) }
+                val toCurr = toWallet?.let { moneyDao.getCurrencyByIso(it.currency) }
+                val fromDecimals = fromCurr?.decimals ?: 2
+                val toDecimals = toCurr?.decimals ?: 2
 
                 _formState.update { form ->
                     form.copy(
@@ -134,10 +175,18 @@ class TransferAddEditViewModel @Inject constructor(
                     val fromTx = if (tx.direction == Direction.EXPENSE) tx else sibling
                     val toTx = if (tx.direction == Direction.INCOME) tx else sibling
 
+                    val wallets = moneyDao.getWalletsList()
+                    val fromWallet = wallets.find { it.id == fromTx?.walletId }
+                    val toWallet = wallets.find { it.id == toTx?.walletId }
+                    val fromCurr = fromWallet?.let { moneyDao.getCurrencyByIso(it.currency) }
+                    val toCurr = toWallet?.let { moneyDao.getCurrencyByIso(it.currency) }
+                    val fromDecimals = fromCurr?.decimals ?: 2
+                    val toDecimals = toCurr?.decimals ?: 2
+
                     _formState.update { form ->
                         form.copy(
-                            amount = (fromTx?.money ?: tx.money).toDecimalString(2),
-                            targetAmount = (toTx?.money ?: tx.money).toDecimalString(2),
+                            amount = (fromTx?.money ?: tx.money).toDecimalString(fromDecimals),
+                            targetAmount = (toTx?.money ?: tx.money).toDecimalString(toDecimals),
                             walletId = fromTx?.walletId ?: tx.walletId,
                             targetWalletId = toTx?.walletId,
                             description = tx.description ?: "",

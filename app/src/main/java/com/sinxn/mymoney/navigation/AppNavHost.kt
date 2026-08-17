@@ -315,6 +315,11 @@ fun AppNavHost(
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null
+                },
+                navArgument("templateId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
                 }
             )
         ) {
@@ -336,6 +341,11 @@ fun AppNavHost(
                     defaultValue = null
                 },
                 navArgument("walletId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("templateId") {
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null
@@ -593,6 +603,13 @@ fun AppNavHost(
                 onNavigateBack = { navController.navigateUp() },
                 onEditTemplateClick = { templateId, isTransfer ->
                     navController.navigate(Screen.TemplateAddEdit.createRoute(templateId, isTransfer))
+                },
+                onUseInTransactionClick = { templateId, isTransfer ->
+                    if (isTransfer) {
+                        navController.navigate(Screen.TransferAddEdit.createRoute(templateId = templateId))
+                    } else {
+                        navController.navigate(Screen.TransactionAddEdit.createRoute(templateId = templateId))
+                    }
                 }
             )
         }

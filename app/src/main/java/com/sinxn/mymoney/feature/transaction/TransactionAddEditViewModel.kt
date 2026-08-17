@@ -14,6 +14,7 @@ import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.DebtRepository
 import com.sinxn.mymoney.core.data.repository.SavingRepository
+import com.sinxn.mymoney.core.data.repository.TemplateRepository
 import com.sinxn.mymoney.core.data.repository.TransactionRepository
 import com.sinxn.mymoney.core.util.AmountUtils.parseAmountToLong
 import com.sinxn.mymoney.core.util.AmountUtils.toDecimalString
@@ -74,6 +75,7 @@ class TransactionAddEditViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val savingRepository: SavingRepository,
     private val debtRepository: DebtRepository,
+    private val templateRepository: TemplateRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -95,9 +97,10 @@ class TransactionAddEditViewModel @Inject constructor(
         val savingActionArg: String? = savedStateHandle.get<String>("action")
         val debtIdArg: String? = savedStateHandle.get<String>("debtId")
         val debtActionArg: String? = savedStateHandle.get<String>("debtAction")
+        val templateIdArg: String? = savedStateHandle.get<String>("templateId")
 
         if (isNewTransaction) {
-            initNewTransactionDefaults(savingIdArg, savingActionArg, debtIdArg, debtActionArg)
+            initNewTransactionDefaults(savingIdArg, savingActionArg, debtIdArg, debtActionArg, templateIdArg)
         } else {
             initExistingTransaction()
         }
@@ -107,7 +110,8 @@ class TransactionAddEditViewModel @Inject constructor(
         savingIdArg: String?,
         savingActionArg: String?,
         debtIdArg: String?,
-        debtActionArg: String?
+        debtActionArg: String?,
+        templateIdArg: String?
     ) {
         if (!savingIdArg.isNullOrBlank()) {
             viewModelScope.launch {
@@ -154,6 +158,31 @@ class TransactionAddEditViewModel @Inject constructor(
                     }
                 }
             }
+        } else if (!templateIdArg.isNullOrBlank()) {
+            viewModelScope.launch {
+                val template = templateRepository.getTransactionModelById(templateIdArg)
+                if (template != null) {
+                    val wallet = moneyDao.getWalletsList().find { it.id == template.walletId }
+                    val curr = wallet?.let { moneyDao.getCurrencyByIso(it.currency) }
+                    val decimals = curr?.decimals ?: 2
+                    val amountStr = template.money.toDecimalString(decimals)
+
+                    _formState.update { current ->
+                        current.copy(
+                            amount = amountStr,
+                            description = template.description ?: "",
+                            categoryId = template.categoryId,
+                            direction = template.direction,
+                            walletId = template.walletId,
+                            placeId = template.placeId,
+                            eventId = template.eventId,
+                            note = template.note ?: "",
+                            confirmed = template.confirmed,
+                            countInTotal = template.countInTotal
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -164,7 +193,10 @@ class TransactionAddEditViewModel @Inject constructor(
             val people = transactionRepository.getPeopleForTransaction(txId).firstOrNull() ?: emptyList()
 
             if (tx != null) {
-                val decimals = 2
+                val wallet = moneyDao.getWalletsList().find { it.id == tx.walletId }
+                val curr = wallet?.let { moneyDao.getCurrencyByIso(it.currency) }
+                val decimals = curr?.decimals ?: 2
+
                 _formState.update { form ->
                     form.copy(
                         amount = tx.money.toDecimalString(decimals),

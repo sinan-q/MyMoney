@@ -80,7 +80,7 @@ sealed class Screen(
     }
 
     object TransactionAddEdit : Screen(
-        "transaction_edit?transactionId={transactionId}&savingId={savingId}&action={action}&debtId={debtId}&debtAction={debtAction}",
+        "transaction_edit?transactionId={transactionId}&savingId={savingId}&action={action}&debtId={debtId}&debtAction={debtAction}&templateId={templateId}",
         "transactions",
         "Transaction Edit",
         isTopLevel = false
@@ -90,7 +90,8 @@ sealed class Screen(
             savingId: String? = null,
             action: String? = null,
             debtId: String? = null,
-            debtAction: String? = null
+            debtAction: String? = null,
+            templateId: String? = null
         ): String {
             val params = mutableListOf<String>()
             if (transactionId != null && transactionId != "new") params.add("transactionId=$transactionId")
@@ -98,12 +99,13 @@ sealed class Screen(
             if (action != null) params.add("action=$action")
             if (debtId != null) params.add("debtId=$debtId")
             if (debtAction != null) params.add("debtAction=$debtAction")
+            if (templateId != null) params.add("templateId=$templateId")
             return if (params.isEmpty()) "transaction_edit" else "transaction_edit?${params.joinToString("&")}"
         }
     }
 
     object TransferAddEdit : Screen(
-        "transfer_edit?transactionId={transactionId}&transferId={transferId}&walletId={walletId}",
+        "transfer_edit?transactionId={transactionId}&transferId={transferId}&walletId={walletId}&templateId={templateId}",
         "transactions",
         "Transfer Edit",
         isTopLevel = false
@@ -111,12 +113,14 @@ sealed class Screen(
         fun createRoute(
             transactionId: String? = null,
             transferId: String? = null,
-            walletId: String? = null
+            walletId: String? = null,
+            templateId: String? = null
         ): String {
             val params = mutableListOf<String>()
             if (transactionId != null && transactionId != "new") params.add("transactionId=$transactionId")
             if (transferId != null && transferId != "new") params.add("transferId=$transferId")
             if (walletId != null) params.add("walletId=$walletId")
+            if (templateId != null) params.add("templateId=$templateId")
             return if (params.isEmpty()) "transfer_edit" else "transfer_edit?${params.joinToString("&")}"
         }
     }
