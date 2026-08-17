@@ -13,9 +13,9 @@ import androidx.navigation.navDeepLink
 import com.sinxn.mymoney.core.ui.components.handleSidebarNavigation
 import com.sinxn.mymoney.core.util.Constants
 import com.sinxn.mymoney.feature.about.AboutScreen
+import com.sinxn.mymoney.feature.budget.BudgetAddEditScreen
 import com.sinxn.mymoney.feature.budget.BudgetDetailsScreen
 import com.sinxn.mymoney.feature.budget.BudgetListScreen
-import com.sinxn.mymoney.feature.budget.BudgetOverviewScreen
 import com.sinxn.mymoney.feature.category.CategoryAddEditScreen
 import com.sinxn.mymoney.feature.category.CategoryDetailsScreen
 import com.sinxn.mymoney.feature.category.CategoryListScreen
@@ -362,13 +362,13 @@ fun AppNavHost(
             BudgetListScreen(
                 onNavigateUp = { navController.navigateUp() },
                 onBudgetClick = { budgetId ->
-                    navController.navigate(Screen.BudgetOverview.createRoute(budgetId))
-                },
-                onEditBudget = { budgetId ->
                     navController.navigate(Screen.BudgetDetails.createRoute(budgetId))
                 },
+                onEditBudget = { budgetId ->
+                    navController.navigate(Screen.BudgetAddEdit.createRoute(budgetId))
+                },
                 onAddBudget = {
-                    navController.navigate(Screen.BudgetDetails.createRoute("new"))
+                    navController.navigate(Screen.BudgetAddEdit.createRoute())
                 },
                 onNavigateMenuItem = { itemId ->
                     handleSidebarNavigation(
@@ -387,15 +387,15 @@ fun AppNavHost(
             )
         }
         composable(
-            Screen.BudgetOverview.routePattern,
+            Screen.BudgetDetails.routePattern,
             arguments = listOf(
                 navArgument("budgetId") { type = NavType.StringType }
             )
         ) {
-            BudgetOverviewScreen(
+            BudgetDetailsScreen(
                 onNavigateBack = { navController.navigateUp() },
-                onNavigateToEdit = { budgetId ->
-                    navController.navigate(Screen.BudgetDetails.createRoute(budgetId))
+                onEditBudgetClick = { budgetId ->
+                    navController.navigate(Screen.BudgetAddEdit.createRoute(budgetId))
                 },
                 onTransactionClick = { transactionId ->
                     navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
@@ -403,12 +403,28 @@ fun AppNavHost(
             )
         }
         composable(
-            Screen.BudgetDetails.routePattern,
+            Screen.BudgetOverview.routePattern,
             arguments = listOf(
                 navArgument("budgetId") { type = NavType.StringType }
             )
         ) {
             BudgetDetailsScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onEditBudgetClick = { budgetId ->
+                    navController.navigate(Screen.BudgetAddEdit.createRoute(budgetId))
+                },
+                onTransactionClick = { transactionId ->
+                    navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
+                }
+            )
+        }
+        composable(
+            Screen.BudgetAddEdit.routePattern,
+            arguments = listOf(
+                navArgument("budgetId") { type = NavType.StringType; nullable = true; defaultValue = null }
+            )
+        ) {
+            BudgetAddEditScreen(
                 onNavigateBack = { navController.navigateUp() }
             )
         }

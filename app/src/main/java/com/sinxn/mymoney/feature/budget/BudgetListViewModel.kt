@@ -8,6 +8,7 @@ import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.BudgetRepository
 import com.sinxn.mymoney.core.util.DateUtils
+import com.sinxn.mymoney.core.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,7 +22,10 @@ import javax.inject.Inject
 data class BudgetListUiState(
     val filterWalletId: String? = null,
     val budgets: List<BudgetWithDetails> = emptyList(),
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val formatterConfig: MoneyFormatter.Config = MoneyFormatter.Config(),
+    val dateFormat: Int = 0,
+    val globalCurrency: String = "USD"
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -46,13 +50,24 @@ class BudgetListViewModel @Inject constructor(
 
     val uiState: StateFlow<BudgetListUiState> = combine(
         settingsRepository.currentWalletId,
-        budgetsFlow
-    ) { wId, list ->
+        budgetsFlow,
+        settingsRepository.formattingSettings
+    ) { wId, list, formatting ->
         val actualWId = if (wId == "total") null else wId
+        val formatterConfig = MoneyFormatter.Config(
+            showCurrency = formatting.showCurrency,
+            groupDigits = formatting.groupDigits,
+            roundDecimals = formatting.roundDecimals,
+            showPlusMinus = formatting.showPlusMinus
+        )
+
         BudgetListUiState(
             filterWalletId = actualWId,
             budgets = list,
-            isLoading = false
+            isLoading = false,
+            formatterConfig = formatterConfig,
+            dateFormat = formatting.dateFormat,
+            globalCurrency = formatting.globalCurrency
         )
     }.stateIn(
         scope = viewModelScope,
@@ -66,3 +81,4 @@ class BudgetListViewModel @Inject constructor(
         }
     }
 }
+
