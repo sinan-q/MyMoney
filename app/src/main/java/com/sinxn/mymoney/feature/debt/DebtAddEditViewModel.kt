@@ -156,7 +156,7 @@ class DebtAddEditViewModel @Inject constructor(
 
         // Auto-populate form once existing debt is loaded
         if (debtIdArg != null && existingDebt != null && _editWalletId.value.isEmpty()) {
-            val decimals = 2
+            val decimals = existingDebt.walletDecimals ?: 2
             val amountStr = (existingDebt.debt.money / 10.0.pow(decimals)).toString()
             _editType.value = existingDebt.debt.type
             _editDescription.value = existingDebt.debt.description
@@ -209,7 +209,7 @@ class DebtAddEditViewModel @Inject constructor(
             availablePlaces = selectors.places,
             availablePeople = selectors.people,
             currencyCode = displayCurrency,
-            currencySymbol = "$",
+            currencySymbol = MoneyFormatter.getCurrencySymbol(displayCurrency),
             currencyDecimals = displayDecimals,
             decimals = displayDecimals,
             formatterConfig = formatterConfig,

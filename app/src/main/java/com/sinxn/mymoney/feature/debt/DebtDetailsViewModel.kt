@@ -64,7 +64,7 @@ class DebtDetailsViewModel @Inject constructor(
             transactions = txList,
             isLoading = debtDetails == null,
             currencyCode = displayCurrency,
-            currencySymbol = "$",
+            currencySymbol = MoneyFormatter.getCurrencySymbol(displayCurrency),
             currencyDecimals = displayDecimals,
             decimals = displayDecimals,
             formatterConfig = formatterConfig,
