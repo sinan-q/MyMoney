@@ -40,12 +40,12 @@ data class JsonEvent(
 )
 
 data class JsonCurrency(
-    @SerializedName("currency_iso") val iso: String?,
-    @SerializedName("currency_name") val name: String?,
-    @SerializedName("currency_symbol") val symbol: String?,
-    @SerializedName("currency_decimals") val decimals: Int?,
-    @SerializedName("currency_favourite") val favourite: Boolean?,
-    @SerializedName("uuid") val id: String?,
+    @SerializedName(value = "iso", alternate = ["currency_iso"]) val iso: String?,
+    @SerializedName(value = "name", alternate = ["currency_name"]) val name: String?,
+    @SerializedName(value = "symbol", alternate = ["currency_symbol"]) val symbol: String?,
+    @SerializedName(value = "decimals", alternate = ["currency_decimals"]) val decimals: Int?,
+    @SerializedName(value = "favourite", alternate = ["currency_favourite"]) val favourite: Boolean?,
+    @SerializedName(value = "id", alternate = ["uuid"]) val id: String?,
     @SerializedName("last_edit") val lastEdit: Long?,
     @SerializedName("deleted") val deleted: Boolean?
 )

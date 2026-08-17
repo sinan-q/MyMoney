@@ -75,35 +75,35 @@ data class JsonTransfer(
 
 data class JsonTransactionModel(
     @SerializedName("id") val id: String, // Value is the UUID
-    @SerializedName("model_transaction_money") val money: Long?,
-    @SerializedName("model_transaction_description") val description: String?,
-    @SerializedName("model_transaction_category") val categoryId: String?,
-    @SerializedName("model_transaction_direction") val direction: Int?,
-    @SerializedName("model_transaction_wallet") val walletId: String?,
-    @SerializedName("model_transaction_place") val placeId: String?,
-    @SerializedName("model_transaction_note") val note: String?,
-    @SerializedName("model_transaction_event") val eventId: String?,
-    @SerializedName("model_transaction_confirmed") val confirmed: Boolean?,
-    @SerializedName("model_transaction_count_in_total") val countInTotal: Boolean?,
-    @SerializedName("model_transaction_tag") val tag: String?,
+    @SerializedName(value = "money", alternate = ["model_transaction_money"]) val money: Long?,
+    @SerializedName(value = "description", alternate = ["model_transaction_description"]) val description: String?,
+    @SerializedName(value = "category", alternate = ["model_transaction_category", "categoryId"]) val categoryId: String?,
+    @SerializedName(value = "direction", alternate = ["model_transaction_direction"]) val direction: Int?,
+    @SerializedName(value = "wallet", alternate = ["model_transaction_wallet", "walletId"]) val walletId: String?,
+    @SerializedName(value = "place", alternate = ["model_transaction_place", "placeId"]) val placeId: String?,
+    @SerializedName(value = "note", alternate = ["model_transaction_note"]) val note: String?,
+    @SerializedName(value = "event", alternate = ["model_transaction_event", "eventId"]) val eventId: String?,
+    @SerializedName(value = "confirmed", alternate = ["model_transaction_confirmed"]) val confirmed: Boolean?,
+    @SerializedName(value = "count_in_total", alternate = ["model_transaction_count_in_total"]) val countInTotal: Boolean?,
+    @SerializedName(value = "tag", alternate = ["model_transaction_tag"]) val tag: String?,
     @SerializedName("last_edit") val lastEdit: Long?,
     @SerializedName("deleted") val deleted: Boolean?
 )
 
 data class JsonTransferModel(
     @SerializedName("id") val id: String, // Value is the UUID
-    @SerializedName("model_transfer_description") val description: String?,
-    @SerializedName("model_transfer_from_wallet") val walletFromId: String?,
-    @SerializedName("model_transfer_to_wallet") val walletToId: String?,
-    @SerializedName("model_transfer_from_money") val moneyFrom: Long?,
-    @SerializedName("model_transfer_to_money") val moneyTo: Long?,
-    @SerializedName("model_transfer_tax_money") val moneyTax: Long?,
-    @SerializedName("model_transfer_note") val note: String?,
-    @SerializedName("model_transfer_event") val eventId: String?,
-    @SerializedName("model_transfer_place") val placeId: String?,
-    @SerializedName("model_transfer_confirmed") val confirmed: Boolean?,
-    @SerializedName("model_transfer_count_in_total") val countInTotal: Boolean?,
-    @SerializedName("model_transfer_tag") val tag: String?,
+    @SerializedName(value = "description", alternate = ["model_transfer_description"]) val description: String?,
+    @SerializedName(value = "from_wallet", alternate = ["model_transfer_from_wallet", "walletFromId", "wallet_from"]) val walletFromId: String?,
+    @SerializedName(value = "to_wallet", alternate = ["model_transfer_to_wallet", "walletToId", "wallet_to"]) val walletToId: String?,
+    @SerializedName(value = "from_money", alternate = ["model_transfer_from_money", "moneyFrom", "money_from"]) val moneyFrom: Long?,
+    @SerializedName(value = "to_money", alternate = ["model_transfer_to_money", "moneyTo", "money_to"]) val moneyTo: Long?,
+    @SerializedName(value = "tax_money", alternate = ["model_transfer_tax_money", "moneyTax", "money_tax"]) val moneyTax: Long?,
+    @SerializedName(value = "note", alternate = ["model_transfer_note"]) val note: String?,
+    @SerializedName(value = "event", alternate = ["model_transfer_event", "eventId"]) val eventId: String?,
+    @SerializedName(value = "place", alternate = ["model_transfer_place", "placeId"]) val placeId: String?,
+    @SerializedName(value = "confirmed", alternate = ["model_transfer_confirmed"]) val confirmed: Boolean?,
+    @SerializedName(value = "count_in_total", alternate = ["model_transfer_count_in_total"]) val countInTotal: Boolean?,
+    @SerializedName(value = "tag", alternate = ["model_transfer_tag"]) val tag: String?,
     @SerializedName("last_edit") val lastEdit: Long?,
     @SerializedName("deleted") val deleted: Boolean?
 )
