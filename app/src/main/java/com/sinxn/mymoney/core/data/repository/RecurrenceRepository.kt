@@ -35,11 +35,17 @@ class RecurrenceRepository @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
 
+    fun getRecurrentTransactions(walletId: String? = null): Flow<List<RecurrentTransactionWithDetails>> =
+        moneyDao.getRecurrentTransactionsWithDetails(walletId)
+
+    fun getRecurrentTransfers(walletId: String? = null): Flow<List<RecurrentTransferWithDetails>> =
+        moneyDao.getRecurrentTransfersWithDetails(walletId)
+
     val recurrentTransactions: Flow<List<RecurrentTransactionWithDetails>> =
-        moneyDao.getRecurrentTransactionsWithDetails()
+        getRecurrentTransactions()
 
     val recurrentTransfers: Flow<List<RecurrentTransferWithDetails>> =
-        moneyDao.getRecurrentTransfersWithDetails()
+        getRecurrentTransfers()
 
     fun getRecurrentTransactionWithDetails(id: String): Flow<RecurrentTransactionWithDetails?> {
         return moneyDao.getRecurrentTransactionWithDetailsById(id)

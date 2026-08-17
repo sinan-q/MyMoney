@@ -8,9 +8,11 @@ import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.RecurrenceRepository
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -22,17 +24,24 @@ data class RecurrenceUiState(
     val dateFormat: Int = 3
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class RecurrenceViewModel @Inject constructor(
     private val recurrenceRepository: RecurrenceRepository,
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
+    private val recurrencesFlow = settingsRepository.currentWalletId.flatMapLatest { walletId ->
+        combine(
+            recurrenceRepository.getRecurrentTransactions(walletId),
+            recurrenceRepository.getRecurrentTransfers(walletId)
+        ) { txs, trs -> Pair(txs, trs) }
+    }
+
     val uiState: StateFlow<RecurrenceUiState> = combine(
-        recurrenceRepository.recurrentTransactions,
-        recurrenceRepository.recurrentTransfers,
+        recurrencesFlow,
         settingsRepository.formattingSettings
-    ) { transactions, transfers, formatting ->
+    ) { (transactions, transfers), formatting ->
         RecurrenceUiState(
             recurrentTransactions = transactions,
             recurrentTransfers = transfers,
@@ -51,14 +60,18 @@ class RecurrenceViewModel @Inject constructor(
     )
 
     val recurrentTransactions: StateFlow<List<RecurrentTransactionWithDetails>> =
-        recurrenceRepository.recurrentTransactions.stateIn(
+        settingsRepository.currentWalletId.flatMapLatest { walletId ->
+            recurrenceRepository.getRecurrentTransactions(walletId)
+        }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
             emptyList()
         )
 
     val recurrentTransfers: StateFlow<List<RecurrentTransferWithDetails>> =
-        recurrenceRepository.recurrentTransfers.stateIn(
+        settingsRepository.currentWalletId.flatMapLatest { walletId ->
+            recurrenceRepository.getRecurrentTransfers(walletId)
+        }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
             emptyList()

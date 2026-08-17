@@ -1030,12 +1030,31 @@ interface MoneyDao {
 
     // Recurrent Transactions & Transfers
     @androidx.room.Transaction
-    @Query("SELECT * FROM recurrent_transactions WHERE isDeleted = 0 ORDER BY startDate DESC")
-    fun getRecurrentTransactionsWithDetails(): Flow<List<com.sinxn.mymoney.core.data.local.model.RecurrentTransactionWithDetails>>
+    @Query("""
+        SELECT rt.* FROM recurrent_transactions rt
+        INNER JOIN wallets w ON rt.walletId = w.id
+        WHERE rt.isDeleted = 0
+          AND (
+            (:walletId IS NULL OR :walletId = 'total' OR :walletId = '') AND w.countInTotal = 1
+            OR (:walletId IS NOT NULL AND :walletId != 'total' AND :walletId != '' AND rt.walletId = :walletId)
+          )
+        ORDER BY rt.startDate DESC
+    """)
+    fun getRecurrentTransactionsWithDetails(walletId: String? = null): Flow<List<com.sinxn.mymoney.core.data.local.model.RecurrentTransactionWithDetails>>
 
     @androidx.room.Transaction
-    @Query("SELECT * FROM recurrent_transfers WHERE isDeleted = 0 ORDER BY startDate DESC")
-    fun getRecurrentTransfersWithDetails(): Flow<List<com.sinxn.mymoney.core.data.local.model.RecurrentTransferWithDetails>>
+    @Query("""
+        SELECT rtf.* FROM recurrent_transfers rtf
+        INNER JOIN wallets wf ON rtf.walletFromId = wf.id
+        INNER JOIN wallets wt ON rtf.walletToId = wt.id
+        WHERE rtf.isDeleted = 0
+          AND (
+            (:walletId IS NULL OR :walletId = 'total' OR :walletId = '') AND (wf.countInTotal = 1 OR wt.countInTotal = 1)
+            OR (:walletId IS NOT NULL AND :walletId != 'total' AND :walletId != '' AND (rtf.walletFromId = :walletId OR rtf.walletToId = :walletId))
+          )
+        ORDER BY rtf.startDate DESC
+    """)
+    fun getRecurrentTransfersWithDetails(walletId: String? = null): Flow<List<com.sinxn.mymoney.core.data.local.model.RecurrentTransferWithDetails>>
 
     @Query("SELECT * FROM recurrent_transactions WHERE id = :id AND isDeleted = 0")
     suspend fun getRecurrentTransactionById(id: String): com.sinxn.mymoney.core.data.local.entity.RecurrentTransactionEntity?

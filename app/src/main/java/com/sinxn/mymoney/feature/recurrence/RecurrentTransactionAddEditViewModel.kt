@@ -82,27 +82,38 @@ class RecurrentTransactionAddEditViewModel @Inject constructor(
             val categories = moneyDao.getCategoriesList()
             val places = moneyDao.getPlacesList()
             val events = moneyDao.getEventsList()
+            val currentWalletId = settingsRepository.currentWalletId.firstOrNull()
 
-            val defaultWallet = wallets.firstOrNull()
-            val defaultWalletId = defaultWallet?.id ?: ""
+            val preferredWallet = if (!currentWalletId.isNullOrBlank() && currentWalletId != "total" && currentWalletId != com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID) {
+                wallets.find { it.id == currentWalletId && !it.isArchived }
+                    ?: wallets.find { it.id == currentWalletId }
+            } else {
+                null
+            }
+
+            val defaultWalletId = preferredWallet?.id ?: ""
             val targetCatType = if (_uiState.value.direction == Direction.INCOME) CategoryType.INCOME else CategoryType.EXPENSE
-            val defaultCategoryId = categories.firstOrNull { it.type == targetCatType }?.id
+            val defaultCategoryId = categories.firstOrNull { it.type == targetCatType && !it.isArchived }?.id
+                ?: categories.firstOrNull { it.type == targetCatType }?.id
                 ?: categories.firstOrNull()?.id ?: ""
 
             val currSymbol = try {
-                defaultWallet?.currency?.let { Currency.getInstance(it).getSymbol(Locale.getDefault()) } ?: "$"
+                preferredWallet?.currency?.let { Currency.getInstance(it).getSymbol(Locale.getDefault()) } ?: "$"
             } catch (e: Exception) {
-                defaultWallet?.currency ?: "$"
+                preferredWallet?.currency ?: "$"
             }
+
+            val filteredWallets = wallets.filter { !it.isArchived || it.id == defaultWalletId }
+            val filteredCategories = categories.filter { !it.isArchived || it.id == defaultCategoryId }
 
             _uiState.update {
                 it.copy(
-                    availableWallets = wallets,
-                    availableCategories = categories,
-                    availableIncomeCategories = categories.filter { c -> c.type == CategoryType.INCOME },
-                    availableExpenseCategories = categories.filter { c -> c.type == CategoryType.EXPENSE },
-                    availablePlaces = places,
-                    availableEvents = events,
+                    availableWallets = filteredWallets,
+                    availableCategories = filteredCategories,
+                    availableIncomeCategories = filteredCategories.filter { c -> c.type == CategoryType.INCOME },
+                    availableExpenseCategories = filteredCategories.filter { c -> c.type == CategoryType.EXPENSE },
+                    availablePlaces = places.filter { p -> !p.isArchived },
+                    availableEvents = events.filter { e -> !e.isArchived },
                     walletId = defaultWalletId,
                     categoryId = defaultCategoryId,
                     currencySymbol = currSymbol,
@@ -123,6 +134,9 @@ class RecurrentTransactionAddEditViewModel @Inject constructor(
                     }
                     val moneyFormatted = (entity.money / 100.0).toString()
 
+                    val editWallets = wallets.filter { w -> !w.isArchived || w.id == entity.walletId }
+                    val editCategories = categories.filter { c -> !c.isArchived || c.id == entity.categoryId }
+
                     _uiState.update {
                         it.copy(
                             isNew = false,
@@ -140,7 +154,13 @@ class RecurrentTransactionAddEditViewModel @Inject constructor(
                             startDate = parsedStartDate,
                             rule = entity.rule,
                             currencySymbol = entityCurrSymbol,
-                            currencyDecimals = 2
+                            currencyDecimals = 2,
+                            availableWallets = editWallets,
+                            availableCategories = editCategories,
+                            availableIncomeCategories = editCategories.filter { c -> c.type == CategoryType.INCOME },
+                            availableExpenseCategories = editCategories.filter { c -> c.type == CategoryType.EXPENSE },
+                            availablePlaces = places.filter { p -> !p.isArchived || p.id == entity.placeId },
+                            availableEvents = events.filter { e -> !e.isArchived || e.id == entity.eventId }
                         )
                     }
                 } else {

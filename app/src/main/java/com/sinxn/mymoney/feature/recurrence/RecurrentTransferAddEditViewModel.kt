@@ -76,22 +76,35 @@ class RecurrentTransferAddEditViewModel @Inject constructor(
             val wallets = moneyDao.getWalletsList()
             val places = moneyDao.getPlacesList()
             val events = moneyDao.getEventsList()
+            val currentWalletId = settingsRepository.currentWalletId.firstOrNull()
 
-            val fromWallet = wallets.firstOrNull()
-            val fromId = fromWallet?.id ?: ""
-            val toId = wallets.getOrNull(1)?.id ?: fromId
+            val preferredWallet = if (!currentWalletId.isNullOrBlank() && currentWalletId != "total" && currentWalletId != com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID) {
+                wallets.find { it.id == currentWalletId && !it.isArchived }
+                    ?: wallets.find { it.id == currentWalletId }
+            } else {
+                null
+            }
+
+            val fromId = preferredWallet?.id ?: ""
+            val toId = if (fromId.isNotEmpty()) {
+                wallets.firstOrNull { it.id != fromId && !it.isArchived }?.id
+                    ?: wallets.firstOrNull { it.id != fromId }?.id
+                    ?: ""
+            } else ""
 
             val currSymbol = try {
-                fromWallet?.currency?.let { Currency.getInstance(it).getSymbol(Locale.getDefault()) } ?: "$"
+                preferredWallet?.currency?.let { Currency.getInstance(it).getSymbol(Locale.getDefault()) } ?: "$"
             } catch (e: Exception) {
-                fromWallet?.currency ?: "$"
+                preferredWallet?.currency ?: "$"
             }
+
+            val filteredWallets = wallets.filter { !it.isArchived || it.id == fromId || it.id == toId }
 
             _uiState.update {
                 it.copy(
-                    availableWallets = wallets,
-                    availablePlaces = places,
-                    availableEvents = events,
+                    availableWallets = filteredWallets,
+                    availablePlaces = places.filter { p -> !p.isArchived },
+                    availableEvents = events.filter { e -> !e.isArchived },
                     walletFromId = fromId,
                     walletToId = toId,
                     currencySymbol = currSymbol,
@@ -111,6 +124,8 @@ class RecurrentTransferAddEditViewModel @Inject constructor(
                         matchingWallet?.currency ?: "$"
                     }
 
+                    val editWallets = wallets.filter { w -> !w.isArchived || w.id == entity.walletFromId || w.id == entity.walletToId }
+
                     _uiState.update {
                         it.copy(
                             isNew = false,
@@ -129,7 +144,10 @@ class RecurrentTransferAddEditViewModel @Inject constructor(
                             startDate = parsedStartDate,
                             rule = entity.rule,
                             currencySymbol = entityCurrSymbol,
-                            currencyDecimals = 2
+                            currencyDecimals = 2,
+                            availableWallets = editWallets,
+                            availablePlaces = places.filter { p -> !p.isArchived || p.id == entity.placeId },
+                            availableEvents = events.filter { e -> !e.isArchived || e.id == entity.eventId }
                         )
                     }
                 } else {
