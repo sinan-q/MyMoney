@@ -468,6 +468,50 @@ interface MoneyDao {
         maxDate: String
     ): List<com.sinxn.mymoney.core.data.local.model.OverviewTransaction>
 
+    @androidx.room.Transaction
+    @Query("""
+        SELECT t.*, c.name as categoryName, c.icon as categoryIcon,
+               COALESCE(curr.decimals, 2) as decimals, curr.symbol as currencySymbol,
+               w.currency as currencyCode
+        FROM transactions t
+        LEFT JOIN categories c ON t.categoryId = c.id
+        INNER JOIN wallets w ON t.walletId = w.id
+        LEFT JOIN currencies curr ON w.currency = curr.iso
+        WHERE t.walletId = :walletId 
+          AND t.isDeleted = 0 AND w.isDeleted = 0
+          AND t.confirmed = 1 AND t.countInTotal = 1
+          AND t.date >= :startDate AND t.date <= :endDate
+          AND t.date <= :maxDate
+        ORDER BY t.date DESC
+    """)
+    fun getTransactionsForWalletInPeriod(
+        walletId: String,
+        startDate: String,
+        endDate: String,
+        maxDate: String
+    ): kotlinx.coroutines.flow.Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory>>
+
+    @androidx.room.Transaction
+    @Query("""
+        SELECT t.*, c.name as categoryName, c.icon as categoryIcon,
+               COALESCE(curr.decimals, 2) as decimals, curr.symbol as currencySymbol,
+               w.currency as currencyCode
+        FROM transactions t
+        LEFT JOIN categories c ON t.categoryId = c.id
+        INNER JOIN wallets w ON t.walletId = w.id
+        LEFT JOIN currencies curr ON w.currency = curr.iso
+        WHERE t.isDeleted = 0 AND w.isDeleted = 0 AND w.countInTotal = 1
+          AND t.confirmed = 1 AND t.countInTotal = 1
+          AND t.date >= :startDate AND t.date <= :endDate
+          AND t.date <= :maxDate
+        ORDER BY t.date DESC
+    """)
+    fun getTransactionsForTotalInPeriod(
+        startDate: String,
+        endDate: String,
+        maxDate: String
+    ): kotlinx.coroutines.flow.Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory>>
+
     // Transactions
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTransactions(transactions: List<TransactionEntity>)

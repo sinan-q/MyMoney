@@ -206,6 +206,10 @@ sealed class Screen(
     object SqlConsole : Screen("sql_console", "settings", "SQL Console", isTopLevel = false)
     object Backup : Screen("backup", "settings", "Backup", isTopLevel = false)
     object Recap : Screen("recap", "overview", "Year Recap", isTopLevel = false)
+    object PeriodDetail : Screen("period_detail?startDate={startDate}&endDate={endDate}", "overview", "Period Details", isTopLevel = false) {
+        fun createRoute(startDate: String, endDate: String): String =
+            "period_detail?startDate=$startDate&endDate=$endDate"
+    }
 
     companion object {
         private val ALL: List<Screen>
@@ -219,7 +223,7 @@ sealed class Screen(
                 BudgetDetails, BudgetAddEdit, BudgetOverview, SavingDetails, SavingAddEdit,
                 RecurrentTransactionDetails, RecurrentTransactionAddEdit, RecurrentTransferDetails, RecurrentTransferAddEdit, TransactionDetails, TransactionAddEdit, TransferAddEdit,
                 TemplateDetails, TemplateAddEdit,
-                SqlConsole, Backup, Recap
+                SqlConsole, Backup, Recap, PeriodDetail
             )
 
 

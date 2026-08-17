@@ -26,6 +26,7 @@ import com.sinxn.mymoney.feature.event.EventAddEditScreen
 import com.sinxn.mymoney.feature.event.EventDetailsScreen
 import com.sinxn.mymoney.feature.event.EventListScreen
 import com.sinxn.mymoney.feature.overview.OverviewScreen
+import com.sinxn.mymoney.feature.overview.PeriodDetailScreen
 import com.sinxn.mymoney.feature.people.PeopleListScreen
 import com.sinxn.mymoney.feature.people.PersonAddEditScreen
 import com.sinxn.mymoney.feature.people.PersonDetailsScreen
@@ -747,7 +748,24 @@ fun AppNavHost(
         composable(Screen.Overview.routePattern) {
             OverviewScreen(
                 onNavigateBack = { navController.navigateUp() },
-                onNavigateToRecap = { navController.navigate(Screen.Recap.routePattern) }
+                onNavigateToRecap = { navController.navigate(Screen.Recap.routePattern) },
+                onPeriodClick = { startDate, endDate ->
+                    navController.navigate(Screen.PeriodDetail.createRoute(startDate, endDate))
+                }
+            )
+        }
+        composable(
+            route = Screen.PeriodDetail.routePattern,
+            arguments = listOf(
+                navArgument("startDate") { type = NavType.StringType; defaultValue = "" },
+                navArgument("endDate") { type = NavType.StringType; defaultValue = "" }
+            )
+        ) {
+            PeriodDetailScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onTransactionClick = { transactionId ->
+                    navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
+                }
             )
         }
         composable(Screen.About.routePattern) {
