@@ -24,6 +24,10 @@ class PlaceRepository @Inject constructor(
         return moneyDao.getTransactionsForPlace(placeId)
     }
 
+    fun getAllPlaceTransactions(): Flow<List<TransactionWithCategory>> {
+        return moneyDao.getAllPlaceTransactions()
+    }
+
     suspend fun savePlace(
         id: String?,
         name: String,
@@ -61,6 +65,13 @@ class PlaceRepository @Inject constructor(
 
     suspend fun deletePlace(placeId: String) {
         val now = System.currentTimeMillis()
+        moneyDao.unlinkTransactionsForPlace(placeId, now)
+        moneyDao.unlinkTransfersForPlace(placeId, now)
+        moneyDao.unlinkTransactionModelsForPlace(placeId, now)
+        moneyDao.unlinkTransferModelsForPlace(placeId, now)
+        moneyDao.unlinkRecurrentTransactionsForPlace(placeId, now)
+        moneyDao.unlinkRecurrentTransfersForPlace(placeId, now)
+        moneyDao.unlinkDebtsForPlace(placeId, now)
         moneyDao.softDeletePlace(placeId, now)
     }
 }

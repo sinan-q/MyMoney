@@ -29,6 +29,8 @@ import com.sinxn.mymoney.feature.overview.OverviewScreen
 import com.sinxn.mymoney.feature.people.PeopleListScreen
 import com.sinxn.mymoney.feature.people.PersonAddEditScreen
 import com.sinxn.mymoney.feature.people.PersonDetailsScreen
+import com.sinxn.mymoney.feature.place.PlaceAddEditScreen
+import com.sinxn.mymoney.feature.place.PlaceDetailsScreen
 import com.sinxn.mymoney.feature.place.PlaceListScreen
 import com.sinxn.mymoney.feature.recap.YearRecapScreen
 import com.sinxn.mymoney.feature.recurrence.RecurrenceScreen
@@ -544,6 +546,33 @@ fun AppNavHost(
         }
         composable(Screen.Places.routePattern) {
             PlaceListScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onAddPlaceClick = {
+                    navController.navigate(Screen.PlaceAddEdit.createRoute())
+                },
+                onPlaceClick = { placeId ->
+                    navController.navigate(Screen.PlaceDetails.createRoute(placeId))
+                }
+            )
+        }
+        composable(Screen.PlaceDetails.routePattern) {
+            PlaceDetailsScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onTransactionClick = { transactionId ->
+                    navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
+                },
+                onEditPlaceClick = { placeId ->
+                    navController.navigate(Screen.PlaceAddEdit.createRoute(placeId))
+                }
+            )
+        }
+        composable(
+            Screen.PlaceAddEdit.routePattern,
+            arguments = listOf(
+                navArgument("placeId") { type = NavType.StringType; nullable = true; defaultValue = null }
+            )
+        ) {
+            PlaceAddEditScreen(
                 onNavigateBack = { navController.navigateUp() }
             )
         }
