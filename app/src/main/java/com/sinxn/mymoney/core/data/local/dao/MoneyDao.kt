@@ -113,15 +113,34 @@ interface MoneyDao {
     @Query("""
         SELECT tm.*, c.name as categoryName, c.icon as categoryIcon,
                w.name as walletName, w.currency as walletCurrency,
-               COALESCE(curr.decimals, 2) as walletDecimals, curr.symbol as currencySymbol
+               COALESCE(curr.decimals, 2) as walletDecimals, COALESCE(curr.symbol, '$') as currencySymbol,
+               p.name as placeName, e.name as eventName
         FROM transaction_models tm
         LEFT JOIN categories c ON tm.categoryId = c.id
         INNER JOIN wallets w ON tm.walletId = w.id
         LEFT JOIN currencies curr ON w.currency = curr.iso
+        LEFT JOIN places p ON tm.placeId = p.id
+        LEFT JOIN events e ON tm.eventId = e.id
         WHERE tm.isDeleted = 0
         ORDER BY tm.id DESC
     """)
     fun getTransactionModelsWithDetails(): Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionModelWithDetails>>
+
+    @androidx.room.Transaction
+    @Query("""
+        SELECT tm.*, c.name as categoryName, c.icon as categoryIcon,
+               w.name as walletName, w.currency as walletCurrency,
+               COALESCE(curr.decimals, 2) as walletDecimals, COALESCE(curr.symbol, '$') as currencySymbol,
+               p.name as placeName, e.name as eventName
+        FROM transaction_models tm
+        LEFT JOIN categories c ON tm.categoryId = c.id
+        INNER JOIN wallets w ON tm.walletId = w.id
+        LEFT JOIN currencies curr ON w.currency = curr.iso
+        LEFT JOIN places p ON tm.placeId = p.id
+        LEFT JOIN events e ON tm.eventId = e.id
+        WHERE tm.id = :id AND tm.isDeleted = 0
+    """)
+    fun getTransactionModelWithDetailsById(id: String): Flow<com.sinxn.mymoney.core.data.local.model.TransactionModelWithDetails?>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTransferModels(items: List<com.sinxn.mymoney.core.data.local.entity.TransferModelEntity>)
@@ -141,16 +160,41 @@ interface MoneyDao {
     @androidx.room.Transaction
     @Query("""
         SELECT tm.*, wf.name as walletFromName, wf.currency as walletFromCurrency,
+               COALESCE(curr_from.decimals, 2) as walletFromDecimals,
                wt.name as walletToName, wt.currency as walletToCurrency,
-               COALESCE(curr.symbol, '$') as currencySymbol
+               COALESCE(curr_to.decimals, 2) as walletToDecimals,
+               COALESCE(curr_from.symbol, '$') as currencySymbol,
+               p.name as placeName, e.name as eventName
         FROM transfer_models tm
         INNER JOIN wallets wf ON tm.walletFromId = wf.id
         INNER JOIN wallets wt ON tm.walletToId = wt.id
-        LEFT JOIN currencies curr ON wf.currency = curr.iso
+        LEFT JOIN currencies curr_from ON wf.currency = curr_from.iso
+        LEFT JOIN currencies curr_to ON wt.currency = curr_to.iso
+        LEFT JOIN places p ON tm.placeId = p.id
+        LEFT JOIN events e ON tm.eventId = e.id
         WHERE tm.isDeleted = 0
         ORDER BY tm.id DESC
     """)
     fun getTransferModelsWithDetails(): Flow<List<com.sinxn.mymoney.core.data.local.model.TransferModelWithDetails>>
+
+    @androidx.room.Transaction
+    @Query("""
+        SELECT tm.*, wf.name as walletFromName, wf.currency as walletFromCurrency,
+               COALESCE(curr_from.decimals, 2) as walletFromDecimals,
+               wt.name as walletToName, wt.currency as walletToCurrency,
+               COALESCE(curr_to.decimals, 2) as walletToDecimals,
+               COALESCE(curr_from.symbol, '$') as currencySymbol,
+               p.name as placeName, e.name as eventName
+        FROM transfer_models tm
+        INNER JOIN wallets wf ON tm.walletFromId = wf.id
+        INNER JOIN wallets wt ON tm.walletToId = wt.id
+        LEFT JOIN currencies curr_from ON wf.currency = curr_from.iso
+        LEFT JOIN currencies curr_to ON wt.currency = curr_to.iso
+        LEFT JOIN places p ON tm.placeId = p.id
+        LEFT JOIN events e ON tm.eventId = e.id
+        WHERE tm.id = :id AND tm.isDeleted = 0
+    """)
+    fun getTransferModelWithDetailsById(id: String): Flow<com.sinxn.mymoney.core.data.local.model.TransferModelWithDetails?>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertEventPeople(items: List<com.sinxn.mymoney.core.data.local.entity.EventPeopleEntity>)

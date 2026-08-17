@@ -26,6 +26,27 @@ class TemplateRepository @Inject constructor(
         return moneyDao.getTransferModelsWithDetails()
     }
 
+    fun getTransactionModelWithDetails(id: String): Flow<TransactionModelWithDetails?> {
+        return moneyDao.getTransactionModelWithDetailsById(id)
+    }
+
+    fun getTransferModelWithDetails(id: String): Flow<TransferModelWithDetails?> {
+        return moneyDao.getTransferModelWithDetailsById(id)
+    }
+
+    suspend fun getTransactionModelById(id: String): TransactionModelEntity? {
+        return moneyDao.getTransactionModelById(id)
+    }
+
+    suspend fun getTransferModelById(id: String): TransferModelEntity? {
+        return moneyDao.getTransferModelById(id)
+    }
+
+    val wallets = moneyDao.getWallets()
+    val categories = moneyDao.getCategories()
+    val places = moneyDao.getPlaces()
+    val events = moneyDao.getEvents()
+
     suspend fun saveTransactionModel(model: TransactionModelEntity) {
         if (moneyDao.getTransactionModelById(model.id) == null) {
             moneyDao.insertTransactionModel(model)

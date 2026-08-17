@@ -42,6 +42,8 @@ import com.sinxn.mymoney.feature.settings.BackupScreen
 import com.sinxn.mymoney.feature.settings.SettingsScreen
 import com.sinxn.mymoney.feature.settings.SqlConsoleScreen
 import com.sinxn.mymoney.feature.support.SupportDeveloperScreen
+import com.sinxn.mymoney.feature.template.TemplateAddEditScreen
+import com.sinxn.mymoney.feature.template.TemplateDetailsScreen
 import com.sinxn.mymoney.feature.template.TemplateListScreen
 import com.sinxn.mymoney.feature.transaction.TransactionAddEditScreen
 import com.sinxn.mymoney.feature.transaction.TransactionDetailsScreen
@@ -571,6 +573,37 @@ fun AppNavHost(
 
         composable(Screen.Templates.routePattern) {
             TemplateListScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onAddTemplateClick = { isTransfer ->
+                    navController.navigate(Screen.TemplateAddEdit.createRoute(isTransfer = isTransfer))
+                },
+                onTemplateClick = { templateId, isTransfer ->
+                    navController.navigate(Screen.TemplateDetails.createRoute(templateId, isTransfer))
+                }
+            )
+        }
+        composable(
+            Screen.TemplateDetails.routePattern,
+            arguments = listOf(
+                navArgument("templateId") { type = NavType.StringType },
+                navArgument("isTransfer") { type = NavType.StringType; nullable = true; defaultValue = "false" }
+            )
+        ) {
+            TemplateDetailsScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onEditTemplateClick = { templateId, isTransfer ->
+                    navController.navigate(Screen.TemplateAddEdit.createRoute(templateId, isTransfer))
+                }
+            )
+        }
+        composable(
+            Screen.TemplateAddEdit.routePattern,
+            arguments = listOf(
+                navArgument("templateId") { type = NavType.StringType; nullable = true; defaultValue = null },
+                navArgument("isTransfer") { type = NavType.StringType; nullable = true; defaultValue = "false" }
+            )
+        ) {
+            TemplateAddEditScreen(
                 onNavigateBack = { navController.navigateUp() }
             )
         }

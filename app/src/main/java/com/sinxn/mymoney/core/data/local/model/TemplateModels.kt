@@ -11,14 +11,20 @@ data class TransactionModelWithDetails(
     val walletName: String = "",
     val walletCurrency: String = "USD",
     val walletDecimals: Int = 2,
-    val currencySymbol: String = "$"
+    val currencySymbol: String = "$",
+    val placeName: String? = null,
+    val eventName: String? = null
 )
 
 data class TransferModelWithDetails(
     @Embedded val model: TransferModelEntity,
     val walletFromName: String = "",
     val walletFromCurrency: String = "USD",
+    val walletFromDecimals: Int = 2,
     val walletToName: String = "",
     val walletToCurrency: String = "USD",
-    val currencySymbol: String = "$"
+    val walletToDecimals: Int = 2,
+    val currencySymbol: String = "$",
+    val placeName: String? = null,
+    val eventName: String? = null
 )
