@@ -4,332 +4,578 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Equalizer
-import androidx.compose.material.icons.filled.PieChart
-import androidx.compose.material.icons.filled.Savings
-import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.compose.cartesian.data.ColumnCartesianLayerModel
+import com.patrykandpatrick.vico.compose.cartesian.data.columnModel
+import com.patrykandpatrick.vico.compose.cartesian.data.columnSeries
+import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
+import com.patrykandpatrick.vico.compose.cartesian.layer.ColumnCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.common.Fill
+import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
+import com.sinxn.mymoney.core.util.MoneyFormatter
+import com.sinxn.mymoney.feature.overview.component.OverviewSettingsSheet
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OverviewScreen(
     onNavigateBack: () -> Unit = {},
-    onNavigateToRecap: () -> Unit = {}
+    onNavigateToRecap: () -> Unit = {},
+    onPeriodClick: (startDate: String, endDate: String) -> Unit = { _, _ -> },
+    viewModel: OverviewViewModel = hiltViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+    val dateFormat = remember { SimpleDateFormat("MMM d", Locale.getDefault()) }
+    val fullDateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
+
+    if (uiState.showSettingsSheet && uiState.settings != null) {
+        OverviewSettingsSheet(
+            settings = uiState.settings!!,
+            onDismiss = { viewModel.dismissSettingsSheet() },
+            onApply = { viewModel.updateSettings(it) }
+        )
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-            // Year Recap Banner Callout
-            item {
-                Card(
-                    onClick = onNavigateToRecap,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    ),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(44.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.AutoAwesome,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimary
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.width(16.dp))
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Year Recap Available",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            Text(
-                                text = "Discover your annual spending insights and financial highlights",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                            )
-                        }
-
-                        Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = "View Recap",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
-            }
-
-            // Financial Summary Header Card
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+        // Header: Wallet name + settings button
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = uiState.walletName,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
                     )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp)
-                    ) {
+                    uiState.settings?.let { settings ->
                         Text(
-                            text = "Net Balance Overview",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "$12,450.00",
-                            style = MaterialTheme.typography.headlineLarge,
-                            fontWeight = FontWeight.Bold,
+                            text = "${fullDateFormat.format(settings.startDate)} – ${fullDateFormat.format(settings.endDate)}",
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+                }
+                FilledTonalIconButton(
+                    onClick = { viewModel.toggleSettingsSheet() }
+                ) {
+                    Icon(Icons.Default.Settings, contentDescription = "Settings")
+                }
+            }
+        }
 
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            CashflowSummaryItem(
-                                title = "Income",
-                                amount = "+$4,200.00",
-                                icon = Icons.Default.ArrowUpward,
-                                color = Color(0xFF2E7D32)
-                            )
-                            CashflowSummaryItem(
-                                title = "Expenses",
-                                amount = "-$1,850.00",
-                                icon = Icons.Default.ArrowDownward,
-                                color = Color(0xFFC62828)
-                            )
-                            CashflowSummaryItem(
-                                title = "Saved",
-                                amount = "+$2,350.00",
-                                icon = Icons.Default.Savings,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
+        // Group Type Quick Selector
+        item {
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                GroupType.entries.forEachIndexed { index, type ->
+                    SegmentedButton(
+                        selected = uiState.settings?.groupType == type,
+                        onClick = { viewModel.setGroupType(type) },
+                        shape = SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = GroupType.entries.size
+                        )
+                    ) {
+                        Text(
+                            text = type.name.lowercase().replaceFirstChar { it.uppercase() },
+                            style = MaterialTheme.typography.labelSmall
+                        )
                     }
                 }
             }
+        }
 
-            // Quick Stats Grid / Section Header
-            item {
-                Text(
-                    text = "Financial Snapshot",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                )
-            }
-
-            // Cashflow Progress & Breakdown Card
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.TrendingUp,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
+        // Cash Flow Filter Chips
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                CashFlowFilter.entries.forEach { filter ->
+                    FilterChip(
+                        selected = uiState.settings?.cashFlowFilter == filter,
+                        onClick = { viewModel.setCashFlowFilter(filter) },
+                        label = {
                             Text(
-                                text = "Monthly Budget Health",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold
+                                text = when (filter) {
+                                    CashFlowFilter.INCOMES -> "Incomes"
+                                    CashFlowFilter.EXPENSES -> "Expenses"
+                                    CashFlowFilter.NET_INCOMES -> "Net Income"
+                                },
+                                style = MaterialTheme.typography.labelSmall
                             )
+                        },
+                        leadingIcon = {
+                            when (filter) {
+                                CashFlowFilter.INCOMES -> Icon(
+                                    Icons.Default.ArrowUpward, null,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = Color(0xFF2E7D32)
+                                )
+                                CashFlowFilter.EXPENSES -> Icon(
+                                    Icons.Default.ArrowDownward, null,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = Color(0xFFC62828)
+                                )
+                                CashFlowFilter.NET_INCOMES -> {}
+                            }
                         }
+                    )
+                }
+            }
+        }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+        if (uiState.isLoading) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+        } else {
+            val overviewData = uiState.overviewData
+            if (overviewData != null && overviewData.periods.isNotEmpty()) {
+                // Chart Section — Bar + Line in pager
+                item {
+                    ChartPager(
+                        overviewData = overviewData,
+                        currencyCode = uiState.currencyCode
+                    )
+                }
 
-                        LinearProgressIndicator(
-                            progress = { 0.44f },
+                // Total Summary Card
+                item {
+                    TotalSummaryCard(
+                        totalNetIncomes = overviewData.totalNetIncomes,
+                        currencyCode = uiState.currencyCode,
+                        decimals = uiState.currencyDecimals,
+                        formattingSettings = uiState.formattingSettings
+                    )
+                }
+
+                // Period List — matching legacy OverviewItemAdapter
+                item {
+                    Text(
+                        text = "Period Breakdown",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+
+                itemsIndexed(
+                    items = overviewData.periods,
+                    key = { index, _ -> "period_$index" }
+                ) { index, period ->
+                    PeriodRow(
+                        period = period,
+                        index = index,
+                        dateFormat = dateFormat,
+                        fullDateFormat = fullDateFormat,
+                        currencyCode = uiState.currencyCode,
+                        decimals = uiState.currencyDecimals,
+                        cashFlowFilter = uiState.settings?.cashFlowFilter ?: CashFlowFilter.NET_INCOMES,
+                        formattingSettings = uiState.formattingSettings,
+                        onClick = {
+                            val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                            onPeriodClick(sdf.format(period.startDate), sdf.format(period.endDate))
+                        }
+                    )
+                }
+            } else {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                        )
+                    ) {
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(10.dp)
-                                .clip(CircleShape),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                                .padding(48.dp),
+                            contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "44% of budget spent ($1,850 of $4,200)",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = "18 days left",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                text = "No data for the selected period",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
                             )
                         }
                     }
                 }
             }
-
-            // Top Spending Breakdown Card
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PieChart,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.secondary
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Top Expense Categories",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        CategoryBreakdownRow(name = "Food & Groceries", amount = "$650.00", percent = "35%", color = Color(0xFFFF9800))
-                        CategoryBreakdownRow(name = "Shopping & Clothing", amount = "$420.00", percent = "23%", color = Color(0xFFE91E63))
-                        CategoryBreakdownRow(name = "Bills & Utilities", amount = "$380.00", percent = "20%", color = Color(0xFF2196F3))
-                        CategoryBreakdownRow(name = "Transport", amount = "$240.00", percent = "13%", color = Color(0xFF9C27B0))
-                    }
-                }
-            }
         }
-}
-
-@Composable
-private fun CashflowSummaryItem(
-    title: String,
-    amount: String,
-    icon: ImageVector,
-    color: Color
-) {
-    Column {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                tint = color,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-            )
-        }
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = amount,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = color
-        )
     }
 }
 
 @Composable
-private fun CategoryBreakdownRow(
-    name: String,
-    amount: String,
-    percent: String,
-    color: Color
+private fun ChartPager(
+    overviewData: OverviewData,
+    currencyCode: String
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
+    val pagerState = rememberPagerState(pageCount = { 2 })
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Box(
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Tab indicators
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.BarChart,
+                    contentDescription = null,
+                    tint = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    repeat(2) { index ->
+                        Box(
+                            modifier = Modifier
+                                .size(if (pagerState.currentPage == index) 8.dp else 6.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (pagerState.currentPage == index) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                                )
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Icon(
+                    Icons.Default.ShowChart,
+                    contentDescription = null,
+                    tint = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // Chart pages
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+            ) { page ->
+                val chartValues = overviewData.chartDataByCurrency[currencyCode]
+                    ?: overviewData.chartDataByCurrency.values.firstOrNull()
+
+                if (!chartValues.isNullOrEmpty()) {
+                    when (page) {
+                        0 -> BarChartView(chartValues)
+                        1 -> LineChartView(chartValues)
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No chart data",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BarChartView(dataPoints: List<ChartDataPoint>) {
+    val modelProducer = remember { CartesianChartModelProducer() }
+    val primaryColor = MaterialTheme.colorScheme.primary
+
+    LaunchedEffect(dataPoints) {
+        modelProducer.runTransaction {
+            columnModel { series(dataPoints.map { it.value }) }
+        }
+    }
+
+    CartesianChartHost(
+        chart = rememberCartesianChart(
+            rememberColumnCartesianLayer(
+                columnProvider = ColumnCartesianLayer.ColumnProvider.series(
+                    rememberLineComponent(
+                        fill = Fill(primaryColor),
+                        thickness = 12.dp
+                    )
+                )
+            ),
+            startAxis = VerticalAxis.rememberStart(),
+            bottomAxis = HorizontalAxis.rememberBottom(
+                valueFormatter = { value, x, _ ->
+                    dataPoints.getOrNull(x.toInt())?.label ?: ""
+                }
+            )
+        ),
+        modelProducer = modelProducer,
+        modifier = Modifier.fillMaxSize()
+    )
+}
+
+@Composable
+private fun LineChartView(dataPoints: List<ChartDataPoint>) {
+    val modelProducer = remember { CartesianChartModelProducer() }
+    val primaryColor = MaterialTheme.colorScheme.primary
+
+    LaunchedEffect(dataPoints) {
+        modelProducer.runTransaction {
+            lineModel {
+                series(dataPoints.map { it.value })
+            }
+        }
+    }
+
+    CartesianChartHost(
+        chart = rememberCartesianChart(
+            rememberLineCartesianLayer(),
+            startAxis = VerticalAxis.rememberStart(),
+            bottomAxis = HorizontalAxis.rememberBottom(
+                valueFormatter = { value, x, _ ->
+                    dataPoints.getOrNull(x.toInt())?.label ?: ""
+                }
+            )
+        ),
+        modelProducer = modelProducer,
+        modifier = Modifier.fillMaxSize()
+    )
+}
+
+@Composable
+private fun TotalSummaryCard(
+    totalNetIncomes: MultiCurrencyMoney,
+    currencyCode: String,
+    decimals: Int,
+    formattingSettings: com.sinxn.mymoney.core.data.preferences.FormattingSettings
+) {
+    val config = remember(formattingSettings) {
+        MoneyFormatter.Config(
+            showCurrency = formattingSettings.showCurrency,
+            groupDigits = formattingSettings.groupDigits,
+            roundDecimals = formattingSettings.roundDecimals,
+            showPlusMinus = true
+        )
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
             modifier = Modifier
-                .size(10.dp)
-                .clip(CircleShape)
-                .background(color)
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Total for Period",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Show all currencies
+            for (currency in totalNetIncomes.getCurrencies()) {
+                val amount = totalNetIncomes.getMoney(currency)
+                val currDecimals = try {
+                    java.util.Currency.getInstance(currency).defaultFractionDigits
+                } catch (e: Exception) { decimals }
+
+                val formatted = MoneyFormatter.format(
+                    amount = amount,
+                    currencyCode = currency,
+                    decimals = currDecimals,
+                    config = config
+                )
+                val color = when {
+                    amount > 0 -> Color(0xFF2E7D32)
+                    amount < 0 -> Color(0xFFC62828)
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                }
+                Text(
+                    text = formatted,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = color
+                )
+            }
+
+            if (totalNetIncomes.getCurrencies().isEmpty()) {
+                Text(
+                    text = MoneyFormatter.format(0L, currencyCode, decimals, config),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PeriodRow(
+    period: PeriodMoney,
+    index: Int,
+    dateFormat: SimpleDateFormat,
+    fullDateFormat: SimpleDateFormat,
+    currencyCode: String,
+    decimals: Int,
+    cashFlowFilter: CashFlowFilter,
+    formattingSettings: com.sinxn.mymoney.core.data.preferences.FormattingSettings,
+    onClick: () -> Unit
+) {
+    val config = remember(formattingSettings) {
+        MoneyFormatter.Config(
+            showCurrency = formattingSettings.showCurrency,
+            groupDigits = formattingSettings.groupDigits,
+            roundDecimals = formattingSettings.roundDecimals,
+            showPlusMinus = true
         )
-        Spacer(modifier = Modifier.width(10.dp))
-        Text(
-            text = name,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f)
+    }
+
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
         )
-        Text(
-            text = amount,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = percent,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Period index badge
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "${index + 1}",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Date range
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "${dateFormat.format(period.startDate)} — ${dateFormat.format(period.endDate)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                // Show income/expense breakdown
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val incomeAmt = period.incomes.getMoney(currencyCode)
+                    val expenseAmt = period.expenses.getMoney(currencyCode)
+                    if (incomeAmt > 0 || expenseAmt > 0) {
+                        if (incomeAmt > 0) {
+                            Text(
+                                text = "↑ ${MoneyFormatter.format(incomeAmt, currencyCode, decimals, config.copy(showPlusMinus = false))}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFF2E7D32)
+                            )
+                        }
+                        if (expenseAmt > 0) {
+                            Text(
+                                text = "↓ ${MoneyFormatter.format(expenseAmt, currencyCode, decimals, config.copy(showPlusMinus = false))}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFFC62828)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Net amount for the period
+            val displayMoney = period.netIncomes
+            val amount = displayMoney.getMoney(currencyCode)
+            val formatted = MoneyFormatter.format(amount, currencyCode, decimals, config)
+            val color = when {
+                amount > 0 -> Color(0xFF2E7D32)
+                amount < 0 -> Color(0xFFC62828)
+                else -> MaterialTheme.colorScheme.onSurfaceVariant
+            }
+            Text(
+                text = formatted,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+        }
     }
 }

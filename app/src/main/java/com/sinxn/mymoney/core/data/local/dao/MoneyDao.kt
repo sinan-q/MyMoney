@@ -415,8 +415,58 @@ interface MoneyDao {
     @Query("UPDATE transactions SET confirmed = 1, lastEdit = :lastEdit WHERE id = :transactionId")
     suspend fun confirmTransaction(transactionId: String, lastEdit: Long)
 
-    @Query("UPDATE transactions SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :transactionId")
+     @Query("UPDATE transactions SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :transactionId")
     suspend fun softDeleteTransaction(transactionId: String, lastEdit: Long)
+
+    // Overview queries — matching legacy OverviewDataLoader filters
+    // Single wallet: confirmed, countInTotal, showReport, date range
+    @Query("""
+        SELECT t.date, t.direction, t.money, w.currency as walletCurrency,
+               COALESCE(curr.decimals, 2) as walletDecimals,
+               t.categoryId, c.parentId as categoryParentId
+        FROM transactions t
+        INNER JOIN wallets w ON t.walletId = w.id
+        LEFT JOIN categories c ON t.categoryId = c.id
+        LEFT JOIN currencies curr ON w.currency = curr.iso
+        WHERE t.walletId = :walletId
+          AND t.isDeleted = 0 AND w.isDeleted = 0
+          AND t.confirmed = 1 AND t.countInTotal = 1
+          AND (c.showReport = 1 OR c.showReport IS NULL)
+          AND t.date <= :maxDate
+          AND t.date >= :startDate
+          AND t.date <= :endDate
+        ORDER BY t.date ASC
+    """)
+    suspend fun getOverviewTransactionsForWallet(
+        walletId: String,
+        startDate: String,
+        endDate: String,
+        maxDate: String
+    ): List<com.sinxn.mymoney.core.data.local.model.OverviewTransaction>
+
+    // Total wallet (all countInTotal wallets)
+    @Query("""
+        SELECT t.date, t.direction, t.money, w.currency as walletCurrency,
+               COALESCE(curr.decimals, 2) as walletDecimals,
+               t.categoryId, c.parentId as categoryParentId
+        FROM transactions t
+        INNER JOIN wallets w ON t.walletId = w.id
+        LEFT JOIN categories c ON t.categoryId = c.id
+        LEFT JOIN currencies curr ON w.currency = curr.iso
+        WHERE t.isDeleted = 0 AND w.isDeleted = 0
+          AND w.countInTotal = 1
+          AND t.confirmed = 1 AND t.countInTotal = 1
+          AND (c.showReport = 1 OR c.showReport IS NULL)
+          AND t.date <= :maxDate
+          AND t.date >= :startDate
+          AND t.date <= :endDate
+        ORDER BY t.date ASC
+    """)
+    suspend fun getOverviewTransactionsForTotal(
+        startDate: String,
+        endDate: String,
+        maxDate: String
+    ): List<com.sinxn.mymoney.core.data.local.model.OverviewTransaction>
 
     // Transactions
     @Insert(onConflict = OnConflictStrategy.IGNORE)

@@ -9,12 +9,12 @@ plugins {
 
 android {
     namespace = "com.sinxn.mymoney"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.sinxn.mymoney"
-        minSdk = 26
-        targetSdk = 36
+        minSdk = 27
+        targetSdk = 37
         versionCode = 1
         versionName = "1.0"
 
@@ -90,4 +90,8 @@ dependencies {
     // Recurrence Rule & WorkManager
     implementation(libs.lib.recur)
     implementation(libs.androidx.work.runtime.ktx)
+
+    // Charts
+    implementation(libs.vico.compose)
+    implementation(libs.vico.compose.m3)
 }
