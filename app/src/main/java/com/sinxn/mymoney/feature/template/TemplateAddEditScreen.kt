@@ -36,7 +36,8 @@ fun TemplateAddEditScreen(
     }
     val amountNum = evaluatedAmount.toDoubleOrNull() ?: 0.0
     val isSaveEnabled = amountNum > 0.0 && uiState.walletId.isNotBlank() &&
-            (uiState.type == TemplateType.TRANSFER || uiState.categoryId.isNotBlank())
+            (uiState.type == TemplateType.TRANSFER || uiState.categoryId.isNotBlank()) &&
+            (uiState.type != TemplateType.TRANSFER || uiState.targetWalletId.isNotBlank())
 
     val selectedWallet = uiState.availableWallets.find { it.id == uiState.walletId }
     val selectedTargetWallet = uiState.availableWallets.find { it.id == uiState.targetWalletId }

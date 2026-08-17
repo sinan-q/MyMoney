@@ -10,6 +10,7 @@ import com.sinxn.mymoney.core.data.local.entity.PlaceEntity
 import com.sinxn.mymoney.core.data.local.entity.TransactionModelEntity
 import com.sinxn.mymoney.core.data.local.entity.TransferModelEntity
 import com.sinxn.mymoney.core.data.local.entity.WalletEntity
+import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.TemplateRepository
 import com.sinxn.mymoney.core.util.MathExpressionEvaluator
 import com.sinxn.mymoney.core.util.MoneyFormatter
@@ -74,6 +75,7 @@ data class TemplateAddEditUiState(
 @HiltViewModel
 class TemplateAddEditViewModel @Inject constructor(
     private val templateRepository: TemplateRepository,
+    private val settingsRepository: SettingsRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -141,15 +143,30 @@ class TemplateAddEditViewModel @Inject constructor(
             val places = templateRepository.places.firstOrNull() ?: emptyList()
             val events = templateRepository.events.firstOrNull() ?: emptyList()
             val currencies = templateRepository.currencies.firstOrNull() ?: emptyList()
+            val currentWalletId = settingsRepository.currentWalletId.firstOrNull()
 
-            val defaultWallet = wallets.firstOrNull()
-            val defaultWalletId = defaultWallet?.id ?: ""
-            val defaultTargetWallet = wallets.getOrNull(1) ?: defaultWallet
-            val defaultTargetWalletId = defaultTargetWallet?.id ?: defaultWalletId
-            val defaultCatId = categories.firstOrNull()?.id ?: ""
+            val preferredWallet = if (!currentWalletId.isNullOrBlank() && currentWalletId != "total" && currentWalletId != com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID) {
+                wallets.find { it.id == currentWalletId && !it.isArchived }
+                    ?: wallets.find { it.id == currentWalletId }
+            } else {
+                null
+            }
 
-            val defaultDecimals = getCurrencyDecimals(defaultWallet?.currency, currencies)
-            val defaultSymbol = getCurrencySymbol(defaultWallet?.currency, currencies)
+            val defaultWalletId = preferredWallet?.id ?: ""
+            val defaultTargetWallet = if (defaultWalletId.isNotEmpty()) {
+                wallets.firstOrNull { it.id != defaultWalletId && !it.isArchived }
+                    ?: wallets.firstOrNull { it.id != defaultWalletId }
+            } else null
+            val defaultTargetWalletId = defaultTargetWallet?.id ?: ""
+
+            val initialType = if (isTransferArg) TemplateType.TRANSFER else TemplateType.EXPENSE
+            val targetCategoryType = if (initialType == TemplateType.INCOME) 1 else 0
+            val defaultCatId = categories.firstOrNull { it.type == targetCategoryType && !it.isArchived }?.id
+                ?: categories.firstOrNull { it.type == targetCategoryType }?.id
+                ?: categories.firstOrNull()?.id ?: ""
+
+            val defaultDecimals = getCurrencyDecimals(preferredWallet?.currency, currencies)
+            val defaultSymbol = getCurrencySymbol(preferredWallet?.currency, currencies)
             val defaultTargetDecimals = getCurrencyDecimals(defaultTargetWallet?.currency, currencies)
             val defaultTargetSymbol = getCurrencySymbol(defaultTargetWallet?.currency, currencies)
 
@@ -168,6 +185,9 @@ class TemplateAddEditViewModel @Inject constructor(
                         val toAmountStr = formatBaseUnitsToDecimal(transferModel.moneyTo, toDecimals)
                         val taxAmountStr = transferModel.moneyTax?.let { formatBaseUnitsToDecimal(it, fromDecimals) } ?: ""
 
+                        val activeWalletIds = setOf(transferModel.walletFromId, transferModel.walletToId)
+                        val filteredWallets = wallets.filter { !it.isArchived || it.id in activeWalletIds }
+
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
@@ -184,10 +204,10 @@ class TemplateAddEditViewModel @Inject constructor(
                                 tag = transferModel.tag ?: "",
                                 confirmed = transferModel.confirmed,
                                 countInTotal = transferModel.countInTotal,
-                                availableWallets = wallets,
-                                availableCategories = categories,
-                                availablePlaces = places,
-                                availableEvents = events,
+                                availableWallets = filteredWallets,
+                                availableCategories = categories.filter { !it.isArchived },
+                                availablePlaces = places.filter { !it.isArchived || it.id == transferModel.placeId },
+                                availableEvents = events.filter { !it.isArchived || it.id == transferModel.eventId },
                                 availableCurrencies = currencies,
                                 currencySymbol = fromSymbol,
                                 currencyDecimals = fromDecimals,
@@ -206,6 +226,9 @@ class TemplateAddEditViewModel @Inject constructor(
                         val amountStr = formatBaseUnitsToDecimal(txModel.money, decimals)
                         val type = if (txModel.direction == 1) TemplateType.INCOME else TemplateType.EXPENSE
 
+                        val filteredWallets = wallets.filter { !it.isArchived || it.id == txModel.walletId }
+                        val filteredCategories = categories.filter { !it.isArchived || it.id == txModel.categoryId }
+
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
@@ -220,10 +243,10 @@ class TemplateAddEditViewModel @Inject constructor(
                                 tag = txModel.tag ?: "",
                                 confirmed = txModel.confirmed,
                                 countInTotal = txModel.countInTotal,
-                                availableWallets = wallets,
-                                availableCategories = categories,
-                                availablePlaces = places,
-                                availableEvents = events,
+                                availableWallets = filteredWallets,
+                                availableCategories = filteredCategories,
+                                availablePlaces = places.filter { !it.isArchived || it.id == txModel.placeId },
+                                availableEvents = events.filter { !it.isArchived || it.id == txModel.eventId },
                                 availableCurrencies = currencies,
                                 currencySymbol = symbol,
                                 currencyDecimals = decimals
@@ -234,16 +257,19 @@ class TemplateAddEditViewModel @Inject constructor(
                 }
             }
 
+            val filteredWallets = wallets.filter { !it.isArchived || it.id == defaultWalletId || it.id == defaultTargetWalletId }
+            val filteredCategories = categories.filter { !it.isArchived || it.id == defaultCatId }
+
             _uiState.update {
                 it.copy(
                     isLoading = false,
                     walletId = defaultWalletId,
                     targetWalletId = defaultTargetWalletId,
                     categoryId = defaultCatId,
-                    availableWallets = wallets,
-                    availableCategories = categories,
-                    availablePlaces = places,
-                    availableEvents = events,
+                    availableWallets = filteredWallets,
+                    availableCategories = filteredCategories,
+                    availablePlaces = places.filter { !it.isArchived },
+                    availableEvents = events.filter { !it.isArchived },
                     availableCurrencies = currencies,
                     currencySymbol = defaultSymbol,
                     currencyDecimals = defaultDecimals,
@@ -255,7 +281,28 @@ class TemplateAddEditViewModel @Inject constructor(
     }
 
     fun onTypeChange(newType: TemplateType) {
-        _uiState.update { it.copy(type = newType) }
+        _uiState.update { current ->
+            val targetCategoryType = when (newType) {
+                TemplateType.INCOME -> 1
+                TemplateType.EXPENSE -> 0
+                TemplateType.TRANSFER -> null
+            }
+
+            val newCatId = if (targetCategoryType == null) {
+                ""
+            } else {
+                val currentCat = current.availableCategories.find { it.id == current.categoryId }
+                if (currentCat?.type == targetCategoryType) {
+                    current.categoryId
+                } else {
+                    current.availableCategories.firstOrNull { it.type == targetCategoryType && !it.isArchived }?.id
+                        ?: current.availableCategories.firstOrNull { it.type == targetCategoryType }?.id
+                        ?: current.categoryId
+                }
+            }
+
+            current.copy(type = newType, categoryId = newCatId)
+        }
     }
 
     fun onAmountChange(value: String) {
@@ -275,7 +322,13 @@ class TemplateAddEditViewModel @Inject constructor(
     }
 
     fun onCategoryChange(categoryId: String) {
-        _uiState.update { it.copy(categoryId = categoryId) }
+        val cat = _uiState.value.availableCategories.find { it.id == categoryId }
+        val newType = when (cat?.type) {
+            1 -> TemplateType.INCOME
+            0 -> TemplateType.EXPENSE
+            else -> _uiState.value.type
+        }
+        _uiState.update { it.copy(categoryId = categoryId, type = newType) }
     }
 
     fun onWalletChange(walletId: String) {

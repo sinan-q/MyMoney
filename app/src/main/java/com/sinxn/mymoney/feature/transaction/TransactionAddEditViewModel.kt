@@ -234,12 +234,13 @@ class TransactionAddEditViewModel @Inject constructor(
         listsFlow
     ) { isSaving, form, currentWalletId, lists ->
         if (isNewTransaction && form.walletId.isEmpty() && lists.wallets.isNotEmpty()) {
-            val preferredWallet = lists.wallets.find { it.wallet.id == currentWalletId }
-                ?: lists.wallets.firstOrNull { !it.wallet.isArchived }
-                ?: lists.wallets.firstOrNull()
+            if (currentWalletId.isNotEmpty() && currentWalletId != "total" && currentWalletId != com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID) {
+                val preferredWallet = lists.wallets.find { it.wallet.id == currentWalletId && !it.wallet.isArchived }
+                    ?: lists.wallets.find { it.wallet.id == currentWalletId }
 
-            if (preferredWallet != null) {
-                _formState.update { it.copy(walletId = preferredWallet.wallet.id) }
+                if (preferredWallet != null) {
+                    _formState.update { it.copy(walletId = preferredWallet.wallet.id) }
+                }
             }
         }
 

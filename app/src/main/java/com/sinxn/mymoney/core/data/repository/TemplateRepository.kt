@@ -18,12 +18,12 @@ import javax.inject.Singleton
 class TemplateRepository @Inject constructor(
     private val moneyDao: MoneyDao
 ) {
-    fun getTransactionModels(): Flow<List<TransactionModelWithDetails>> {
-        return moneyDao.getTransactionModelsWithDetails()
+    fun getTransactionModels(walletId: String? = null): Flow<List<TransactionModelWithDetails>> {
+        return moneyDao.getTransactionModelsWithDetails(walletId)
     }
 
-    fun getTransferModels(): Flow<List<TransferModelWithDetails>> {
-        return moneyDao.getTransferModelsWithDetails()
+    fun getTransferModels(walletId: String? = null): Flow<List<TransferModelWithDetails>> {
+        return moneyDao.getTransferModelsWithDetails(walletId)
     }
 
     fun getTransactionModelWithDetails(id: String): Flow<TransactionModelWithDetails?> {

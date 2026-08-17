@@ -128,9 +128,13 @@ interface MoneyDao {
         LEFT JOIN places p ON tm.placeId = p.id
         LEFT JOIN events e ON tm.eventId = e.id
         WHERE tm.isDeleted = 0
+          AND (
+            (:walletId IS NULL OR :walletId = 'total' OR :walletId = '') AND w.countInTotal = 1
+            OR (:walletId IS NOT NULL AND :walletId != 'total' AND :walletId != '' AND tm.walletId = :walletId)
+          )
         ORDER BY tm.id DESC
     """)
-    fun getTransactionModelsWithDetails(): Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionModelWithDetails>>
+    fun getTransactionModelsWithDetails(walletId: String? = null): Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionModelWithDetails>>
 
     @androidx.room.Transaction
     @Query("""
@@ -179,9 +183,13 @@ interface MoneyDao {
         LEFT JOIN places p ON tm.placeId = p.id
         LEFT JOIN events e ON tm.eventId = e.id
         WHERE tm.isDeleted = 0
+          AND (
+            (:walletId IS NULL OR :walletId = 'total' OR :walletId = '') AND (wf.countInTotal = 1 OR wt.countInTotal = 1)
+            OR (:walletId IS NOT NULL AND :walletId != 'total' AND :walletId != '' AND (tm.walletFromId = :walletId OR tm.walletToId = :walletId))
+          )
         ORDER BY tm.id DESC
     """)
-    fun getTransferModelsWithDetails(): Flow<List<com.sinxn.mymoney.core.data.local.model.TransferModelWithDetails>>
+    fun getTransferModelsWithDetails(walletId: String? = null): Flow<List<com.sinxn.mymoney.core.data.local.model.TransferModelWithDetails>>
 
     @androidx.room.Transaction
     @Query("""
