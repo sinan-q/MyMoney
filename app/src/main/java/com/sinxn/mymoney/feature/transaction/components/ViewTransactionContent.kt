@@ -43,10 +43,11 @@ fun ViewTransactionContent(
     } else {
         resolveCategoryHierarchy(
             transaction.categoryId,
-            uiState.availableCategories
+            uiState.availableCategories,
+            fallbackName = uiState.transaction?.categoryName
         )
     }
-    val categoryIcon = if (isTransfer) "{\"type\":\"color\",\"color\":\"#0284C7\",\"name\":\"⇄\"}" else uiState.transaction?.categoryIcon
+    val categoryIcon = if (isTransfer) "{\"type\":\"color\",\"color\":\"#0284C7\",\"name\":\"⇄\"}" else (uiState.transaction?.categoryIcon ?: uiState.availableCategories.find { it.id == transaction.categoryId }?.icon)
 
     val directionColor = if (isTransfer) Color(0xFF0284C7) else when (transaction.direction) {
         1 -> Color(0xFF10B981)

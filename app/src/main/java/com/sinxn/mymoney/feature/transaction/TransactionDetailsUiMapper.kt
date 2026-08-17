@@ -11,13 +11,12 @@ object TransactionDetailsUiMapper {
      * Flattens category hierarchy for UI dropdown selection, adding visual indentation for child categories.
      */
     fun flattenCategories(categories: List<CategoryEntity>): List<CategoryEntity> {
-        val validCategories = categories.filter { it.type == CategoryType.INCOME || it.type == CategoryType.EXPENSE }
-        val parents = validCategories.filter { it.parentId == null }.sortedBy { it.index }
+        val parents = categories.filter { it.parentId == null }.sortedBy { it.index }
         val result = mutableListOf<CategoryEntity>()
 
         parents.forEach { parent ->
             result.add(parent)
-            val children = validCategories.filter { it.parentId == parent.id }.sortedBy { it.index }
+            val children = categories.filter { it.parentId == parent.id }.sortedBy { it.index }
             children.forEach { child ->
                 result.add(child.copy(name = "  ↳ ${child.name}"))
             }

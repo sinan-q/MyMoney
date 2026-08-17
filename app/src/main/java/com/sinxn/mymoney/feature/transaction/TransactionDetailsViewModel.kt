@@ -72,7 +72,7 @@ class TransactionDetailsViewModel @Inject constructor(
         moneyDao.getWalletsWithBalance(DateUtils.getSQLDateTimeString(Date())),
         moneyDao.getCategories()
     ) { wallets, categories ->
-        Pair(wallets, TransactionDetailsUiMapper.flattenCategories(categories))
+        Pair(wallets, categories)
     }
 
     val uiState: StateFlow<TransactionDetailsUiState> = combine(
