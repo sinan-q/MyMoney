@@ -101,6 +101,13 @@ class EventDetailsViewModel @Inject constructor(
         }
     }
 
+    fun toggleArchive() {
+        val currentEvent = _uiState.value.event ?: return
+        viewModelScope.launch {
+            eventRepository.updateEventArchived(eventId, !currentEvent.isArchived)
+        }
+    }
+
     fun deleteEvent() {
         viewModelScope.launch {
             eventRepository.deleteEvent(eventId)

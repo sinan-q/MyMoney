@@ -87,12 +87,15 @@ class EventAddEditViewModel @Inject constructor(
             }
 
             // New Event mode
-            val nowStr = DateUtils.getSQLDateTimeString(Date())
+            val cal = java.util.Calendar.getInstance()
+            val startDateStr = DateUtils.getSQLDateTimeString(cal.time)
+            cal.add(java.util.Calendar.MONTH, 1)
+            val endDateStr = DateUtils.getSQLDateTimeString(cal.time)
             _uiState.value = _uiState.value.copy(
                 name = "",
                 icon = "ic_event",
-                startDate = nowStr,
-                endDate = nowStr,
+                startDate = startDateStr,
+                endDate = endDateStr,
                 note = "",
                 tag = "",
                 isArchived = false,
@@ -112,11 +115,25 @@ class EventAddEditViewModel @Inject constructor(
     }
 
     fun onStartDateChange(startDate: String) {
-        _uiState.value = _uiState.value.copy(startDate = startDate)
+        val startD = DateUtils.parseDate(startDate)
+        val endD = DateUtils.parseDate(_uiState.value.endDate)
+        val updatedEndDate = if (startD != null && endD != null && endD.before(startD)) {
+            startDate
+        } else {
+            _uiState.value.endDate
+        }
+        _uiState.value = _uiState.value.copy(startDate = startDate, endDate = updatedEndDate)
     }
 
     fun onEndDateChange(endDate: String) {
-        _uiState.value = _uiState.value.copy(endDate = endDate)
+        val startD = DateUtils.parseDate(_uiState.value.startDate)
+        val endD = DateUtils.parseDate(endDate)
+        val updatedStartDate = if (startD != null && endD != null && startD.after(endD)) {
+            endDate
+        } else {
+            _uiState.value.startDate
+        }
+        _uiState.value = _uiState.value.copy(startDate = updatedStartDate, endDate = endDate)
     }
 
     fun onNoteChange(note: String) {
@@ -136,13 +153,21 @@ class EventAddEditViewModel @Inject constructor(
         val cleanName = current.name.trim()
         if (cleanName.isEmpty()) return
 
+        var finalStartDate = current.startDate
+        var finalEndDate = current.endDate
+        val startD = DateUtils.parseDate(finalStartDate)
+        val endD = DateUtils.parseDate(finalEndDate)
+        if (startD != null && endD != null && startD.after(endD)) {
+            finalEndDate = finalStartDate
+        }
+
         viewModelScope.launch {
             eventRepository.saveEvent(
                 id = current.eventId,
                 name = cleanName,
                 icon = current.icon,
-                startDate = current.startDate,
-                endDate = current.endDate,
+                startDate = finalStartDate,
+                endDate = finalEndDate,
                 note = current.note.ifBlank { null },
                 isArchived = current.isArchived,
                 tag = current.tag.ifBlank { null }

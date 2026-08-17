@@ -521,6 +521,24 @@ interface MoneyDao {
     @Query("UPDATE events SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :eventId")
     suspend fun softDeleteEvent(eventId: String, lastEdit: Long)
 
+    @Query("UPDATE transactions SET eventId = NULL, lastEdit = :lastEdit WHERE eventId = :eventId")
+    suspend fun unlinkTransactionsForEvent(eventId: String, lastEdit: Long)
+
+    @Query("UPDATE transfers SET eventId = NULL, lastEdit = :lastEdit WHERE eventId = :eventId")
+    suspend fun unlinkTransfersForEvent(eventId: String, lastEdit: Long)
+
+    @Query("UPDATE transaction_models SET eventId = NULL, lastEdit = :lastEdit WHERE eventId = :eventId")
+    suspend fun unlinkTransactionModelsForEvent(eventId: String, lastEdit: Long)
+
+    @Query("UPDATE transfer_models SET eventId = NULL, lastEdit = :lastEdit WHERE eventId = :eventId")
+    suspend fun unlinkTransferModelsForEvent(eventId: String, lastEdit: Long)
+
+    @Query("UPDATE recurrent_transactions SET eventId = NULL, lastEdit = :lastEdit WHERE eventId = :eventId")
+    suspend fun unlinkRecurrentTransactionsForEvent(eventId: String, lastEdit: Long)
+
+    @Query("UPDATE recurrent_transfers SET eventId = NULL, lastEdit = :lastEdit WHERE eventId = :eventId")
+    suspend fun unlinkRecurrentTransfersForEvent(eventId: String, lastEdit: Long)
+
     @Query("SELECT * FROM events WHERE isDeleted = 0")
     fun getEvents(): Flow<List<com.sinxn.mymoney.core.data.local.entity.EventEntity>>
 

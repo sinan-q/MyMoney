@@ -149,7 +149,7 @@ fun EventListScreen(
                             EventListItem(
                                 item = item,
                                 formatterConfig = uiState.formatterConfig,
-                                dateFormat = 3,
+                                dateFormat = uiState.dateFormat,
                                 onClick = { onEventClick(item.event.id) }
                             )
                         }

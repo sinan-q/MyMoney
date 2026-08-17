@@ -7,10 +7,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -95,6 +97,12 @@ fun EventDetailsScreen(
                 },
                 actions = {
                     if (uiState.event != null) {
+                        IconButton(onClick = viewModel::toggleArchive) {
+                            Icon(
+                                imageVector = if (uiState.event!!.isArchived) Icons.Default.Unarchive else Icons.Default.Archive,
+                                contentDescription = if (uiState.event!!.isArchived) "Unarchive Event" else "Archive Event"
+                            )
+                        }
                         IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(
                                 imageVector = Icons.Default.Delete,

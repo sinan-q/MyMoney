@@ -65,6 +65,12 @@ class EventRepository @Inject constructor(
 
     suspend fun deleteEvent(eventId: String) {
         val now = System.currentTimeMillis()
+        moneyDao.unlinkTransactionsForEvent(eventId, now)
+        moneyDao.unlinkTransfersForEvent(eventId, now)
+        moneyDao.unlinkTransactionModelsForEvent(eventId, now)
+        moneyDao.unlinkTransferModelsForEvent(eventId, now)
+        moneyDao.unlinkRecurrentTransactionsForEvent(eventId, now)
+        moneyDao.unlinkRecurrentTransfersForEvent(eventId, now)
         moneyDao.softDeleteEvent(eventId, now)
     }
 }
