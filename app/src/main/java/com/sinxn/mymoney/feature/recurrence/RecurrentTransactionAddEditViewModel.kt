@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.dao.MoneyDao
 import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
+import com.sinxn.mymoney.core.data.local.entity.CurrencyEntity
 import com.sinxn.mymoney.core.data.local.entity.EventEntity
 import com.sinxn.mymoney.core.data.local.entity.PlaceEntity
 import com.sinxn.mymoney.core.data.local.entity.RecurrentTransactionEntity
@@ -16,17 +17,18 @@ import com.sinxn.mymoney.core.util.CategoryType
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.Direction
 import com.sinxn.mymoney.core.util.MathExpressionEvaluator
+import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.core.util.RecurrenceSetting
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.dmfs.rfc5545.recur.Freq
 import org.dmfs.rfc5545.recur.RecurrenceRule
-import java.util.Currency
 import java.util.Date
-import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
+import kotlin.math.pow
+import kotlin.math.roundToLong
 
 data class RecurrentTransactionAddEditUiState(
     val id: String = "",
@@ -64,6 +66,8 @@ class RecurrentTransactionAddEditViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val recurrenceId: String? = savedStateHandle.get<String>("id")?.takeIf { it.isNotBlank() && it != "new" }
+    private var existingEntity: RecurrentTransactionEntity? = null
+    private var currencyList: List<CurrencyEntity> = emptyList()
 
     private val _uiState = MutableStateFlow(
         RecurrentTransactionAddEditUiState(
@@ -76,12 +80,23 @@ class RecurrentTransactionAddEditViewModel @Inject constructor(
     val formattingSettings: StateFlow<FormattingSettings> = settingsRepository.formattingSettings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), FormattingSettings())
 
+    private fun getDecimalsForCurrency(currencyCode: String): Int {
+        return currencyList.find { it.iso == currencyCode }?.decimals
+            ?: MoneyFormatter.getCurrencyDecimals(currencyCode)
+    }
+
+    private fun getSymbolForCurrency(currencyCode: String): String {
+        return currencyList.find { it.iso == currencyCode }?.symbol
+            ?: MoneyFormatter.getCurrencySymbol(currencyCode)
+    }
+
     init {
         viewModelScope.launch {
             val wallets = moneyDao.getWalletsList()
             val categories = moneyDao.getCategoriesList()
             val places = moneyDao.getPlacesList()
             val events = moneyDao.getEventsList()
+            currencyList = moneyDao.getCurrenciesList()
             val currentWalletId = settingsRepository.currentWalletId.firstOrNull()
 
             val preferredWallet = if (!currentWalletId.isNullOrBlank() && currentWalletId != "total" && currentWalletId != com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID) {
@@ -97,11 +112,8 @@ class RecurrentTransactionAddEditViewModel @Inject constructor(
                 ?: categories.firstOrNull { it.type == targetCatType }?.id
                 ?: categories.firstOrNull()?.id ?: ""
 
-            val currSymbol = try {
-                preferredWallet?.currency?.let { Currency.getInstance(it).getSymbol(Locale.getDefault()) } ?: "$"
-            } catch (e: Exception) {
-                preferredWallet?.currency ?: "$"
-            }
+            val currSymbol = getSymbolForCurrency(preferredWallet?.currency ?: "")
+            val currDecimals = getDecimalsForCurrency(preferredWallet?.currency ?: "")
 
             val filteredWallets = wallets.filter { !it.isArchived || it.id == defaultWalletId }
             val filteredCategories = categories.filter { !it.isArchived || it.id == defaultCategoryId }
@@ -117,22 +129,31 @@ class RecurrentTransactionAddEditViewModel @Inject constructor(
                     walletId = defaultWalletId,
                     categoryId = defaultCategoryId,
                     currencySymbol = currSymbol,
-                    currencyDecimals = 2,
+                    currencyDecimals = currDecimals,
                     isLoading = recurrenceId != null
                 )
             }
 
             if (recurrenceId != null) {
                 val entity = moneyDao.getRecurrentTransactionById(recurrenceId)
+                existingEntity = entity
                 if (entity != null) {
                     val parsedStartDate = DateUtils.parseDate(entity.startDate)
                     val matchingWallet = wallets.find { w -> w.id == entity.walletId }
-                    val entityCurrSymbol = try {
-                        matchingWallet?.currency?.let { Currency.getInstance(it).getSymbol(Locale.getDefault()) } ?: "$"
-                    } catch (e: Exception) {
-                        matchingWallet?.currency ?: "$"
-                    }
-                    val moneyFormatted = (entity.money / 100.0).toString()
+                    val entityDecimals = getDecimalsForCurrency(matchingWallet?.currency ?: "")
+                    val entityCurrSymbol = getSymbolForCurrency(matchingWallet?.currency ?: "")
+
+                    val moneyFormatted = MoneyFormatter.format(
+                        amount = entity.money,
+                        currencyCode = matchingWallet?.currency ?: "",
+                        decimals = entityDecimals,
+                        config = MoneyFormatter.Config(
+                            showCurrency = false,
+                            groupDigits = false,
+                            roundDecimals = false,
+                            showPlusMinus = false
+                        )
+                    )
 
                     val editWallets = wallets.filter { w -> !w.isArchived || w.id == entity.walletId }
                     val editCategories = categories.filter { c -> !c.isArchived || c.id == entity.categoryId }
@@ -154,7 +175,7 @@ class RecurrentTransactionAddEditViewModel @Inject constructor(
                             startDate = parsedStartDate,
                             rule = entity.rule,
                             currencySymbol = entityCurrSymbol,
-                            currencyDecimals = 2,
+                            currencyDecimals = entityDecimals,
                             availableWallets = editWallets,
                             availableCategories = editCategories,
                             availableIncomeCategories = editCategories.filter { c -> c.type == CategoryType.INCOME },
@@ -210,15 +231,12 @@ class RecurrentTransactionAddEditViewModel @Inject constructor(
     fun onWalletChanged(value: String) {
         _uiState.update { current ->
             val matchingWallet = current.availableWallets.find { it.id == value }
-            val currSymbol = try {
-                matchingWallet?.currency?.let { Currency.getInstance(it).getSymbol(Locale.getDefault()) } ?: "$"
-            } catch (e: Exception) {
-                matchingWallet?.currency ?: "$"
-            }
+            val currSymbol = getSymbolForCurrency(matchingWallet?.currency ?: "")
+            val currDecimals = getDecimalsForCurrency(matchingWallet?.currency ?: "")
             current.copy(
                 walletId = value,
                 currencySymbol = currSymbol,
-                currencyDecimals = 2
+                currencyDecimals = currDecimals
             )
         }
     }
@@ -250,7 +268,9 @@ class RecurrentTransactionAddEditViewModel @Inject constructor(
     fun save(onSuccess: () -> Unit) {
         val state = _uiState.value
         val evaluatedMoney = getImmediateResult(state.moneyStr)
-        val amountLong = ((evaluatedMoney.toDoubleOrNull() ?: 0.0) * 100).toLong()
+        val decimals = state.currencyDecimals
+        val divider = 10.0.pow(decimals.toDouble())
+        val amountLong = (evaluatedMoney.toDoubleOrNull()?.times(divider))?.roundToLong() ?: 0L
         if (amountLong <= 0 || state.walletId.isBlank() || state.categoryId.isBlank()) return
 
         viewModelScope.launch {
@@ -259,10 +279,23 @@ class RecurrentTransactionAddEditViewModel @Inject constructor(
                 val id = if (state.isNew) UUID.randomUUID().toString() else state.id
                 val startDateStr = DateUtils.getSQLDateTimeString(state.startDate)
 
-                // Compute next occurrence
-                val setting = RecurrenceSetting.fromStringOrFallback(state.startDate, state.rule)
-                val nextOccurrence = setting.getNextOccurrence(state.startDate)
-                val nextOccurrenceStr = nextOccurrence?.let { DateUtils.getSQLDateTimeString(it) }
+                val lastOccurrenceStr: String?
+                val nextOccurrenceStr: String?
+
+                if (state.isNew || existingEntity == null) {
+                    lastOccurrenceStr = startDateStr
+                    nextOccurrenceStr = startDateStr
+                } else {
+                    val oldStartDate = existingEntity?.startDate
+                    val oldRule = existingEntity?.rule
+                    if (oldStartDate == startDateStr && oldRule == state.rule) {
+                        lastOccurrenceStr = existingEntity?.lastOccurrence ?: startDateStr
+                        nextOccurrenceStr = existingEntity?.nextOccurrence
+                    } else {
+                        lastOccurrenceStr = startDateStr
+                        nextOccurrenceStr = startDateStr
+                    }
+                }
 
                 val entity = RecurrentTransactionEntity(
                     id = id,
@@ -277,7 +310,7 @@ class RecurrentTransactionAddEditViewModel @Inject constructor(
                     confirmed = state.confirmed,
                     countInTotal = state.countInTotal,
                     startDate = startDateStr,
-                    lastOccurrence = startDateStr,
+                    lastOccurrence = lastOccurrenceStr,
                     nextOccurrence = nextOccurrenceStr,
                     rule = state.rule,
                     isDeleted = false,

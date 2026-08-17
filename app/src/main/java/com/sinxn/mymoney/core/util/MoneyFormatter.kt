@@ -80,6 +80,15 @@ object MoneyFormatter {
         }
     }
 
+    fun getCurrencyDecimals(currencyCode: String): Int {
+        return try {
+            val digits = Currency.getInstance(currencyCode).defaultFractionDigits
+            if (digits >= 0) digits else 2
+        } catch (e: Exception) {
+            2
+        }
+    }
+
     fun format(
         amount: Long, 
         currencyCode: String, 

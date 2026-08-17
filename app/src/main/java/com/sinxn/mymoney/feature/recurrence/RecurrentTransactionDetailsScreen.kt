@@ -115,11 +115,18 @@ fun RecurrentTransactionDetailsScreen(
                         RecurrenceSetting.fromStringOrFallback(startDate, rt.rule)
                     }
 
-                    val formattedAmountValue = remember(rt.money, settings) {
+                    val decimals = remember(item.wallet.currency) {
+                        MoneyFormatter.getCurrencyDecimals(item.wallet.currency)
+                    }
+                    val currencySymbol = remember(item.wallet.currency) {
+                        MoneyFormatter.getCurrencySymbol(item.wallet.currency)
+                    }
+
+                    val formattedAmountValue = remember(rt.money, item.wallet.currency, decimals, settings) {
                         MoneyFormatter.format(
                             amount = rt.money,
-                            currencyCode = "",
-                            decimals = 2,
+                            currencyCode = item.wallet.currency,
+                            decimals = decimals,
                             config = MoneyFormatter.Config(
                                 showCurrency = false,
                                 groupDigits = settings.groupDigits,
@@ -159,7 +166,7 @@ fun RecurrentTransactionDetailsScreen(
                                 horizontalArrangement = Arrangement.Center
                             ) {
                                 Text(
-                                    text = item.wallet.currency,
+                                    text = currencySymbol,
                                     fontSize = 32.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = directionColor

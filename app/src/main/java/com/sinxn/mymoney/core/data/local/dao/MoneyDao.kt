@@ -1038,7 +1038,7 @@ interface MoneyDao {
             (:walletId IS NULL OR :walletId = 'total' OR :walletId = '') AND w.countInTotal = 1
             OR (:walletId IS NOT NULL AND :walletId != 'total' AND :walletId != '' AND rt.walletId = :walletId)
           )
-        ORDER BY rt.startDate DESC
+        ORDER BY rt.nextOccurrence IS NULL, rt.nextOccurrence ASC, rt.startDate DESC
     """)
     fun getRecurrentTransactionsWithDetails(walletId: String? = null): Flow<List<com.sinxn.mymoney.core.data.local.model.RecurrentTransactionWithDetails>>
 
@@ -1052,7 +1052,7 @@ interface MoneyDao {
             (:walletId IS NULL OR :walletId = 'total' OR :walletId = '') AND (wf.countInTotal = 1 OR wt.countInTotal = 1)
             OR (:walletId IS NOT NULL AND :walletId != 'total' AND :walletId != '' AND (rtf.walletFromId = :walletId OR rtf.walletToId = :walletId))
           )
-        ORDER BY rtf.startDate DESC
+        ORDER BY rtf.nextOccurrence IS NULL, rtf.nextOccurrence ASC, rtf.startDate DESC
     """)
     fun getRecurrentTransfersWithDetails(walletId: String? = null): Flow<List<com.sinxn.mymoney.core.data.local.model.RecurrentTransferWithDetails>>
 

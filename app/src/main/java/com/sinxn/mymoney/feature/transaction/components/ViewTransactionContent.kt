@@ -240,11 +240,12 @@ fun ViewTransactionContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // 4. Secondary Details Card (Place, Event, Note, Attachments, Status, Impact)
+        // 4. Secondary Details Card (Place, Event, Note, Attachments, Recurrence, Status, Impact)
         val hasSecondaryContent = uiState.place != null ||
                 uiState.event != null ||
                 !transaction.note.isNullOrEmpty() ||
                 uiState.attachments.isNotEmpty() ||
+                !transaction.recurrenceId.isNullOrEmpty() ||
                 !settings.hideStatusAndImpact
 
         if (hasSecondaryContent) {
@@ -327,6 +328,29 @@ fun ViewTransactionContent(
                             },
                             label = "Attachments",
                             value = "${uiState.attachments.size} files"
+                        )
+                        hasPreviousRow = true
+                    }
+
+                    if (!transaction.recurrenceId.isNullOrEmpty()) {
+                        if (hasPreviousRow) {
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(
+                                    alpha = 0.2f
+                                ), modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                        }
+                        CleanListRow(
+                            icon = {
+                                Icon(
+                                    Icons.Default.Repeat,
+                                    contentDescription = null,
+                                    tint = directionColor,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
+                            label = "Recurrence",
+                            value = "Recurring Transaction"
                         )
                         hasPreviousRow = true
                     }

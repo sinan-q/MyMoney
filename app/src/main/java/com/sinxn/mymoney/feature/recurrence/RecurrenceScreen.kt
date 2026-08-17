@@ -138,21 +138,25 @@ fun RecurrentTransactionCard(
     val isIncome = rt.direction == 1
     val amountColor = if (isIncome) Color(0xFF2E7D32) else Color(0xFFC62828)
     val amount = if (isIncome) rt.money else -rt.money
+    val decimals = remember(item.wallet.currency) {
+        MoneyFormatter.getCurrencyDecimals(item.wallet.currency)
+    }
 
-    val formattedMoney = remember(amount, item.wallet.currency, formatterConfig) {
+    val formattedMoney = remember(amount, item.wallet.currency, decimals, formatterConfig) {
         MoneyFormatter.format(
             amount = amount,
             currencyCode = item.wallet.currency,
-            decimals = 2,
+            decimals = decimals,
             config = formatterConfig
         )
     }
 
-    val formattedNextOccurrence = remember(rt.nextOccurrence, dateFormat) {
+    val finishedHint = stringResource(R.string.hint_recurrence_finished)
+    val formattedNextOccurrence = remember(rt.nextOccurrence, dateFormat, finishedHint) {
         rt.nextOccurrence?.let { next ->
             val nextDate = DateUtils.parseDate(next)
             DateUtils.formatDate(nextDate, dateFormat)
-        }
+        } ?: finishedHint
     }
 
     FinanceListItem(
@@ -187,20 +191,24 @@ fun RecurrentTransferCard(
     onClick: () -> Unit
 ) {
     val rtf = item.recurrentTransfer
-    val formattedMoney = remember(rtf.moneyFrom, item.walletFrom.currency, formatterConfig) {
+    val decimals = remember(item.walletFrom.currency) {
+        MoneyFormatter.getCurrencyDecimals(item.walletFrom.currency)
+    }
+    val formattedMoney = remember(rtf.moneyFrom, item.walletFrom.currency, decimals, formatterConfig) {
         MoneyFormatter.format(
             amount = rtf.moneyFrom,
             currencyCode = item.walletFrom.currency,
-            decimals = 2,
+            decimals = decimals,
             config = formatterConfig
         )
     }
 
-    val formattedNextOccurrence = remember(rtf.nextOccurrence, dateFormat) {
+    val finishedHint = stringResource(R.string.hint_recurrence_finished)
+    val formattedNextOccurrence = remember(rtf.nextOccurrence, dateFormat, finishedHint) {
         rtf.nextOccurrence?.let { next ->
             val nextDate = DateUtils.parseDate(next)
             DateUtils.formatDate(nextDate, dateFormat)
-        }
+        } ?: finishedHint
     }
 
     FinanceListItem(
