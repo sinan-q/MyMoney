@@ -191,6 +191,18 @@ sealed class Screen(
         }
     }
 
+    object Wallets : Screen("wallets", "wallets", "Wallets", isTopLevel = false)
+
+    object WalletInfo : Screen("wallet_info/{walletId}", "wallets", "Wallet Details", isTopLevel = false) {
+        fun createRoute(walletId: String): String = "wallet_info/$walletId"
+    }
+
+    object WalletAddEdit : Screen("wallet_edit?walletId={walletId}", "wallets", "Wallet Edit", isTopLevel = false) {
+        fun createRoute(walletId: String? = null): String {
+            return if (walletId != null && walletId != "new") "wallet_edit?walletId=$walletId" else "wallet_edit"
+        }
+    }
+
     object SqlConsole : Screen("sql_console", "settings", "SQL Console", isTopLevel = false)
     object Backup : Screen("backup", "settings", "Backup", isTopLevel = false)
     object Recap : Screen("recap", "overview", "Year Recap", isTopLevel = false)
@@ -201,6 +213,7 @@ sealed class Screen(
                 Transactions, Categories, Debts, Budgets, Savings,
                 Events, Recurrences, Templates, Places, People,
                 Overview, About, SupportDeveloper, Menu, Settings,
+                Wallets, WalletInfo, WalletAddEdit,
                 DebtDetails, DebtAddEdit, CategoryDetails, PersonDetails, PersonAddEdit, EventDetails, EventAddEdit,
                 PlaceDetails, PlaceAddEdit,
                 BudgetDetails, BudgetAddEdit, BudgetOverview, SavingDetails, SavingAddEdit,
@@ -243,6 +256,9 @@ sealed class Screen(
                 cleanRoute.startsWith("recurrences") || cleanRoute.startsWith("recurrent_") ->
                     ScreenMetadata(Recurrences.sidebarItemId, Recurrences.title, isTopLevel = cleanRoute == "recurrences")
 
+                cleanRoute == "wallets" -> ScreenMetadata(Wallets.sidebarItemId, Wallets.title, isTopLevel = false)
+                cleanRoute.startsWith("wallet_info") -> ScreenMetadata(Wallets.sidebarItemId, WalletInfo.title, isTopLevel = false)
+                cleanRoute.startsWith("wallet_edit") -> ScreenMetadata(Wallets.sidebarItemId, WalletAddEdit.title, isTopLevel = false)
                 cleanRoute == "categories" -> ScreenMetadata(Categories.sidebarItemId, Categories.title, isTopLevel = true)
                 cleanRoute == "events" || cleanRoute.startsWith("event_") -> ScreenMetadata(Events.sidebarItemId, Events.title, isTopLevel = cleanRoute == "events")
                 cleanRoute == "places" || cleanRoute.startsWith("place_") -> ScreenMetadata(Places.sidebarItemId, Places.title, isTopLevel = cleanRoute == "places")

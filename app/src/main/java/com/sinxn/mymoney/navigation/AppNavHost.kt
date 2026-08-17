@@ -51,7 +51,10 @@ import com.sinxn.mymoney.feature.template.TemplateListScreen
 import com.sinxn.mymoney.feature.transaction.TransactionAddEditScreen
 import com.sinxn.mymoney.feature.transaction.TransactionDetailsScreen
 import com.sinxn.mymoney.feature.transfer.TransferAddEditScreen
+import com.sinxn.mymoney.feature.wallet.WalletAddEditScreen
 import com.sinxn.mymoney.feature.wallet.WalletDetailsScreen
+import com.sinxn.mymoney.feature.wallet.WalletInfoScreen
+import com.sinxn.mymoney.feature.wallet.WalletListScreen
 
 @Composable
 fun AppNavHost(
@@ -260,6 +263,12 @@ fun AppNavHost(
                 },
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.routePattern)
+                },
+                onAddWallet = {
+                    navController.navigate(Screen.WalletAddEdit.createRoute())
+                },
+                onManageWallets = {
+                    navController.navigate(Screen.Wallets.routePattern)
                 },
                 onNavigateMenuItem = { itemId ->
                     handleSidebarNavigation(
@@ -552,6 +561,43 @@ fun AppNavHost(
                 onNavigateBack = { navController.navigateUp() }
             )
         }
+        composable(Screen.Wallets.routePattern) {
+            WalletListScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onWalletClick = { walletId ->
+                    navController.navigate(Screen.WalletInfo.createRoute(walletId))
+                },
+                onAddWalletClick = {
+                    navController.navigate(Screen.WalletAddEdit.createRoute())
+                }
+            )
+        }
+        composable(
+            Screen.WalletInfo.routePattern,
+            arguments = listOf(
+                navArgument("walletId") { type = NavType.StringType }
+            )
+        ) {
+            WalletInfoScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onTransactionClick = { transactionId ->
+                    navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
+                },
+                onEditWalletClick = { walletId ->
+                    navController.navigate(Screen.WalletAddEdit.createRoute(walletId))
+                }
+            )
+        }
+        composable(
+            Screen.WalletAddEdit.routePattern,
+            arguments = listOf(
+                navArgument("walletId") { type = NavType.StringType; nullable = true; defaultValue = null }
+            )
+        ) {
+            WalletAddEditScreen(
+                onNavigateBack = { navController.navigateUp() }
+            )
+        }
         composable(Screen.People.routePattern) {
             PeopleListScreen(
                 onNavigateBack = { navController.navigateUp() },
@@ -727,10 +773,10 @@ fun AppNavHost(
                     }
                 },
                 onAddWallet = {
-                    navController.navigate(Screen.Settings.routePattern)
+                    navController.navigate(Screen.WalletAddEdit.createRoute())
                 },
                 onManageWallets = {
-                    navController.navigate(Screen.Settings.routePattern)
+                    navController.navigate(Screen.Wallets.routePattern)
                 },
                 onItemClick = { item ->
                     handleSidebarNavigation(

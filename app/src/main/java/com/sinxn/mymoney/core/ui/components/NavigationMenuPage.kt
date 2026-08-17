@@ -294,6 +294,7 @@ fun handleSidebarNavigation(
             val targetWallet = currentWalletId.ifEmpty { Constants.TOTAL_WALLET_ID }
             navController.navigate(Screen.Transactions.createRoute(targetWallet), navOptions)
         }
+        Screen.Wallets.sidebarItemId -> navController.navigate(Screen.Wallets.routePattern, navOptions)
         Screen.Debts.sidebarItemId -> navController.navigate(Screen.Debts.routePattern, navOptions)
         Screen.Categories.sidebarItemId -> navController.navigate(Screen.Categories.routePattern, navOptions)
         Screen.Overview.sidebarItemId -> navController.navigate(Screen.Overview.routePattern, navOptions)

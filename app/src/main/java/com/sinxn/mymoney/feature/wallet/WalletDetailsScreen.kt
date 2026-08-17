@@ -59,6 +59,8 @@ fun WalletDetailsScreen(
     onDebtClick: (String) -> Unit = {},
     onNavigateToWallet: (String) -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
+    onAddWallet: () -> Unit = {},
+    onManageWallets: () -> Unit = {},
     onNavigateMenuItem: (String) -> Unit = {},
     viewModel: WalletDetailsViewModel = hiltViewModel()
 ) {
@@ -123,11 +125,11 @@ fun WalletDetailsScreen(
                     },
                     onAddWallet = {
                         isWalletListExpanded = false
-                        onNavigateToWallet("new")
+                        onAddWallet()
                     },
                     onManageWallets = {
                         isWalletListExpanded = false
-                        onNavigateToSettings()
+                        onManageWallets()
                     },
                     modifier = Modifier
                         .weight(1f)

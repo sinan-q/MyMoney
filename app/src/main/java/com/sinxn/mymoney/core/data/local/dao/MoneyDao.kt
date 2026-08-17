@@ -16,6 +16,9 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface MoneyDao {
     // Wallets
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWallet(wallet: WalletEntity)
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertWallets(wallets: List<WalletEntity>)
 
@@ -30,6 +33,48 @@ interface MoneyDao {
 
     @Query("UPDATE wallets SET isArchived = :isArchived, lastEdit = :lastEdit WHERE id = :walletId")
     suspend fun updateWalletArchived(walletId: String, isArchived: Boolean, lastEdit: Long)
+
+    @Query("UPDATE wallets SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :walletId")
+    suspend fun softDeleteWallet(walletId: String, lastEdit: Long)
+
+    @Query("UPDATE wallets SET `index` = :index, lastEdit = :lastEdit WHERE id = :walletId")
+    suspend fun updateWalletIndex(walletId: String, index: Int, lastEdit: Long)
+
+    @Query("SELECT MAX(`index`) FROM wallets WHERE isDeleted = 0")
+    suspend fun getMaxWalletIndex(): Int?
+
+    @Query("""
+        SELECT COUNT(*) FROM transfers tf
+        INNER JOIN transactions t1 ON tf.transactionFromId = t1.id AND t1.isDeleted = 0
+        INNER JOIN transactions t2 ON tf.transactionToId = t2.id AND t2.isDeleted = 0
+        LEFT JOIN transactions t3 ON tf.transactionTaxId = t3.id AND t3.isDeleted = 0
+        WHERE tf.isDeleted = 0 AND (t1.walletId = :walletId OR t2.walletId = :walletId OR (t3.walletId IS NOT NULL AND t3.walletId = :walletId))
+    """)
+    suspend fun getTransferCountForWallet(walletId: String): Int
+
+    @Query("UPDATE transactions SET isDeleted = 1, lastEdit = :lastEdit WHERE walletId = :walletId")
+    suspend fun softDeleteTransactionsForWallet(walletId: String, lastEdit: Long)
+
+    @Query("UPDATE transaction_models SET isDeleted = 1, lastEdit = :lastEdit WHERE walletId = :walletId")
+    suspend fun softDeleteTransactionModelsForWallet(walletId: String, lastEdit: Long)
+
+    @Query("UPDATE transfer_models SET isDeleted = 1, lastEdit = :lastEdit WHERE walletFromId = :walletId OR walletToId = :walletId")
+    suspend fun softDeleteTransferModelsForWallet(walletId: String, lastEdit: Long)
+
+    @Query("UPDATE recurrent_transactions SET isDeleted = 1, lastEdit = :lastEdit WHERE walletId = :walletId")
+    suspend fun softDeleteRecurrentTransactionsForWallet(walletId: String, lastEdit: Long)
+
+    @Query("UPDATE recurrent_transfers SET isDeleted = 1, lastEdit = :lastEdit WHERE walletFromId = :walletId OR walletToId = :walletId")
+    suspend fun softDeleteRecurrentTransfersForWallet(walletId: String, lastEdit: Long)
+
+    @Query("UPDATE savings SET isDeleted = 1, lastEdit = :lastEdit WHERE walletId = :walletId")
+    suspend fun softDeleteSavingsForWallet(walletId: String, lastEdit: Long)
+
+    @Query("UPDATE debts SET isDeleted = 1, lastEdit = :lastEdit WHERE walletId = :walletId")
+    suspend fun softDeleteDebtsForWallet(walletId: String, lastEdit: Long)
+
+    @Query("UPDATE budget_wallets SET isDeleted = 1, lastEdit = :lastEdit WHERE walletId = :walletId")
+    suspend fun softDeleteBudgetWalletsForWallet(walletId: String, lastEdit: Long)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertPlaces(places: List<com.sinxn.mymoney.core.data.local.entity.PlaceEntity>)
