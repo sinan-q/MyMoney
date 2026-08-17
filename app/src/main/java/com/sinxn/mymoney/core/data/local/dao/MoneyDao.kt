@@ -94,6 +94,12 @@ interface MoneyDao {
     @Query("SELECT * FROM currencies WHERE iso = :iso LIMIT 1")
     suspend fun getCurrencyByIso(iso: String): com.sinxn.mymoney.core.data.local.entity.CurrencyEntity?
 
+    @Query("SELECT * FROM currencies WHERE isDeleted = 0")
+    fun getCurrencies(): Flow<List<com.sinxn.mymoney.core.data.local.entity.CurrencyEntity>>
+
+    @Query("SELECT * FROM currencies WHERE isDeleted = 0")
+    suspend fun getCurrenciesList(): List<com.sinxn.mymoney.core.data.local.entity.CurrencyEntity>
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTransactionModels(items: List<com.sinxn.mymoney.core.data.local.entity.TransactionModelEntity>)
 

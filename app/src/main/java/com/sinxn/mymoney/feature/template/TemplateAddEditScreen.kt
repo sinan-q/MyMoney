@@ -31,7 +31,7 @@ fun TemplateAddEditScreen(
 
     var activePicker by remember { mutableStateOf<FormPicker?>(null) }
 
-    val evaluatedAmount = remember(uiState.amountStr) {
+    val evaluatedAmount = remember(uiState.amountStr, uiState.currencyDecimals) {
         viewModel.getImmediateResult(uiState.amountStr)
     }
     val amountNum = evaluatedAmount.toDoubleOrNull() ?: 0.0
@@ -264,11 +264,13 @@ fun TemplateAddEditScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
 
+                                val placeholderFrom = if (uiState.currencyDecimals == 0) "0" else "0." + "0".repeat(uiState.currencyDecimals)
                                 OutlinedTextField(
                                     value = uiState.amountStr,
                                     onValueChange = viewModel::onAmountChange,
-                                    label = { Text("Amount") },
-                                    placeholder = { Text("0.00") },
+                                    label = { Text(if (uiState.type == TemplateType.TRANSFER) "From Amount (${uiState.currencySymbol})" else "Amount") },
+                                    placeholder = { Text(placeholderFrom) },
+                                    prefix = { Text(uiState.currencySymbol + " ", fontWeight = FontWeight.Bold) },
                                     singleLine = true,
                                     shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier.fillMaxWidth(),
@@ -279,11 +281,28 @@ fun TemplateAddEditScreen(
                                 )
 
                                 if (uiState.type == TemplateType.TRANSFER) {
+                                    val placeholderTo = if (uiState.targetCurrencyDecimals == 0) "0" else "0." + "0".repeat(uiState.targetCurrencyDecimals)
+                                    OutlinedTextField(
+                                        value = uiState.amountToStr,
+                                        onValueChange = viewModel::onAmountToChange,
+                                        label = { Text("To Amount (${uiState.targetCurrencySymbol}) (Optional)") },
+                                        placeholder = { Text(if (uiState.amountToStr.isBlank() && uiState.amountStr.isNotBlank()) evaluatedAmount else placeholderTo) },
+                                        prefix = { Text(uiState.targetCurrencySymbol + " ", fontWeight = FontWeight.Bold) },
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                                        )
+                                    )
+
                                     OutlinedTextField(
                                         value = uiState.taxAmountStr,
                                         onValueChange = viewModel::onTaxAmountChange,
                                         label = { Text("Transfer Tax (Optional)") },
-                                        placeholder = { Text("0.00") },
+                                        placeholder = { Text(placeholderFrom) },
+                                        prefix = { Text(uiState.currencySymbol + " ", fontWeight = FontWeight.Bold) },
                                         singleLine = true,
                                         shape = RoundedCornerShape(12.dp),
                                         modifier = Modifier.fillMaxWidth(),

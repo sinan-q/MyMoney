@@ -46,6 +46,9 @@ class TemplateRepository @Inject constructor(
     val categories = moneyDao.getCategories()
     val places = moneyDao.getPlaces()
     val events = moneyDao.getEvents()
+    val currencies = moneyDao.getCurrencies()
+
+    suspend fun getCurrencyByIso(iso: String) = moneyDao.getCurrencyByIso(iso)
 
     suspend fun saveTransactionModel(model: TransactionModelEntity) {
         if (moneyDao.getTransactionModelById(model.id) == null) {

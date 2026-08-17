@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
+import com.sinxn.mymoney.core.data.local.entity.CurrencyEntity
 import com.sinxn.mymoney.core.data.local.entity.EventEntity
 import com.sinxn.mymoney.core.data.local.entity.PlaceEntity
 import com.sinxn.mymoney.core.data.local.entity.TransactionModelEntity
@@ -11,6 +12,7 @@ import com.sinxn.mymoney.core.data.local.entity.TransferModelEntity
 import com.sinxn.mymoney.core.data.local.entity.WalletEntity
 import com.sinxn.mymoney.core.data.repository.TemplateRepository
 import com.sinxn.mymoney.core.util.MathExpressionEvaluator
+import com.sinxn.mymoney.core.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,9 +23,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Currency
+import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.math.pow
+import kotlin.math.roundToLong
 
 sealed class TemplateAddEditEvent {
     object Saved : TemplateAddEditEvent()
@@ -59,8 +64,11 @@ data class TemplateAddEditUiState(
     val availableCategories: List<CategoryEntity> = emptyList(),
     val availablePlaces: List<PlaceEntity> = emptyList(),
     val availableEvents: List<EventEntity> = emptyList(),
+    val availableCurrencies: List<CurrencyEntity> = emptyList(),
     val currencySymbol: String = "$",
-    val targetCurrencySymbol: String = "$"
+    val currencyDecimals: Int = 2,
+    val targetCurrencySymbol: String = "$",
+    val targetCurrencyDecimals: Int = 2
 )
 
 @HiltViewModel
@@ -89,6 +97,41 @@ class TemplateAddEditViewModel @Inject constructor(
         loadData()
     }
 
+    private fun getCurrencyDecimals(iso: String?, currencies: List<CurrencyEntity>): Int {
+        if (iso.isNullOrBlank()) return 2
+        val entity = currencies.find { it.iso.equals(iso, ignoreCase = true) }
+        if (entity != null) return entity.decimals
+        return try {
+            val digits = Currency.getInstance(iso).defaultFractionDigits
+            if (digits >= 0) digits else 2
+        } catch (e: Exception) {
+            2
+        }
+    }
+
+    private fun getCurrencySymbol(iso: String?, currencies: List<CurrencyEntity>): String {
+        if (iso.isNullOrBlank()) return "$"
+        val entity = currencies.find { it.iso.equals(iso, ignoreCase = true) }
+        if (!entity?.symbol.isNullOrBlank()) return entity!!.symbol!!
+        return try {
+            Currency.getInstance(iso).getSymbol(Locale.getDefault())
+        } catch (e: Exception) {
+            MoneyFormatter.getCurrencySymbol(iso)
+        }
+    }
+
+    private fun formatBaseUnitsToDecimal(amount: Long, decimals: Int): String {
+        val divider = 10.0.pow(decimals.toDouble())
+        val value = amount.toDouble() / divider
+        return if (decimals == 0) {
+            value.toLong().toString()
+        } else if (value % 1.0 == 0.0) {
+            value.toLong().toString()
+        } else {
+            "%.${decimals}f".format(Locale.US, value).trimEnd('0').trimEnd('.')
+        }
+    }
+
     private fun loadData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
@@ -97,10 +140,18 @@ class TemplateAddEditViewModel @Inject constructor(
             val categories = templateRepository.categories.firstOrNull() ?: emptyList()
             val places = templateRepository.places.firstOrNull() ?: emptyList()
             val events = templateRepository.events.firstOrNull() ?: emptyList()
+            val currencies = templateRepository.currencies.firstOrNull() ?: emptyList()
 
-            val defaultWallet = wallets.firstOrNull()?.id ?: ""
-            val defaultTargetWallet = wallets.getOrNull(1)?.id ?: defaultWallet
-            val defaultCat = categories.firstOrNull()?.id ?: ""
+            val defaultWallet = wallets.firstOrNull()
+            val defaultWalletId = defaultWallet?.id ?: ""
+            val defaultTargetWallet = wallets.getOrNull(1) ?: defaultWallet
+            val defaultTargetWalletId = defaultTargetWallet?.id ?: defaultWalletId
+            val defaultCatId = categories.firstOrNull()?.id ?: ""
+
+            val defaultDecimals = getCurrencyDecimals(defaultWallet?.currency, currencies)
+            val defaultSymbol = getCurrencySymbol(defaultWallet?.currency, currencies)
+            val defaultTargetDecimals = getCurrencyDecimals(defaultTargetWallet?.currency, currencies)
+            val defaultTargetSymbol = getCurrencySymbol(defaultTargetWallet?.currency, currencies)
 
             if (!templateIdArg.isNullOrBlank()) {
                 if (isTransferArg) {
@@ -108,19 +159,22 @@ class TemplateAddEditViewModel @Inject constructor(
                     if (transferModel != null) {
                         val walletFrom = wallets.find { it.id == transferModel.walletFromId }
                         val walletTo = wallets.find { it.id == transferModel.walletToId }
-                        val fromDecimals = 2 // default decimals
-                        val toDecimals = 2
-                        val fromAmount = transferModel.moneyFrom.toDouble() / 10.0.pow(fromDecimals)
-                        val toAmount = transferModel.moneyTo.toDouble() / 10.0.pow(toDecimals)
-                        val taxAmount = transferModel.moneyTax?.let { it.toDouble() / 10.0.pow(fromDecimals) }
+                        val fromDecimals = getCurrencyDecimals(walletFrom?.currency, currencies)
+                        val toDecimals = getCurrencyDecimals(walletTo?.currency, currencies)
+                        val fromSymbol = getCurrencySymbol(walletFrom?.currency, currencies)
+                        val toSymbol = getCurrencySymbol(walletTo?.currency, currencies)
+
+                        val fromAmountStr = formatBaseUnitsToDecimal(transferModel.moneyFrom, fromDecimals)
+                        val toAmountStr = formatBaseUnitsToDecimal(transferModel.moneyTo, toDecimals)
+                        val taxAmountStr = transferModel.moneyTax?.let { formatBaseUnitsToDecimal(it, fromDecimals) } ?: ""
 
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
                                 type = TemplateType.TRANSFER,
-                                amountStr = if (fromAmount % 1.0 == 0.0) fromAmount.toLong().toString() else fromAmount.toString(),
-                                amountToStr = if (toAmount % 1.0 == 0.0) toAmount.toLong().toString() else toAmount.toString(),
-                                taxAmountStr = taxAmount?.let { t -> if (t % 1.0 == 0.0) t.toLong().toString() else t.toString() } ?: "",
+                                amountStr = fromAmountStr,
+                                amountToStr = toAmountStr,
+                                taxAmountStr = taxAmountStr,
                                 description = transferModel.description ?: "",
                                 walletId = transferModel.walletFromId,
                                 targetWalletId = transferModel.walletToId,
@@ -133,7 +187,12 @@ class TemplateAddEditViewModel @Inject constructor(
                                 availableWallets = wallets,
                                 availableCategories = categories,
                                 availablePlaces = places,
-                                availableEvents = events
+                                availableEvents = events,
+                                availableCurrencies = currencies,
+                                currencySymbol = fromSymbol,
+                                currencyDecimals = fromDecimals,
+                                targetCurrencySymbol = toSymbol,
+                                targetCurrencyDecimals = toDecimals
                             )
                         }
                         return@launch
@@ -141,15 +200,17 @@ class TemplateAddEditViewModel @Inject constructor(
                 } else {
                     val txModel = templateRepository.getTransactionModelById(templateIdArg)
                     if (txModel != null) {
-                        val decimals = 2
-                        val amount = txModel.money.toDouble() / 10.0.pow(decimals)
+                        val wallet = wallets.find { it.id == txModel.walletId }
+                        val decimals = getCurrencyDecimals(wallet?.currency, currencies)
+                        val symbol = getCurrencySymbol(wallet?.currency, currencies)
+                        val amountStr = formatBaseUnitsToDecimal(txModel.money, decimals)
                         val type = if (txModel.direction == 1) TemplateType.INCOME else TemplateType.EXPENSE
 
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
                                 type = type,
-                                amountStr = if (amount % 1.0 == 0.0) amount.toLong().toString() else amount.toString(),
+                                amountStr = amountStr,
                                 description = txModel.description ?: "",
                                 categoryId = txModel.categoryId,
                                 walletId = txModel.walletId,
@@ -162,7 +223,10 @@ class TemplateAddEditViewModel @Inject constructor(
                                 availableWallets = wallets,
                                 availableCategories = categories,
                                 availablePlaces = places,
-                                availableEvents = events
+                                availableEvents = events,
+                                availableCurrencies = currencies,
+                                currencySymbol = symbol,
+                                currencyDecimals = decimals
                             )
                         }
                         return@launch
@@ -173,13 +237,18 @@ class TemplateAddEditViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     isLoading = false,
-                    walletId = defaultWallet,
-                    targetWalletId = defaultTargetWallet,
-                    categoryId = defaultCat,
+                    walletId = defaultWalletId,
+                    targetWalletId = defaultTargetWalletId,
+                    categoryId = defaultCatId,
                     availableWallets = wallets,
                     availableCategories = categories,
                     availablePlaces = places,
-                    availableEvents = events
+                    availableEvents = events,
+                    availableCurrencies = currencies,
+                    currencySymbol = defaultSymbol,
+                    currencyDecimals = defaultDecimals,
+                    targetCurrencySymbol = defaultTargetSymbol,
+                    targetCurrencyDecimals = defaultTargetDecimals
                 )
             }
         }
@@ -210,11 +279,31 @@ class TemplateAddEditViewModel @Inject constructor(
     }
 
     fun onWalletChange(walletId: String) {
-        _uiState.update { it.copy(walletId = walletId) }
+        val wallet = _uiState.value.availableWallets.find { it.id == walletId }
+        val decimals = getCurrencyDecimals(wallet?.currency, _uiState.value.availableCurrencies)
+        val symbol = getCurrencySymbol(wallet?.currency, _uiState.value.availableCurrencies)
+
+        _uiState.update {
+            it.copy(
+                walletId = walletId,
+                currencySymbol = symbol,
+                currencyDecimals = decimals
+            )
+        }
     }
 
     fun onTargetWalletChange(walletId: String) {
-        _uiState.update { it.copy(targetWalletId = walletId) }
+        val wallet = _uiState.value.availableWallets.find { it.id == walletId }
+        val decimals = getCurrencyDecimals(wallet?.currency, _uiState.value.availableCurrencies)
+        val symbol = getCurrencySymbol(wallet?.currency, _uiState.value.availableCurrencies)
+
+        _uiState.update {
+            it.copy(
+                targetWalletId = walletId,
+                targetCurrencySymbol = symbol,
+                targetCurrencyDecimals = decimals
+            )
+        }
     }
 
     fun onPlaceChange(placeId: String?) {
@@ -242,7 +331,7 @@ class TemplateAddEditViewModel @Inject constructor(
     }
 
     fun getImmediateResult(input: String): String {
-        return MathExpressionEvaluator.getImmediateResult(input, 2)
+        return MathExpressionEvaluator.getImmediateResult(input, _uiState.value.currencyDecimals)
     }
 
     fun saveTemplate() {
@@ -260,13 +349,13 @@ class TemplateAddEditViewModel @Inject constructor(
                     _uiState.update { it.copy(isSaving = false) }
                     return@launch
                 }
-                val fromDecimals = 2
-                val toDecimals = 2
-                val moneyFrom = (evaluatedAmount * 10.0.pow(fromDecimals)).toLong()
+                val fromDecimals = state.currencyDecimals
+                val toDecimals = state.targetCurrencyDecimals
+                val moneyFrom = (evaluatedAmount * 10.0.pow(fromDecimals.toDouble())).roundToLong()
                 val evaluatedTo = (getImmediateResult(state.amountToStr).toDoubleOrNull() ?: evaluatedAmount)
-                val moneyTo = (evaluatedTo * 10.0.pow(toDecimals)).toLong()
+                val moneyTo = (evaluatedTo * 10.0.pow(toDecimals.toDouble())).roundToLong()
                 val moneyTax = getImmediateResult(state.taxAmountStr).toDoubleOrNull()?.let {
-                    (it * 10.0.pow(fromDecimals)).toLong()
+                    (it * 10.0.pow(fromDecimals.toDouble())).roundToLong()
                 }
 
                 val transferModel = TransferModelEntity(
@@ -292,8 +381,8 @@ class TemplateAddEditViewModel @Inject constructor(
                     _uiState.update { it.copy(isSaving = false) }
                     return@launch
                 }
-                val decimals = 2
-                val money = (evaluatedAmount * 10.0.pow(decimals)).toLong()
+                val decimals = state.currencyDecimals
+                val money = (evaluatedAmount * 10.0.pow(decimals.toDouble())).roundToLong()
                 val direction = if (state.type == TemplateType.INCOME) 1 else 0
 
                 val txModel = TransactionModelEntity(
