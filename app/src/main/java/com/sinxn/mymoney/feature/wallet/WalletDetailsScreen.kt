@@ -575,7 +575,8 @@ fun PendingConfirmationItem(
                     amount = item.transaction.money,
                     currencyCode = item.currencyCode ?: "USD",
                     decimals = item.decimals ?: 2,
-                    tintMode = if (item.transaction.direction == 1) MoneyFormatter.TintMode.INCOME else MoneyFormatter.TintMode.EXPENSE
+                    tintMode = if (item.transaction.direction == 1) MoneyFormatter.TintMode.INCOME else MoneyFormatter.TintMode.EXPENSE,
+                    config = MoneyFormatter.Config()
                 )
                 Text(
                     text = formattedMoney,

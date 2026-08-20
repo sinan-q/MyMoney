@@ -31,8 +31,7 @@ import java.util.Locale
 @Composable
 fun ViewTransactionContent(
     uiState: TransactionDetailsUiState,
-    settings: FormattingSettings,
-    onEditClick: () -> Unit
+    settings: FormattingSettings
 ) {
     val transaction = uiState.transaction?.transaction ?: return
     val scrollState = rememberScrollState()
@@ -44,10 +43,11 @@ fun ViewTransactionContent(
         resolveCategoryHierarchy(
             transaction.categoryId,
             uiState.availableCategories,
-            fallbackName = uiState.transaction?.categoryName
+            fallbackName = uiState.transaction.categoryName
         )
     }
-    val categoryIcon = if (isTransfer) "{\"type\":\"color\",\"color\":\"#0284C7\",\"name\":\"⇄\"}" else (uiState.transaction?.categoryIcon ?: uiState.availableCategories.find { it.id == transaction.categoryId }?.icon)
+    val categoryIcon = if (isTransfer) "{\"type\":\"color\",\"color\":\"#0284C7\",\"name\":\"⇄\"}" else (uiState.transaction.categoryIcon
+        ?: uiState.availableCategories.find { it.id == transaction.categoryId }?.icon)
 
     val directionColor = if (isTransfer) Color(0xFF0284C7) else when (transaction.direction) {
         1 -> Color(0xFF10B981)
@@ -71,12 +71,7 @@ fun ViewTransactionContent(
                 amount = transaction.money,
                 currencyCode = "",
                 decimals = uiState.currencyDecimals,
-                config = MoneyFormatter.Config(
-                    showCurrency = false,
-                    groupDigits = settings.groupDigits,
-                    roundDecimals = settings.roundDecimals,
-                    showPlusMinus = false
-                )
+                config = settings
             )
 
             Row(

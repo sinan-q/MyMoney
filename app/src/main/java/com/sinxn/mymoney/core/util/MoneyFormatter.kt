@@ -5,6 +5,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
+import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.util.Currency
@@ -127,6 +128,23 @@ object MoneyFormatter {
         return formattedValue
     }
 
+    fun format(
+        amount: Long, 
+        currencyCode: String, 
+        decimals: Int = 2, 
+        config: FormattingSettings
+    ): String = format(
+        amount = amount,
+        currencyCode = currencyCode,
+        decimals = decimals,
+        config = Config(
+            showCurrency = config.showCurrency,
+            groupDigits = config.groupDigits,
+            roundDecimals = config.roundDecimals,
+            showPlusMinus = config.showPlusMinus
+        )
+    )
+
     /**
      * REG-08: Format money with income/expense coloring for Compose.
      * Returns an AnnotatedString with appropriate ForegroundColorSpan equivalent.
@@ -163,5 +181,30 @@ object MoneyFormatter {
             }
         }
     }
+
+    fun formatColored(
+        amount: Long,
+        currencyCode: String,
+        decimals: Int = 2,
+        config: FormattingSettings,
+        tintMode: TintMode = TintMode.AUTO_DETECT,
+        incomeColor: Color = DEFAULT_INCOME_COLOR,
+        expenseColor: Color = DEFAULT_EXPENSE_COLOR,
+        neutralColor: Color = DEFAULT_NEUTRAL_COLOR
+    ): AnnotatedString = formatColored(
+        amount = amount,
+        currencyCode = currencyCode,
+        decimals = decimals,
+        config = Config(
+            showCurrency = config.showCurrency,
+            groupDigits = config.groupDigits,
+            roundDecimals = config.roundDecimals,
+            showPlusMinus = config.showPlusMinus
+        ),
+        tintMode = tintMode,
+        incomeColor = incomeColor,
+        expenseColor = expenseColor,
+        neutralColor = neutralColor
+    )
 }
 
