@@ -38,28 +38,26 @@ fun EditTransactionFormOptions(
     FormCardContainer {
         Column {
             // Category Row
-            val activeCategory =
-                uiState.availableCategories.find { it.id == uiState.editCategoryId }
+            val activeCategory = uiState.availableCategories.find { it.id == uiState.editCategoryId }
             CleanListRow(
                 icon = {
-                    if (activeCategory != null) {
-                        CategoryIcon(
-                            iconString = activeCategory.icon,
-                            categoryName = activeCategory.name,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    } else {
-                        Icon(
-                            Icons.Default.Category,
-                            contentDescription = null,
-                            tint = accentColor,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
+                    Icon(
+                        Icons.Default.Category,
+                        contentDescription = null,
+                        tint = accentColor,
+                    )
                 },
                 label = "Category",
                 value = activeCategory?.name?.replace("  ↳ ", "") ?: "Select Category",
-                onClick = onCategoryClick
+                active = !activeCategory?.name.isNullOrEmpty(),
+                onClick = onCategoryClick,
+                trailingIcon =  { if (activeCategory != null)
+                    CategoryIcon(
+                        iconString = activeCategory.icon,
+                        categoryName = activeCategory.name,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
             )
 
             HorizontalDivider(
@@ -71,23 +69,21 @@ fun EditTransactionFormOptions(
             val activeWallet = uiState.availableWallets.find { it.id == uiState.editWalletId }
             CleanListRow(
                 icon = {
-                    if (activeWallet != null) {
-                        CategoryIcon(
-                            iconString = activeWallet.icon,
-                            categoryName = activeWallet.name,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    } else {
-                        Icon(
-                            Icons.Default.AccountBalanceWallet,
-                            contentDescription = null,
-                            tint = accentColor,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
+                    Icon(
+                        Icons.Default.AccountBalanceWallet,
+                        contentDescription = null,
+                        tint = accentColor,
+                    )
                 },
                 label = "Wallet",
                 value = activeWallet?.name ?: "Select Wallet",
+                trailingIcon =  { if (activeWallet != null)
+                    CategoryIcon(
+                        iconString = activeWallet.icon,
+                        categoryName = activeWallet.name,
+                        modifier = Modifier.size(32.dp)
+                    )
+                },
                 onClick = onWalletClick
             )
 
@@ -110,7 +106,6 @@ fun EditTransactionFormOptions(
                         Icons.Default.CalendarToday,
                         contentDescription = null,
                         tint = accentColor,
-                        modifier = Modifier.size(20.dp)
                     )
                 },
                 label = "Date",
@@ -128,24 +123,17 @@ fun EditTransactionFormOptions(
             val selectedPeopleNames = selectedPeople.joinToString { it.name }.ifEmpty { "None" }
 
             CleanListRow(
+
                 icon = {
-                    if (selectedPeople.size == 1) {
-                        CategoryIcon(
-                            iconString = selectedPeople.first().icon,
-                            categoryName = selectedPeople.first().name,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    } else {
-                        Icon(
-                            Icons.Default.People,
-                            contentDescription = null,
-                            tint = accentColor,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                    Icon(
+                        Icons.Default.People,
+                        contentDescription = null,
+                        tint = if (selectedPeople.isNotEmpty()) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    )
                 },
                 label = "People",
                 value = selectedPeopleNames,
+                active = selectedPeople.isNotEmpty(),
                 onClick = onPeopleClick
             )
 
@@ -158,23 +146,22 @@ fun EditTransactionFormOptions(
             val activePlace = uiState.availablePlaces.find { it.id == uiState.editPlaceId }
             CleanListRow(
                 icon = {
-                    if (activePlace != null && activePlace.icon.isNotBlank()) {
-                        CategoryIcon(
-                            iconString = activePlace.icon,
-                            categoryName = activePlace.name,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    } else {
-                        Icon(
-                            Icons.Default.LocationOn,
-                            contentDescription = null,
-                            tint = accentColor,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                    Icon(
+                        Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = if (activePlace != null) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    )
                 },
                 label = "Place",
                 value = activePlace?.name ?: "None",
+                active = activePlace != null,
+                trailingIcon = {if ( activePlace != null && activePlace.icon.isNotBlank())
+                CategoryIcon(iconString = activePlace.icon,
+                    categoryName = activePlace.name,
+                    modifier = Modifier.size(32.dp)
+
+                )
+                },
                 onClick = onPlaceClick
             )
 
@@ -187,23 +174,22 @@ fun EditTransactionFormOptions(
             val activeEvent = uiState.availableEvents.find { it.id == uiState.editEventId }
             CleanListRow(
                 icon = {
-                    if (activeEvent != null && activeEvent.icon.isNotBlank()) {
-                        CategoryIcon(
-                            iconString = activeEvent.icon,
-                            categoryName = activeEvent.name,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    } else {
-                        Icon(
-                            Icons.Default.Event,
-                            contentDescription = null,
-                            tint = accentColor,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                    Icon(
+                        Icons.Default.Event,
+                        contentDescription = null,
+                        tint = if (activeEvent != null) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    )
                 },
                 label = "Event",
-                value = activeEvent?.name ?: "None",
+                value = activeEvent?.name?: "None",
+                active = !activeEvent?.name.isNullOrEmpty(),
+                trailingIcon =  { if (activeEvent != null && activeEvent.icon.isNotBlank())
+                    CategoryIcon(
+                        iconString = activeEvent.icon,
+                        categoryName = activeEvent.name,
+                        modifier = Modifier.size(32.dp)
+                    )
+                },
                 onClick = onEventClick
             )
 

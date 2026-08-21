@@ -2,6 +2,7 @@ package com.sinxn.mymoney.core.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
@@ -18,9 +19,10 @@ import androidx.compose.ui.unit.sp
 fun CleanListRow(
     icon: @Composable () -> Unit,
     label: String,
+    active: Boolean = true,
     value: String,
     onClick: (() -> Unit)? = null,
-    trailingBadge: (@Composable () -> Unit)? = null
+    trailingIcon:  (@Composable () -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
@@ -30,55 +32,45 @@ fun CleanListRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(
-            modifier = Modifier.weight(1f)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                icon()
-                Spacer(modifier = Modifier.width(8.dp))
+            icon()
+            Spacer(modifier = Modifier.width(16.dp))
+            Column() {
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
                 )
-            }
 
-            Spacer(modifier = Modifier.height(6.dp))
-
-            if (trailingBadge != null) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = value,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        lineHeight = 22.sp
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    trailingBadge()
-                }
-            } else {
                 Text(
                     text = value,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = if (active) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
                     lineHeight = 22.sp
                 )
             }
         }
-
-        if (onClick != null) {
-            Spacer(modifier = Modifier.width(12.dp))
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                modifier = Modifier.size(20.dp)
-            )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            trailingIcon?.invoke()
+            if (onClick != null) {
+                Spacer(modifier = Modifier.width(12.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
+}
+
+fun TransactionFormRowItem(
+
+) {
+
 }

@@ -306,7 +306,7 @@ fun DebtViewContent(
                                 icon = { Icon(Icons.Default.Event, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
                                 label = "Due Date",
                                 value = debt.expirationDate.take(10),
-                                trailingBadge = if (isOverdue) {
+                                trailingIcon = if (isOverdue) {
                                     {
                                         Surface(
                                             shape = CircleShape,

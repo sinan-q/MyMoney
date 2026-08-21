@@ -260,207 +260,197 @@ fun ViewTransactionContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // 4. Secondary Details Card (Place, Event, Note, Attachments, Recurrence, Status, Impact)
-        val hasSecondaryContent = uiState.place != null ||
-                uiState.event != null ||
-                !transaction.note.isNullOrEmpty() ||
-                uiState.attachments.isNotEmpty() ||
-                !transaction.recurrenceId.isNullOrEmpty() ||
-                !settings.hideStatusAndImpact
+        FormCardContainer(containerAlpha = 0.25f) {
+            Column {
+                var hasPreviousRow = false
 
-        if (hasSecondaryContent) {
-            FormCardContainer(containerAlpha = 0.25f) {
-                Column {
-                    var hasPreviousRow = false
-
-                    uiState.place?.let { place ->
-                        CleanListRow(
-                            icon = {
-                                Icon(
-                                    Icons.Default.LocationOn,
-                                    contentDescription = null,
-                                    tint = directionColor,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            },
-                            label = "Place",
-                            value = place.name
-                        )
-                        hasPreviousRow = true
-                    }
-
-                    uiState.event?.let { event ->
-                        if (hasPreviousRow) {
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(
-                                    alpha = 0.2f
-                                ), modifier = Modifier.padding(horizontal = 16.dp)
+                uiState.place?.let { place ->
+                    CleanListRow(
+                        icon = {
+                            Icon(
+                                Icons.Default.LocationOn,
+                                contentDescription = null,
+                                tint = directionColor,
+                                modifier = Modifier.size(20.dp)
                             )
-                        }
-                        CleanListRow(
-                            icon = {
-                                Icon(
-                                    Icons.Default.Event,
-                                    contentDescription = null,
-                                    tint = directionColor,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            },
-                            label = "Event",
-                            value = event.name
-                        )
-                        hasPreviousRow = true
-                    }
+                        },
+                        label = "Place",
+                        value = place.name
+                    )
+                    hasPreviousRow = true
+                }
 
-                    if (!transaction.note.isNullOrEmpty()) {
-                        if (hasPreviousRow) {
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(
-                                    alpha = 0.2f
-                                ), modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                        }
-                        ViewStackedDetailBlock(
-                            icon = Icons.Default.Notes,
-                            iconTint = directionColor,
-                            label = "Note",
-                            value = transaction.note
-                        )
-                        hasPreviousRow = true
-                    }
-
-                    if (uiState.attachments.isNotEmpty()) {
-                        if (hasPreviousRow) {
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(
-                                    alpha = 0.2f
-                                ), modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                        }
-                        CleanListRow(
-                            icon = {
-                                Icon(
-                                    Icons.Default.AttachFile,
-                                    contentDescription = null,
-                                    tint = directionColor,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            },
-                            label = "Attachments",
-                            value = "${uiState.attachments.size} files"
-                        )
-                        hasPreviousRow = true
-                    }
-
-                    if (!transaction.recurrenceId.isNullOrEmpty()) {
-                        if (hasPreviousRow) {
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(
-                                    alpha = 0.2f
-                                ), modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                        }
-                        CleanListRow(
-                            icon = {
-                                Icon(
-                                    Icons.Default.Repeat,
-                                    contentDescription = null,
-                                    tint = directionColor,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            },
-                            label = "Recurrence",
-                            value = "Recurring Transaction"
-                        )
-                        hasPreviousRow = true
-                    }
-
-                    if (!settings.hideStatusAndImpact) {
-                        if (hasPreviousRow) {
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(
-                                    alpha = 0.2f
-                                ), modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                        }
-
-                        // Status Row
-                        CleanListRow(
-                            icon = {
-                                Icon(
-                                    Icons.Default.Info,
-                                    contentDescription = null,
-                                    tint = directionColor,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            },
-                            label = "Status",
-                            value = "",
-                            trailingBadge = {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = if (transaction.confirmed) Color(0xFF10B981).copy(alpha = 0.15f) else MaterialTheme.colorScheme.outline.copy(
-                                        alpha = 0.15f
-                                    ),
-                                    border = BorderStroke(
-                                        1.dp,
-                                        if (transaction.confirmed) Color(0xFF10B981).copy(alpha = 0.3f) else MaterialTheme.colorScheme.outline.copy(
-                                            alpha = 0.3f
-                                        )
-                                    )
-                                ) {
-                                    Text(
-                                        text = if (transaction.confirmed) "Confirmed" else "Pending",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (transaction.confirmed) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(
-                                            horizontal = 10.dp,
-                                            vertical = 4.dp
-                                        )
-                                    )
-                                }
-                            }
-                        )
-
+                uiState.event?.let { event ->
+                    if (hasPreviousRow) {
                         HorizontalDivider(
                             color = MaterialTheme.colorScheme.outlineVariant.copy(
                                 alpha = 0.2f
                             ), modifier = Modifier.padding(horizontal = 16.dp)
                         )
+                    }
+                    CleanListRow(
+                        icon = {
+                            Icon(
+                                Icons.Default.Event,
+                                contentDescription = null,
+                                tint = directionColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        },
+                        label = "Event",
+                        value = event.name
+                    )
+                    hasPreviousRow = true
+                }
 
-                        // Impact Row
-                        CleanListRow(
-                            icon = {
-                                Icon(
-                                    Icons.Default.Tune,
-                                    contentDescription = null,
-                                    tint = directionColor,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            },
-                            label = "Impact",
-                            value = "",
-                            trailingBadge = {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = directionColor.copy(alpha = 0.12f),
-                                    border = BorderStroke(1.dp, directionColor.copy(alpha = 0.25f))
-                                ) {
-                                    Text(
-                                        text = if (transaction.countInTotal) "Included in Total" else "Excluded from Total",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = directionColor,
-                                        modifier = Modifier.padding(
-                                            horizontal = 10.dp,
-                                            vertical = 4.dp
-                                        )
-                                    )
-                                }
-                            }
+                if (!transaction.note.isNullOrEmpty()) {
+                    if (hasPreviousRow) {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(
+                                alpha = 0.2f
+                            ), modifier = Modifier.padding(horizontal = 16.dp)
                         )
                     }
+                    ViewStackedDetailBlock(
+                        icon = Icons.Default.Notes,
+                        iconTint = directionColor,
+                        label = "Note",
+                        value = transaction.note
+                    )
+                    hasPreviousRow = true
+                }
+
+                if (uiState.attachments.isNotEmpty()) {
+                    if (hasPreviousRow) {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(
+                                alpha = 0.2f
+                            ), modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    }
+                    CleanListRow(
+                        icon = {
+                            Icon(
+                                Icons.Default.AttachFile,
+                                contentDescription = null,
+                                tint = directionColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        },
+                        label = "Attachments",
+                        value = "${uiState.attachments.size} files"
+                    )
+                    hasPreviousRow = true
+                }
+
+                if (!transaction.recurrenceId.isNullOrEmpty()) {
+                    if (hasPreviousRow) {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(
+                                alpha = 0.2f
+                            ), modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    }
+                    CleanListRow(
+                        icon = {
+                            Icon(
+                                Icons.Default.Repeat,
+                                contentDescription = null,
+                                tint = directionColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        },
+                        label = "Recurrence",
+                        value = "Recurring Transaction"
+                    )
+                    hasPreviousRow = true
+                }
+
+                if (!settings.hideStatusAndImpact) {
+                    if (hasPreviousRow) {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(
+                                alpha = 0.2f
+                            ), modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    }
+
+                    // Status Row
+                    CleanListRow(
+                        icon = {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = null,
+                                tint = directionColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        },
+                        label = "Status",
+                        value = "",
+                        trailingIcon = {
+                            Surface(
+                                shape = CircleShape,
+                                color = if (transaction.confirmed) Color(0xFF10B981).copy(alpha = 0.15f) else MaterialTheme.colorScheme.outline.copy(
+                                    alpha = 0.15f
+                                ),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (transaction.confirmed) Color(0xFF10B981).copy(alpha = 0.3f) else MaterialTheme.colorScheme.outline.copy(
+                                        alpha = 0.3f
+                                    )
+                                )
+                            ) {
+                                Text(
+                                    text = if (transaction.confirmed) "Confirmed" else "Pending",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (transaction.confirmed) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(
+                                        horizontal = 10.dp,
+                                        vertical = 4.dp
+                                    )
+                                )
+                            }
+                        }
+                    )
+
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(
+                            alpha = 0.2f
+                        ), modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+
+                    // Impact Row
+                    CleanListRow(
+                        icon = {
+                            Icon(
+                                Icons.Default.Tune,
+                                contentDescription = null,
+                                tint = directionColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        },
+                        label = "Impact",
+                        value = "",
+                        trailingIcon = {
+                            Surface(
+                                shape = CircleShape,
+                                color = directionColor.copy(alpha = 0.12f),
+                                border = BorderStroke(1.dp, directionColor.copy(alpha = 0.25f))
+                            ) {
+                                Text(
+                                    text = if (transaction.countInTotal) "Included in Total" else "Excluded from Total",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = directionColor,
+                                    modifier = Modifier.padding(
+                                        horizontal = 10.dp,
+                                        vertical = 4.dp
+                                    )
+                                )
+                            }
+                        }
+                    )
                 }
             }
         }

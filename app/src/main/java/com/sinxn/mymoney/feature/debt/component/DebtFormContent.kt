@@ -127,11 +127,11 @@ fun DebtFormContent(
                         onDismissKeyboardAndNumpad()
                         activePicker = FormPicker.DueDate
                     },
-                    trailingBadge = if (!uiState.editExpirationDate.isNullOrBlank()) {
+                    trailingIcon = if (!uiState.editExpirationDate.isNullOrBlank()) {
                         {
                             IconButton(
                                 onClick = { viewModel.updateExpirationDate(null) },
-                                modifier = Modifier.size(24.dp)
+                                //modifier = Modifier.size(24.dp)
                             ) {
                                 Icon(Icons.Default.Close, contentDescription = "Clear Due Date", modifier = Modifier.size(16.dp))
                             }

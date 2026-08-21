@@ -345,17 +345,15 @@ fun SavingAddEditScreen(
                                         numpadState.dismiss()
                                         showTargetDatePicker = true
                                     },
-                                    trailingBadge = if (uiState.editEndDate != null) {
+                                    trailingIcon = if (uiState.editEndDate != null) {
                                         {
                                             IconButton(
-                                                onClick = { viewModel.updateEndDate(null) },
-                                                modifier = Modifier.size(24.dp)
+                                                onClick = { viewModel.updateEndDate(null) }
                                             ) {
                                                 Icon(
                                                     Icons.Default.Clear,
                                                     contentDescription = "Clear date",
                                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    modifier = Modifier.size(16.dp)
                                                 )
                                             }
                                         }

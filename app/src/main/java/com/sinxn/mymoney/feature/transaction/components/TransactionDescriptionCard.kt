@@ -1,6 +1,7 @@
 package com.sinxn.mymoney.feature.transaction.components
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Description
@@ -18,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sinxn.mymoney.core.ui.components.CleanListRow
 import com.sinxn.mymoney.core.ui.components.FormCardContainer
 
 @Composable
@@ -63,35 +65,45 @@ fun TransactionDescriptionCard(
                 )
             }
         } else {
-            Column(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            CleanListRow(
+                icon = {
                     Icon(
                         imageVector = Icons.Default.Description,
                         contentDescription = null,
-                        tint = accentColor,
-                        modifier = Modifier.size(18.dp)
+                        tint = accentColor
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Description",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    lineHeight = 22.sp
-                )
-            }
+                },
+                label = "Description",
+                value = description,
+            )
+//            Row(
+//                modifier = Modifier.fillMaxWidth(),
+//                horizontalArrangement = Arrangement.Start,
+//                verticalAlignment = Alignment.CenterVertically
+//            ) {
+//                Icon(
+//                    modifier = Modifier
+//                        .padding(vertical = 16.dp, horizontal = 12.dp),
+//                    imageVector = Icons.Default.Description,
+//                    contentDescription = null,
+//                    tint = accentColor
+//                )
+//                Column() {
+//                    Text(
+//                        text = "Description",
+//                        style = MaterialTheme.typography.labelSmall,
+//                        fontWeight = FontWeight.Medium,
+//                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+//                    )
+//                    Text(
+//                        text = description,
+//                        style = MaterialTheme.typography.bodyMedium,
+//                        fontWeight = FontWeight.SemiBold,
+//                        color = MaterialTheme.colorScheme.onSurface,
+//                        lineHeight = 22.sp
+//                    )
+//                }
+//            }
         }
     }
 }
