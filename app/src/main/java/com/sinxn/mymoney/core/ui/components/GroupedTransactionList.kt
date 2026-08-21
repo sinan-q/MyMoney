@@ -8,22 +8,26 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sinxn.mymoney.core.data.local.model.TransactionListItem
+import com.sinxn.mymoney.core.data.local.model.TransactionMonthGroup
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 
 /**
- * Group raw List<TransactionWithCategory> into month headers and transaction items.
+ * Group raw List<TransactionWithCategory> directly into structured TransactionMonthGroup instances.
  */
-fun groupTransactionsByMonth(
+fun groupTransactionsIntoMonthGroups(
     transactions: List<TransactionWithCategory>,
-    firstDayOfMonth: Int = 1
-): List<TransactionListItem> {
+    firstDayOfMonth: Int = 1,
+    decimals: Int = 2,
+    currencyCode: String = "USD",
+    formatterConfig: MoneyFormatter.Config = MoneyFormatter.Config(),
+    dateFormat: Int = 0
+): List<TransactionMonthGroup> {
     if (transactions.isEmpty()) return emptyList()
 
     val validTransactions = transactions.map {
@@ -36,7 +40,7 @@ fun groupTransactionsByMonth(
             DateUtils.getStartOfBudgetMonth(date, firstDayOfMonth)
         }
 
-    val result = ArrayList<TransactionListItem>(transactions.size + grouped.size)
+    val result = ArrayList<TransactionMonthGroup>(grouped.size)
 
     grouped.forEach { (monthDate, transactionsInGroup) ->
         var total = 0L
@@ -53,33 +57,91 @@ fun groupTransactionsByMonth(
             }
         }
 
-        result.add(
-            TransactionListItem.Header(
-                date = monthDate,
-                totalAmount = total,
-                income = income,
-                expense = expense,
-                isTotalValid = true,
-                balanceBreakdown = null,
-                transactionCount = transactionsInGroup.size
-            )
+        val formattedTotal = MoneyFormatter.format(
+            amount = total,
+            currencyCode = currencyCode,
+            decimals = decimals,
+            config = formatterConfig
+        )
+        val formattedIncome = MoneyFormatter.format(
+            amount = income,
+            currencyCode = currencyCode,
+            decimals = decimals,
+            config = formatterConfig
+        )
+        val formattedExpense = MoneyFormatter.format(
+            amount = expense,
+            currencyCode = currencyCode,
+            decimals = decimals,
+            config = formatterConfig
+        )
+        val formattedMonthHeader = DateUtils.formatMonthHeader(monthDate)
+
+        val header = TransactionListItem.Header(
+            date = monthDate,
+            totalAmount = total,
+            income = income,
+            expense = expense,
+            isTotalValid = true,
+            balanceBreakdown = null,
+            transactionCount = transactionsInGroup.size,
+            formattedDate = formattedMonthHeader,
+            formattedTotal = formattedTotal,
+            formattedIncome = formattedIncome,
+            formattedExpense = formattedExpense
         )
 
-        transactionsInGroup.forEach { (t, _) ->
-            result.add(TransactionListItem.Transaction(t))
+        val items = transactionsInGroup.map { (t, _) ->
+            val uiModel = t.toUiModel(
+                decimals = t.decimals,
+                currencyCode = t.currencySymbol ?: t.currencyCode ?: currencyCode,
+                formatterConfig = formatterConfig,
+                dateFormat = dateFormat
+            )
+            TransactionListItem.Transaction(t, uiModel)
         }
+
+        result.add(TransactionMonthGroup(header = header, items = items))
     }
 
     return result
 }
 
 /**
- * LazyListScope extension for rendering month-grouped transaction sticky headers and transaction items.
- * Can be plugged directly inside any parent LazyColumn (CategoryDetails, BudgetOverview, WalletDetails, etc.).
+ * Group raw List<TransactionWithCategory> into month headers and transaction items.
+ */
+fun groupTransactionsByMonth(
+    transactions: List<TransactionWithCategory>,
+    firstDayOfMonth: Int = 1,
+    decimals: Int = 2,
+    currencyCode: String = "USD",
+    formatterConfig: MoneyFormatter.Config = MoneyFormatter.Config(),
+    dateFormat: Int = 0
+): List<TransactionListItem> {
+    val monthGroups = groupTransactionsIntoMonthGroups(
+        transactions = transactions,
+        firstDayOfMonth = firstDayOfMonth,
+        decimals = decimals,
+        currencyCode = currencyCode,
+        formatterConfig = formatterConfig,
+        dateFormat = dateFormat
+    )
+
+    val result = ArrayList<TransactionListItem>(transactions.size + monthGroups.size)
+    monthGroups.forEach { group ->
+        result.add(group.header)
+        result.addAll(group.items)
+    }
+    return result
+}
+
+/**
+ * Primary LazyListScope extension: renders structured List<TransactionMonthGroup> directly
+ * with ZERO in-composable grouping or memory allocations.
  */
 @OptIn(ExperimentalFoundationApi::class)
 fun LazyListScope.monthGroupedTransactionItems(
-    items: List<TransactionListItem>,
+    monthGroups: List<TransactionMonthGroup>,
     collapsedGroups: Set<String>,
     onToggleGroup: (String) -> Unit,
     onTransactionClick: (String) -> Unit,
@@ -89,8 +151,8 @@ fun LazyListScope.monthGroupedTransactionItems(
     dateFormat: Int = 0,
     emptyMessage: String = "No transactions found"
 ) {
-    if (items.isEmpty()) {
-        item(key = "empty_transactions_state") {
+    if (monthGroups.isEmpty()) {
+        item(key = "empty_transactions_state", contentType = "empty_state") {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -107,28 +169,12 @@ fun LazyListScope.monthGroupedTransactionItems(
         return
     }
 
-    var currentHeader: TransactionListItem.Header? = null
-    val customGrouped = mutableListOf<Pair<TransactionListItem.Header, MutableList<TransactionListItem>>>()
-
-    items.forEach { item ->
-        when (item) {
-            is TransactionListItem.Header -> {
-                currentHeader = item
-                customGrouped.add(item to mutableListOf())
-            }
-            is TransactionListItem.Transaction -> {
-                currentHeader?.let {
-                    customGrouped.lastOrNull()?.second?.add(item)
-                }
-            }
-        }
-    }
-
-    customGrouped.forEach { (header, groupItems) ->
-        val headerKey = DateUtils.formatMonthHeader(header.date)
+    monthGroups.forEach { group ->
+        val header = group.header
+        val headerKey = header.formattedDate ?: DateUtils.formatMonthHeader(header.date)
         val isCollapsed = collapsedGroups.contains(headerKey)
 
-        stickyHeader(key = "header_$headerKey") {
+        stickyHeader(key = "header_$headerKey", contentType = "header") {
             TransactionHeader(
                 header = header,
                 decimals = decimals,
@@ -141,31 +187,32 @@ fun LazyListScope.monthGroupedTransactionItems(
 
         if (!isCollapsed) {
             itemsIndexed(
-                items = groupItems,
-                key = { _, item ->
-                    when (item) {
-                        is TransactionListItem.Transaction -> item.transaction.transaction.id
-                        else -> "unknown_${item.hashCode()}"
-                    }
-                }
+                items = group.items,
+                key = { _, item -> item.transaction.transaction.id },
+                contentType = { _, _ -> "transaction" }
             ) { index, item ->
-                val isLastItem = index == groupItems.lastIndex
+                val isLastItem = index == group.items.lastIndex
+                val trans = item.transaction
+                val uiModel = item.uiModel
 
-                when (item) {
-                    is TransactionListItem.Transaction -> {
-                        val trans = item.transaction
-                        TransactionItem(
-                            item = trans,
-                            decimals = trans.decimals,
-                            currencyCode = trans.currencySymbol ?: trans.currencyCode ?: currencyCode,
-                            formatterConfig = formatterConfig,
-                            dateFormat = dateFormat,
-                            isLastItem = isLastItem,
-                            showDate = true,
-                            onClick = { onTransactionClick(trans.transaction.id) }
-                        )
-                    }
-                    else -> {}
+                if (uiModel != null) {
+                    TransactionItem(
+                        uiModel = uiModel,
+                        isLastItem = isLastItem,
+                        showDate = true,
+                        onClick = { onTransactionClick(uiModel.id) }
+                    )
+                } else {
+                    TransactionItem(
+                        item = trans,
+                        decimals = trans.decimals,
+                        currencyCode = trans.currencySymbol ?: trans.currencyCode ?: currencyCode,
+                        formatterConfig = formatterConfig,
+                        dateFormat = dateFormat,
+                        isLastItem = isLastItem,
+                        showDate = true,
+                        onClick = { onTransactionClick(trans.transaction.id) }
+                    )
                 }
             }
         }

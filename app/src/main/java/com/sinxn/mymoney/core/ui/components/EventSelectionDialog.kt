@@ -191,6 +191,15 @@ fun EventSelectionDialog(
             }
 
             // ── 3. Edge-to-Edge Events List ──
+            val eventDialogItems = remember(filteredEvents) {
+                filteredEvents.map { event ->
+                    EventDialogItem(
+                        event = event,
+                        iconData = if (event.icon.isNotBlank()) parseIconData(event.icon, event.name) else null
+                    )
+                }
+            }
+
             LazyColumn(
                 state = listState,
                 modifier = Modifier
@@ -268,14 +277,15 @@ fun EventSelectionDialog(
                     }
                 } else {
                     itemsIndexed(
-                        items = filteredEvents,
-                        key = { idx, event -> "event_${event.id}_$idx" }
-                    ) { _, event ->
+                        items = eventDialogItems,
+                        key = { idx, item -> "event_${item.event.id}_$idx" },
+                        contentType = { _, _ -> "event_dialog_row" }
+                    ) { _, item ->
                         EventRow(
-                            event = event,
-                            isSelected = event.id == selectedEventId,
+                            item = item,
+                            isSelected = item.event.id == selectedEventId,
                             onClick = {
-                                onEventSelected(event)
+                                onEventSelected(item.event)
                                 scope.launch {
                                     sheetState.hide()
                                     onDismissRequest()
@@ -289,14 +299,21 @@ fun EventSelectionDialog(
     }
 }
 
+@Immutable
+private data class EventDialogItem(
+    val event: EventEntity,
+    val iconData: IconData?
+)
+
 // ── Minimalist Edge-to-Edge Event Row ──
 
 @Composable
 private fun EventRow(
-    event: EventEntity,
+    item: EventDialogItem,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val event = item.event
     val bgColor by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer
         else Color.Transparent,
@@ -311,10 +328,9 @@ private fun EventRow(
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (event.icon.isNotBlank()) {
+        if (item.iconData != null) {
             CategoryIcon(
-                iconString = event.icon,
-                categoryName = event.name,
+                iconData = item.iconData,
                 modifier = Modifier.size(42.dp)
             )
         } else {

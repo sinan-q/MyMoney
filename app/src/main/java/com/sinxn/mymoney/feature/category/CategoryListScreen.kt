@@ -25,20 +25,32 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.Immutable
 import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
+import com.sinxn.mymoney.core.ui.components.IconData
 import com.sinxn.mymoney.core.ui.components.TabPill
+import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.CategoryType
 import kotlinx.coroutines.launch
 import kotlin.collections.listOf
 
+@Immutable
 private sealed class CategoryRow {
+    @Immutable
     data class Parent(
         val category: CategoryEntity,
+        val cleanName: String,
+        val iconData: IconData,
         val subcategoryCount: Int,
         val isExpanded: Boolean
     ) : CategoryRow()
-    data class Sub(val category: CategoryEntity) : CategoryRow()
+    @Immutable
+    data class Sub(
+        val category: CategoryEntity,
+        val cleanName: String,
+        val iconData: IconData
+    ) : CategoryRow()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -144,12 +156,19 @@ fun CategoryListScreen(
                                         is CategoryRow.Parent -> "p_${row.category.id}"
                                         is CategoryRow.Sub -> "s_${row.category.id}"
                                     }
+                                },
+                                contentType = { row ->
+                                    when (row) {
+                                        is CategoryRow.Parent -> "parent_cat"
+                                        is CategoryRow.Sub -> "sub_cat"
+                                    }
                                 }
                             ) { row ->
                                 when (row) {
                                     is CategoryRow.Parent -> {
                                         ParentCategoryRow(
-                                            category = row.category,
+                                            cleanName = row.cleanName,
+                                            iconData = row.iconData,
                                             hasSubcategories = row.subcategoryCount > 0,
                                             isExpanded = row.isExpanded,
                                             onRowClick = {
@@ -162,7 +181,8 @@ fun CategoryListScreen(
                                     }
                                     is CategoryRow.Sub -> {
                                         SubcategoryCategoryRow(
-                                            category = row.category,
+                                            cleanName = row.cleanName,
+                                            iconData = row.iconData,
                                             onClick = {
                                                 onCategoryClick(row.category.id)
                                             }
@@ -180,16 +200,13 @@ fun CategoryListScreen(
 
 @Composable
 private fun ParentCategoryRow(
-    category: CategoryEntity,
+    cleanName: String,
+    iconData: IconData,
     hasSubcategories: Boolean,
     isExpanded: Boolean,
     onRowClick: () -> Unit,
     onExpandToggle: () -> Unit
 ) {
-    val cleanName = remember(category.name) {
-        category.name.replace("  ↳ ", "").replace("↳", "").trim()
-    }
-
     Column {
         Row(
             modifier = Modifier
@@ -199,8 +216,7 @@ private fun ParentCategoryRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             CategoryIcon(
-                iconString = category.icon,
-                categoryName = cleanName,
+                iconData = iconData,
                 modifier = Modifier.size(42.dp)
             )
 
@@ -240,13 +256,10 @@ private fun ParentCategoryRow(
 
 @Composable
 private fun SubcategoryCategoryRow(
-    category: CategoryEntity,
+    cleanName: String,
+    iconData: IconData,
     onClick: () -> Unit
 ) {
-    val cleanName = remember(category.name) {
-        category.name.replace("  ↳ ", "").replace("↳", "").trim()
-    }
-
     Column {
         Row(
             modifier = Modifier
@@ -256,8 +269,7 @@ private fun SubcategoryCategoryRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             CategoryIcon(
-                iconString = category.icon,
-                categoryName = cleanName,
+                iconData = iconData,
                 modifier = Modifier.size(42.dp)
             )
 
@@ -321,16 +333,22 @@ private fun buildFlatRows(
     for (parent in parents) {
         val subs = subMap[parent.id] ?: emptyList()
         val isExpanded = parent.id in expandedParentIds
-        result.add(CategoryRow.Parent(parent, subs.size, isExpanded))
+        val cleanName = parent.name.replace("  ↳ ", "").replace("↳", "").trim()
+        val iconData = parseIconData(parent.icon, cleanName)
+        result.add(CategoryRow.Parent(parent, cleanName, iconData, subs.size, isExpanded))
         if (isExpanded) {
             for (sub in subs) {
-                result.add(CategoryRow.Sub(sub))
+                val subCleanName = sub.name.replace("  ↳ ", "").replace("↳", "").trim()
+                val subIconData = parseIconData(sub.icon, subCleanName)
+                result.add(CategoryRow.Sub(sub, subCleanName, subIconData))
             }
         }
     }
 
     for (orphan in orphaned) {
-        result.add(CategoryRow.Parent(orphan, 0, false))
+        val cleanName = orphan.name.replace("  ↳ ", "").replace("↳", "").trim()
+        val iconData = parseIconData(orphan.icon, cleanName)
+        result.add(CategoryRow.Parent(orphan, cleanName, iconData, 0, false))
     }
 
     return result

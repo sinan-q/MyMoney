@@ -25,7 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
-import com.sinxn.mymoney.core.ui.components.groupTransactionsByMonth
+import com.sinxn.mymoney.core.ui.components.groupTransactionsIntoMonthGroups
 import com.sinxn.mymoney.core.ui.components.monthGroupedTransactionItems
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import kotlinx.coroutines.flow.collectLatest
@@ -43,16 +43,31 @@ fun WalletInfoScreen(
     var showTransferInUseDialog by remember { mutableStateOf(false) }
     var collapsedMonthGroups by remember { mutableStateOf(setOf<String>()) }
 
-    val groupedItems = remember(uiState.transactions) {
-        groupTransactionsByMonth(uiState.transactions)
-    }
-
     val formatterConfig = remember(uiState.formattingSettings) {
         MoneyFormatter.Config(
             showCurrency = uiState.formattingSettings.showCurrency,
             groupDigits = uiState.formattingSettings.groupDigits,
             roundDecimals = uiState.formattingSettings.roundDecimals,
             showPlusMinus = false
+        )
+    }
+
+    val effectiveCurrencyCode = uiState.wallet?.let { it.currencySymbol ?: it.wallet.currency } ?: "USD"
+    val decimals = uiState.wallet?.decimals ?: 2
+
+    val groupedItems = remember(
+        uiState.transactions,
+        decimals,
+        effectiveCurrencyCode,
+        formatterConfig,
+        uiState.formattingSettings.dateFormat
+    ) {
+        groupTransactionsIntoMonthGroups(
+            transactions = uiState.transactions,
+            decimals = decimals,
+            currencyCode = effectiveCurrencyCode,
+            formatterConfig = formatterConfig,
+            dateFormat = uiState.formattingSettings.dateFormat
         )
     }
 
@@ -406,7 +421,7 @@ fun WalletInfoScreen(
                     }
                 } else {
                     monthGroupedTransactionItems(
-                        items = groupedItems,
+                        monthGroups = groupedItems,
                         collapsedGroups = collapsedMonthGroups,
                         onToggleGroup = { groupKey ->
                             collapsedMonthGroups = if (groupKey in collapsedMonthGroups) {

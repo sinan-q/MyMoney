@@ -33,7 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
-import com.sinxn.mymoney.core.ui.components.groupTransactionsByMonth
+import com.sinxn.mymoney.core.ui.components.groupTransactionsIntoMonthGroups
 import com.sinxn.mymoney.core.ui.components.monthGroupedTransactionItems
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import kotlinx.coroutines.flow.collectLatest
@@ -51,8 +51,20 @@ fun PlaceDetailsScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var collapsedGroups by remember { mutableStateOf(setOf<String>()) }
 
-    val groupedItems = remember(uiState.transactions) {
-        groupTransactionsByMonth(uiState.transactions)
+    val groupedItems = remember(
+        uiState.transactions,
+        uiState.decimals,
+        uiState.currencyCode,
+        uiState.formatterConfig,
+        uiState.dateFormat
+    ) {
+        groupTransactionsIntoMonthGroups(
+            transactions = uiState.transactions,
+            decimals = uiState.decimals,
+            currencyCode = uiState.currencyCode,
+            formatterConfig = uiState.formatterConfig,
+            dateFormat = uiState.dateFormat
+        )
     }
 
     LaunchedEffect(Unit) {
@@ -374,7 +386,7 @@ fun PlaceDetailsScreen(
 
                     // Month-grouped Transactions List with Sticky Headers
                     monthGroupedTransactionItems(
-                        items = groupedItems,
+                        monthGroups = groupedItems,
                         collapsedGroups = collapsedGroups,
                         onToggleGroup = { headerKey ->
                             collapsedGroups = if (headerKey in collapsedGroups) {

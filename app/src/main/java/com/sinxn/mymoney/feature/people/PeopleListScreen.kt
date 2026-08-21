@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.entity.PersonEntity
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
+import com.sinxn.mymoney.core.ui.components.IconData
+import com.sinxn.mymoney.core.ui.components.parseIconData
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,9 +40,17 @@ fun PeopleListScreen(
         } else {
             uiState.people.filter { person ->
                 person.name.contains(searchQuery, ignoreCase = true) ||
-                (!person.tag.isNullOrBlank() && person.tag.contains(searchQuery, ignoreCase = true)) ||
-                (!person.note.isNullOrBlank() && person.note.contains(searchQuery, ignoreCase = true))
+                (!person.tag.isNullOrBlank() && person.tag.contains(searchQuery, ignoreCase = true))
             }
+        }
+    }
+
+    val peopleUiModels = remember(filteredPeople) {
+        filteredPeople.map { person ->
+            PersonUiModel(
+                person = person,
+                iconData = parseIconData(person.icon, person.name)
+            )
         }
     }
 
@@ -62,7 +72,7 @@ fun PeopleListScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp)
+                        .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp)
                 ) {
                     OutlinedTextField(
                         value = searchQuery,
@@ -112,7 +122,7 @@ fun PeopleListScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-            } else if (filteredPeople.isEmpty()) {
+            } else if (peopleUiModels.isEmpty()) {
                 EmptyPeopleState(isSearching = searchQuery.isNotEmpty())
             } else {
                 LazyColumn(
@@ -120,12 +130,13 @@ fun PeopleListScreen(
                     contentPadding = PaddingValues(bottom = 88.dp)
                 ) {
                     itemsIndexed(
-                        items = filteredPeople,
-                        key = { idx, person -> "person_${person.id}_$idx" }
-                    ) { _, person ->
+                        items = peopleUiModels,
+                        key = { idx, item -> "person_${item.person.id}_$idx" },
+                        contentType = { _, _ -> "person_item" }
+                    ) { _, item ->
                         PersonRow(
-                            person = person,
-                            onClick = { onPersonClick(person.id) }
+                            item = item,
+                            onClick = { onPersonClick(item.person.id) }
                         )
                     }
                 }
@@ -134,11 +145,18 @@ fun PeopleListScreen(
     }
 }
 
+@Immutable
+private data class PersonUiModel(
+    val person: PersonEntity,
+    val iconData: IconData
+)
+
 @Composable
 private fun PersonRow(
-    person: PersonEntity,
+    item: PersonUiModel,
     onClick: () -> Unit
 ) {
+    val person = item.person
     Column {
         Row(
             modifier = Modifier
@@ -148,8 +166,7 @@ private fun PersonRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             CategoryIcon(
-                iconString = person.icon,
-                categoryName = person.name,
+                iconData = item.iconData,
                 modifier = Modifier.size(42.dp)
             )
 

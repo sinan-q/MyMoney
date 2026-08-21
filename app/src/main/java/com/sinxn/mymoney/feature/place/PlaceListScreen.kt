@@ -139,7 +139,11 @@ fun PlaceListScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 88.dp)
                     ) {
-                        items(filteredPlaces, key = { it.place.id }) { item ->
+                        items(
+                            items = filteredPlaces,
+                            key = { it.place.id },
+                            contentType = { "place_item" }
+                        ) { item ->
                             PlaceListItem(
                                 item = item,
                                 formatterConfig = uiState.formatterConfig,
@@ -197,8 +201,7 @@ private fun PlaceListItem(
                 contentAlignment = Alignment.Center
             ) {
                 CategoryIcon(
-                    iconString = place.icon.ifBlank { "ic_place" },
-                    categoryName = place.name,
+                    iconData = item.iconData,
                     modifier = Modifier.size(44.dp)
                 )
             }

@@ -13,6 +13,11 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
+import androidx.compose.runtime.Immutable
+import com.sinxn.mymoney.core.ui.components.IconData
+import com.sinxn.mymoney.core.ui.components.parseIconData
+
+@Immutable
 data class PlaceItemUi(
     val place: PlaceEntity,
     val totalAmount: Long = 0L,
@@ -20,7 +25,8 @@ data class PlaceItemUi(
     val expense: Long = 0L,
     val transactionCount: Int = 0,
     val currencyCode: String = "USD",
-    val decimals: Int = 2
+    val decimals: Int = 2,
+    val iconData: IconData = parseIconData(place.icon.ifBlank { "ic_place" }, place.name)
 )
 
 data class PlaceUiState(
@@ -70,7 +76,8 @@ class PlaceViewModel @Inject constructor(
                 expense = expense,
                 transactionCount = txs.size,
                 currencyCode = currencyCode,
-                decimals = decimals
+                decimals = decimals,
+                iconData = parseIconData(place.icon.ifBlank { "ic_place" }, place.name)
             )
         }
 

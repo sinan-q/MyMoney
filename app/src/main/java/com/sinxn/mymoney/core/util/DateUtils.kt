@@ -28,44 +28,65 @@ object DateUtils {
         }
     }
 
+    private val parseDateCache = java.util.concurrent.ConcurrentHashMap<String, Date>()
+    private val formattedDateCache = java.util.concurrent.ConcurrentHashMap<Long, String>()
+    private val monthHeaderCache = java.util.concurrent.ConcurrentHashMap<Long, String>()
+
     fun getSQLDateTimeString(date: Date): String {
         return sqlDateFormat.get()?.format(date) ?: ""
     }
 
-    fun parseDate(dateString: String): Date {
-        if (dateString.isBlank()) return Date()
-
-        // 1. Try SQL Format (yyyy-MM-dd HH:mm:ss)
+    private fun fallbackParse(dateString: String): Date {
         try {
-            return sqlDateFormat.get()?.parse(dateString) ?: Date()
-        } catch (e: Exception) {
-            // Ignore
-        }
+            sqlDateFormat.get()?.parse(dateString)?.let { return it }
+        } catch (e: Exception) {}
 
-        // 2. Try Simple Date Format (yyyy-MM-dd)
         try {
-            return simpleDateFormat.get()?.parse(dateString) ?: Date()
-        } catch (e: Exception) {
-            // Ignore
-        }
+            simpleDateFormat.get()?.parse(dateString)?.let { return it }
+        } catch (e: Exception) {}
 
-        // 3. Fallback to ISO
         try {
-            return isoDateFormat.get()?.parse(dateString) ?: Date()
-        } catch (e: Exception) {
-            // Ignore
-        }
+            isoDateFormat.get()?.parse(dateString)?.let { return it }
+        } catch (e: Exception) {}
 
-        // 4. Check if it's a Long timestamp
         if (dateString.all { it.isDigit() }) {
             try {
                 return Date(dateString.toLong())
-            } catch (e: NumberFormatException) {
-                // Ignore
-            }
+            } catch (e: Exception) {}
         }
 
         return Date()
+    }
+
+    fun parseDate(dateString: String): Date {
+        if (dateString.isBlank()) return Date()
+        parseDateCache[dateString]?.let { return it }
+
+        val trimmed = dateString.trim()
+        val len = trimmed.length
+
+        val date = when {
+            len == 19 && trimmed[10] == ' ' -> {
+                try { sqlDateFormat.get()?.parse(trimmed) ?: fallbackParse(trimmed) }
+                catch (e: Exception) { fallbackParse(trimmed) }
+            }
+            len == 10 && trimmed.getOrNull(4) == '-' -> {
+                try { simpleDateFormat.get()?.parse(trimmed) ?: fallbackParse(trimmed) }
+                catch (e: Exception) { fallbackParse(trimmed) }
+            }
+            trimmed.contains('T') -> {
+                try { isoDateFormat.get()?.parse(trimmed) ?: fallbackParse(trimmed) }
+                catch (e: Exception) { fallbackParse(trimmed) }
+            }
+            trimmed.all { it.isDigit() } -> {
+                try { Date(trimmed.toLong()) }
+                catch (e: Exception) { Date() }
+            }
+            else -> fallbackParse(trimmed)
+        }
+
+        parseDateCache[dateString] = date
+        return date
     }
 
     private val DATE_FORMATS = arrayOf(
@@ -100,13 +121,18 @@ object DateUtils {
 
     fun formatDate(date: Date, index: Int): String {
         val safeIndex = if (index in DATE_FORMATS.indices) index else 2 // Default to medium
+        val cacheKey = (date.time shl 4) or (safeIndex.toLong() and 0xF)
+        formattedDateCache[cacheKey]?.let { return it }
+
         val cache = cachedDateFormats.get() ?: return SimpleDateFormat(DATE_FORMATS[safeIndex], Locale.getDefault()).format(date)
         var format = cache[safeIndex]
         if (format == null) {
             format = SimpleDateFormat(DATE_FORMATS[safeIndex], Locale.getDefault())
             cache[safeIndex] = format
         }
-        return format.format(date)
+        val result = format.format(date)
+        formattedDateCache[cacheKey] = result
+        return result
     }
 
     /**
@@ -141,17 +167,20 @@ object DateUtils {
     }
 
     fun formatMonthHeader(date: Date): String {
+        monthHeaderCache[date.time]?.let { return it }
+
         val calendar = Calendar.getInstance()
+        val currentYear = calendar.get(Calendar.YEAR)
         calendar.time = date
         val year = calendar.get(Calendar.YEAR)
         
-        val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-        
-        return if (year == currentYear) {
+        val result = if (year == currentYear) {
             monthFormatSameYear.get()?.format(date) ?: SimpleDateFormat("MMMM", Locale.getDefault()).format(date)
         } else {
             monthFormatDiffYear.get()?.format(date) ?: SimpleDateFormat("MMMM, yyyy", Locale.getDefault()).format(date)
         }
+        monthHeaderCache[date.time] = result
+        return result
     }
 
     fun isSameMonth(date1: Date, date2: Date): Boolean {

@@ -191,6 +191,15 @@ fun PlaceSelectionDialog(
             }
 
             // ── 3. Edge-to-Edge Places List ──
+            val placeDialogItems = remember(filteredPlaces) {
+                filteredPlaces.map { place ->
+                    PlaceDialogItem(
+                        place = place,
+                        iconData = if (place.icon.isNotBlank()) parseIconData(place.icon, place.name) else null
+                    )
+                }
+            }
+
             LazyColumn(
                 state = listState,
                 modifier = Modifier
@@ -268,14 +277,15 @@ fun PlaceSelectionDialog(
                     }
                 } else {
                     itemsIndexed(
-                        items = filteredPlaces,
-                        key = { idx, place -> "place_${place.id}_$idx" }
-                    ) { _, place ->
+                        items = placeDialogItems,
+                        key = { idx, item -> "place_${item.place.id}_$idx" },
+                        contentType = { _, _ -> "place_dialog_row" }
+                    ) { _, item ->
                         PlaceRow(
-                            place = place,
-                            isSelected = place.id == selectedPlaceId,
+                            item = item,
+                            isSelected = item.place.id == selectedPlaceId,
                             onClick = {
-                                onPlaceSelected(place)
+                                onPlaceSelected(item.place)
                                 scope.launch {
                                     sheetState.hide()
                                     onDismissRequest()
@@ -289,14 +299,21 @@ fun PlaceSelectionDialog(
     }
 }
 
+@Immutable
+private data class PlaceDialogItem(
+    val place: PlaceEntity,
+    val iconData: IconData?
+)
+
 // ── Minimalist Edge-to-Edge Place Row ──
 
 @Composable
 private fun PlaceRow(
-    place: PlaceEntity,
+    item: PlaceDialogItem,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val place = item.place
     val bgColor by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer
         else Color.Transparent,
@@ -311,10 +328,9 @@ private fun PlaceRow(
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (place.icon.isNotBlank()) {
+        if (item.iconData != null) {
             CategoryIcon(
-                iconString = place.icon,
-                categoryName = place.name,
+                iconData = item.iconData,
                 modifier = Modifier.size(42.dp)
             )
         } else {

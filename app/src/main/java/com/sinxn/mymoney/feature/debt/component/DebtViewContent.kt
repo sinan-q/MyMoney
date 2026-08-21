@@ -50,7 +50,7 @@ import com.sinxn.mymoney.core.data.local.model.DebtWithDetails
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.ui.components.CleanListRow
 import com.sinxn.mymoney.core.ui.components.FormCardContainer
-import com.sinxn.mymoney.core.ui.components.groupTransactionsByMonth
+import com.sinxn.mymoney.core.ui.components.groupTransactionsIntoMonthGroups
 import com.sinxn.mymoney.core.ui.components.monthGroupedTransactionItems
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import java.text.SimpleDateFormat
@@ -77,8 +77,20 @@ fun DebtViewContent(
     val isFullyPaid = remaining == 0L && totalMoney > 0
 
     var collapsedGroups by remember { mutableStateOf(setOf<String>()) }
-    val groupedItems = remember(transactions) {
-        groupTransactionsByMonth(transactions)
+    val groupedItems = remember(
+        transactions,
+        currencyDecimals,
+        currencyCode,
+        formatterConfig,
+        dateFormat
+    ) {
+        groupTransactionsIntoMonthGroups(
+            transactions = transactions,
+            decimals = currencyDecimals,
+            currencyCode = currencyCode,
+            formatterConfig = formatterConfig,
+            dateFormat = dateFormat
+        )
     }
 
     val isOverdue = remember(debt.expirationDate) {
@@ -433,7 +445,7 @@ fun DebtViewContent(
 
         // 7. Month-grouped Transactions List with Sticky Headers
         monthGroupedTransactionItems(
-            items = groupedItems,
+            monthGroups = groupedItems,
             collapsedGroups = collapsedGroups,
             onToggleGroup = { headerKey ->
                 collapsedGroups = if (headerKey in collapsedGroups) {

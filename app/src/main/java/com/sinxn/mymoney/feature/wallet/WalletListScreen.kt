@@ -37,7 +37,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
+import com.sinxn.mymoney.core.ui.components.IconData
 import com.sinxn.mymoney.core.ui.components.TabPill
+import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.MoneyFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -232,6 +234,13 @@ fun WalletListScreen(
                 }
 
                 // 4. Content List
+                val currentWalletUiModels = remember(currentWallets, formatterConfig) {
+                    currentWallets.map { it.toUiModel(formatterConfig) }
+                }
+                val reorderWalletUiModels = remember(uiState.sortedWalletsForReorder, formatterConfig) {
+                    uiState.sortedWalletsForReorder.map { it.toUiModel(formatterConfig) }
+                }
+
                 if (uiState.isSortMode) {
                     // Reorder List View
                     LazyColumn(
@@ -242,13 +251,14 @@ fun WalletListScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         itemsIndexed(
-                            items = uiState.sortedWalletsForReorder,
-                            key = { _, item -> item.wallet.id }
+                            items = reorderWalletUiModels,
+                            key = { _, item -> item.id },
+                            contentType = { _, _ -> "reorder_wallet" }
                         ) { index, item ->
                             ReorderWalletRow(
                                 wallet = item,
                                 index = index,
-                                totalCount = uiState.sortedWalletsForReorder.size,
+                                totalCount = reorderWalletUiModels.size,
                                 onMoveUp = { viewModel.moveWalletUp(index) },
                                 onMoveDown = { viewModel.moveWalletDown(index) }
                             )
@@ -265,13 +275,13 @@ fun WalletListScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         itemsIndexed(
-                            items = currentWallets,
-                            key = { _, item -> item.wallet.id }
+                            items = currentWalletUiModels,
+                            key = { _, item -> item.id },
+                            contentType = { _, _ -> "wallet_card" }
                         ) { _, item ->
                             WalletCardRow(
                                 item = item,
-                                formatterConfig = formatterConfig,
-                                onClick = { onWalletClick(item.wallet.id) }
+                                onClick = { onWalletClick(item.id) }
                             )
                         }
                     }
@@ -281,19 +291,69 @@ fun WalletListScreen(
     }
 }
 
+private val WalletCardShape = RoundedCornerShape(16.dp)
+private val WalletTagShape = RoundedCornerShape(6.dp)
+private val ReorderCardShape = RoundedCornerShape(14.dp)
+
+@Immutable
+private data class WalletUiModel(
+    val id: String,
+    val name: String,
+    val currency: String,
+    val currentBalance: Long,
+    val formattedBalance: String,
+    val formattedStartMoney: String?,
+    val isNegativeBalance: Boolean,
+    val iconData: IconData,
+    val isExcludedFromTotal: Boolean,
+    val note: String?
+)
+
+private fun WalletWithBalance.toUiModel(formatterConfig: MoneyFormatter.Config): WalletUiModel {
+    val currencyCode = currencySymbol ?: wallet.currency
+    val formattedBalance = MoneyFormatter.format(
+        amount = currentBalance,
+        currencyCode = currencyCode,
+        decimals = decimals,
+        config = formatterConfig
+    )
+    val formattedStartMoney = if (wallet.countInTotal && wallet.note.isNullOrBlank()) {
+        val startFormatted = MoneyFormatter.format(
+            amount = wallet.startMoney,
+            currencyCode = currencyCode,
+            decimals = decimals,
+            config = formatterConfig
+        )
+        "Start: $startFormatted"
+    } else null
+    val isNegativeBalance = currentBalance < 0
+    val iconData = parseIconData(wallet.icon, wallet.name)
+    val note = wallet.note?.takeIf { it.isNotBlank() }
+
+    return WalletUiModel(
+        id = wallet.id,
+        name = wallet.name,
+        currency = wallet.currency,
+        currentBalance = currentBalance,
+        formattedBalance = formattedBalance,
+        formattedStartMoney = formattedStartMoney,
+        isNegativeBalance = isNegativeBalance,
+        iconData = iconData,
+        isExcludedFromTotal = !wallet.countInTotal,
+        note = note
+    )
+}
+
 @Composable
 private fun WalletCardRow(
-    item: WalletWithBalance,
-    formatterConfig: MoneyFormatter.Config,
+    item: WalletUiModel,
     onClick: () -> Unit
 ) {
-    val currencyCode = item.currencySymbol ?: item.wallet.currency
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
+        shape = WalletCardShape,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
         )
@@ -310,8 +370,7 @@ private fun WalletCardRow(
                 modifier = Modifier.weight(1f)
             ) {
                 CategoryIcon(
-                    iconString = item.wallet.icon,
-                    categoryName = item.wallet.name,
+                    iconData = item.iconData,
                     modifier = Modifier.size(44.dp)
                 )
 
@@ -320,7 +379,7 @@ private fun WalletCardRow(
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = item.wallet.name,
+                            text = item.name,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -329,11 +388,11 @@ private fun WalletCardRow(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Surface(
-                            shape = RoundedCornerShape(6.dp),
+                            shape = WalletTagShape,
                             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                         ) {
                             Text(
-                                text = item.wallet.currency,
+                                text = item.currency,
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -345,7 +404,7 @@ private fun WalletCardRow(
                     Spacer(modifier = Modifier.height(2.dp))
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (!item.wallet.countInTotal) {
+                        if (item.isExcludedFromTotal) {
                             Icon(
                                 imageVector = Icons.Default.VisibilityOff,
                                 contentDescription = "Excluded from total",
@@ -358,23 +417,17 @@ private fun WalletCardRow(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                             )
-                        } else if (!item.wallet.note.isNullOrBlank()) {
+                        } else if (!item.note.isNullOrBlank()) {
                             Text(
-                                text = item.wallet.note,
+                                text = item.note,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                        } else {
-                            val formattedStart = MoneyFormatter.format(
-                                amount = item.wallet.startMoney,
-                                currencyCode = currencyCode,
-                                decimals = item.decimals,
-                                config = formatterConfig
-                            )
+                        } else if (item.formattedStartMoney != null) {
                             Text(
-                                text = "Start: $formattedStart",
+                                text = item.formattedStartMoney,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                             )
@@ -384,20 +437,14 @@ private fun WalletCardRow(
             }
 
             // Balance
-            val formattedBalance = MoneyFormatter.format(
-                amount = item.currentBalance,
-                currencyCode = currencyCode,
-                decimals = item.decimals,
-                config = formatterConfig
-            )
-            val balanceColor = if (item.currentBalance < 0) {
+            val balanceColor = if (item.isNegativeBalance) {
                 MaterialTheme.colorScheme.error
             } else {
                 MaterialTheme.colorScheme.onSurface
             }
 
             Text(
-                text = formattedBalance,
+                text = item.formattedBalance,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = balanceColor,
@@ -409,7 +456,7 @@ private fun WalletCardRow(
 
 @Composable
 private fun ReorderWalletRow(
-    wallet: WalletWithBalance,
+    wallet: WalletUiModel,
     index: Int,
     totalCount: Int,
     onMoveUp: () -> Unit,
@@ -417,7 +464,7 @@ private fun ReorderWalletRow(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = ReorderCardShape,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
         )
@@ -434,13 +481,12 @@ private fun ReorderWalletRow(
                 modifier = Modifier.weight(1f)
             ) {
                 CategoryIcon(
-                    iconString = wallet.wallet.icon,
-                    categoryName = wallet.wallet.name,
+                    iconData = wallet.iconData,
                     modifier = Modifier.size(36.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = wallet.wallet.name,
+                    text = wallet.name,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,

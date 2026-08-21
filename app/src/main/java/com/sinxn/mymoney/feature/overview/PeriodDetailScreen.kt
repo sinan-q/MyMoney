@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.TransactionItem
-import com.sinxn.mymoney.core.ui.components.groupTransactionsByMonth
+import com.sinxn.mymoney.core.ui.components.groupTransactionsIntoMonthGroups
 import com.sinxn.mymoney.core.ui.components.monthGroupedTransactionItems
 import com.sinxn.mymoney.core.util.MoneyFormatter
 
@@ -47,8 +47,20 @@ fun PeriodDetailScreen(
         )
     }
 
-    val groupedItems = remember(uiState.transactions) {
-        groupTransactionsByMonth(uiState.transactions)
+    val groupedItems = remember(
+        uiState.transactions,
+        uiState.currencyDecimals,
+        uiState.currencyCode,
+        config,
+        uiState.formattingSettings.dateFormat
+    ) {
+        groupTransactionsIntoMonthGroups(
+            transactions = uiState.transactions,
+            decimals = uiState.currencyDecimals,
+            currencyCode = uiState.currencyCode,
+            formatterConfig = config,
+            dateFormat = uiState.formattingSettings.dateFormat
+        )
     }
 
     Scaffold(
@@ -278,7 +290,7 @@ fun PeriodDetailScreen(
                         }
                     } else {
                         monthGroupedTransactionItems(
-                            items = groupedItems,
+                            monthGroups = groupedItems,
                             collapsedGroups = collapsedGroups,
                             onToggleGroup = { groupKey ->
                                 collapsedGroups = if (collapsedGroups.contains(groupKey)) {

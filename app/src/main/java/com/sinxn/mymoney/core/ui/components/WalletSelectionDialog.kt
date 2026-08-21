@@ -220,6 +220,15 @@ fun WalletSelectionDialog(
             }
 
             // ── 3. Edge-to-Edge Wallet List ──
+            val walletDialogItems = remember(filteredWallets) {
+                filteredWallets.map { wallet ->
+                    WalletDialogItem(
+                        wallet = wallet,
+                        iconData = parseIconData(wallet.icon, wallet.name)
+                    )
+                }
+            }
+
             if (filteredWallets.isEmpty()) {
                 EmptyWalletState()
             } else {
@@ -231,14 +240,15 @@ fun WalletSelectionDialog(
                     contentPadding = PaddingValues(bottom = 32.dp)
                 ) {
                     itemsIndexed(
-                        items = filteredWallets,
-                        key = { idx, wallet -> "wallet_${wallet.id}_$idx" }
-                    ) { _, wallet ->
+                        items = walletDialogItems,
+                        key = { idx, item -> "wallet_${item.wallet.id}_$idx" },
+                        contentType = { _, _ -> "wallet_dialog_row" }
+                    ) { _, item ->
                         WalletRow(
-                            wallet = wallet,
-                            isSelected = wallet.id == selectedWalletId,
+                            item = item,
+                            isSelected = item.wallet.id == selectedWalletId,
                             onClick = {
-                                onWalletSelected(wallet)
+                                onWalletSelected(item.wallet)
                                 scope.launch {
                                     sheetState.hide()
                                     onDismissRequest()
@@ -252,6 +262,12 @@ fun WalletSelectionDialog(
     }
 }
 
+@Immutable
+private data class WalletDialogItem(
+    val wallet: WalletEntity,
+    val iconData: IconData
+)
+
 // ── Tab Pill for Active/Archived ──
 
 @Composable
@@ -260,14 +276,12 @@ private fun TabPill(
     onTabChange: (Int) -> Unit
 ) {
     val tabs = listOf("Active", "Archived")
-
     Row(
         modifier = Modifier
-            .height(30.dp)
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                shape = CircleShape
-            )
+            .fillMaxWidth()
+            .height(36.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             .padding(3.dp),
         horizontalArrangement = Arrangement.spacedBy(2.dp)
     ) {
@@ -306,10 +320,11 @@ private fun TabPill(
 
 @Composable
 private fun WalletRow(
-    wallet: WalletEntity,
+    item: WalletDialogItem,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val wallet = item.wallet
     val bgColor by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer
         else Color.Transparent,
@@ -325,8 +340,7 @@ private fun WalletRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         CategoryIcon(
-            iconString = wallet.icon,
-            categoryName = wallet.name,
+            iconData = item.iconData,
             modifier = Modifier.size(42.dp)
         )
 

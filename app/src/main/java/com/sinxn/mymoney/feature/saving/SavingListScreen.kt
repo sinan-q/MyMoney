@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.model.SavingWithDetails
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
+import com.sinxn.mymoney.core.ui.components.IconData
+import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
@@ -198,7 +200,11 @@ fun SavingListScreen(
                         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(filteredSavings, key = { it.saving.id }) { item ->
+                        items(
+                            items = filteredSavings,
+                            key = { it.saving.id },
+                            contentType = { "saving_item" }
+                        ) { item ->
                             SavingItemCard(
                                 item = item,
                                 formatterConfig = uiState.formatterConfig,
@@ -218,6 +224,8 @@ fun SavingListScreen(
         }
     }
 }
+
+private val SavingCardShape = RoundedCornerShape(16.dp)
 
 @Composable
 fun SavingItemCard(
@@ -255,11 +263,15 @@ fun SavingItemCard(
         }
     }
 
+    val iconData = remember(saving.icon, saving.description) {
+        parseIconData(saving.icon.ifBlank { "ic_saving" }, saving.description ?: "Saving Goal")
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
+        shape = SavingCardShape,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
         ),
@@ -281,8 +293,7 @@ fun SavingItemCard(
                     contentAlignment = Alignment.Center
                 ) {
                     CategoryIcon(
-                        iconString = saving.icon.ifBlank { "ic_saving" },
-                        categoryName = saving.description ?: "Saving Goal",
+                        iconData = iconData,
                         modifier = Modifier.size(44.dp)
                     )
                 }

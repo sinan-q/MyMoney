@@ -27,6 +27,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +39,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
 
+private data class QuickCategoryItem(
+    val category: CategoryEntity,
+    val cleanName: String,
+    val iconData: IconData
+)
+
 @Composable
 fun CategoryQuickGrid(
     categories: List<CategoryEntity>,
@@ -47,8 +54,18 @@ fun CategoryQuickGrid(
     modifier: Modifier = Modifier,
     maxQuickItems: Int = 10
 ) {
-    val quickItems = categories.take(maxQuickItems)
+    val quickItems = remember(categories, maxQuickItems) {
+        categories.take(maxQuickItems).map { category ->
+            val cleanName = category.name.replace("  ↳ ", "").replace("↳", "").trim()
+            QuickCategoryItem(
+                category = category,
+                cleanName = cleanName,
+                iconData = parseIconData(category.icon, cleanName)
+            )
+        }
+    }
     val scrollState = rememberScrollState()
+
 
     Column(
         modifier = modifier.fillMaxWidth()
@@ -90,9 +107,10 @@ fun CategoryQuickGrid(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            quickItems.forEach { category ->
+            quickItems.forEach { item ->
+                val category = item.category
                 val isSelected = category.id == selectedCategoryId
-                val cleanName = category.name.replace("  ↳ ", "")
+                val cleanName = item.cleanName
 
                 val scale by animateFloatAsState(
                     targetValue = if (isSelected) 1.05f else 1.0f,
@@ -130,8 +148,7 @@ fun CategoryQuickGrid(
                         horizontalArrangement = Arrangement.Center
                     ) {
                         CategoryIcon(
-                            iconString = category.icon,
-                            categoryName = cleanName,
+                            iconData = item.iconData,
                             modifier = Modifier.size(26.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))

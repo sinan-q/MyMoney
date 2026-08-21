@@ -25,6 +25,7 @@ import org.json.JSONObject
 import kotlin.math.abs
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Immutable
 
 import androidx.compose.ui.text.PlatformTextStyle
 
@@ -33,15 +34,10 @@ import androidx.core.graphics.toColorInt
 
 @Composable
 fun CategoryIcon(
-    iconString: String?,
-    categoryName: String,
+    iconData: IconData,
     modifier: Modifier = Modifier,
     textColor: Color = Color.White
 ) {
-    val iconData = remember(iconString, categoryName) {
-        parseIconData(iconString, categoryName)
-    }
-
     val fontSize = remember(iconData.text) {
         when {
             iconData.text.length <= 1 -> 16.sp
@@ -81,6 +77,7 @@ fun CategoryIcon(
     }
 }
 
+@Immutable
 data class IconData(val color: Color, val text: String)
 
 private val iconDataCache = java.util.concurrent.ConcurrentHashMap<String, IconData>()
@@ -143,3 +140,19 @@ fun generateColor(name: String): Color {
     return color
 }
 
+@Composable
+fun CategoryIcon(
+    iconString: String?,
+    categoryName: String,
+    modifier: Modifier = Modifier,
+    textColor: Color = Color.White
+) {
+    val iconData = remember(iconString, categoryName) {
+        parseIconData(iconString, categoryName)
+    }
+    CategoryIcon(
+        iconData = iconData,
+        modifier = modifier,
+        textColor = textColor
+    )
+}

@@ -39,20 +39,20 @@ fun TransactionHeader(
     isCollapsed: Boolean = false,
     onToggle: () -> Unit = {}
 ) {
-    val formattedDate = DateUtils.formatMonthHeader(header.date)
-    val formattedTotal = MoneyFormatter.format(
+    val formattedDate = header.formattedDate ?: DateUtils.formatMonthHeader(header.date)
+    val formattedTotal = header.formattedTotal ?: MoneyFormatter.format(
         amount = header.totalAmount,
         currencyCode = currencyCode,
         decimals = decimals,
         config = formatterConfig
     )
-    val formattedIncome = MoneyFormatter.format(
+    val formattedIncome = header.formattedIncome ?: MoneyFormatter.format(
         amount = header.income,
         currencyCode = currencyCode,
         decimals = decimals,
         config = formatterConfig
     )
-    val formattedExpense = MoneyFormatter.format(
+    val formattedExpense = header.formattedExpense ?: MoneyFormatter.format(
         amount = header.expense,
         currencyCode = currencyCode,
         decimals = decimals,

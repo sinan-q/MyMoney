@@ -212,6 +212,15 @@ fun PeopleSelectionDialog(
             }
 
             // ── 3. Edge-to-Edge People List ──
+            val peopleDialogItems = remember(filteredPeople) {
+                filteredPeople.map { person ->
+                    PeopleDialogItem(
+                        person = person,
+                        iconData = parseIconData(person.icon, person.name)
+                    )
+                }
+            }
+
             if (filteredPeople.isEmpty()) {
                 EmptyPeopleState()
             } else {
@@ -223,13 +232,14 @@ fun PeopleSelectionDialog(
                     contentPadding = PaddingValues(bottom = 32.dp)
                 ) {
                     itemsIndexed(
-                        items = filteredPeople,
-                        key = { idx, person -> "person_${person.id}_$idx" }
-                    ) { _, person ->
+                        items = peopleDialogItems,
+                        key = { idx, item -> "person_${item.person.id}_$idx" },
+                        contentType = { _, _ -> "person_dialog_row" }
+                    ) { _, item ->
                         PersonRow(
-                            person = person,
-                            isSelected = person.id in selectedPeopleIds,
-                            onClick = { onPersonToggle(person) }
+                            item = item,
+                            isSelected = item.person.id in selectedPeopleIds,
+                            onClick = { onPersonToggle(item.person) }
                         )
                     }
                 }
@@ -238,14 +248,21 @@ fun PeopleSelectionDialog(
     }
 }
 
+@Immutable
+private data class PeopleDialogItem(
+    val person: PersonEntity,
+    val iconData: IconData
+)
+
 // ── Minimalist Edge-to-Edge Person Row ──
 
 @Composable
 private fun PersonRow(
-    person: PersonEntity,
+    item: PeopleDialogItem,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val person = item.person
     val bgColor by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer
         else Color.Transparent,
@@ -261,8 +278,7 @@ private fun PersonRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         CategoryIcon(
-            iconString = person.icon,
-            categoryName = person.name,
+            iconData = item.iconData,
             modifier = Modifier.size(42.dp)
         )
 

@@ -33,7 +33,7 @@ import com.sinxn.mymoney.core.data.repository.BudgetPeriod
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CleanListRow
 import com.sinxn.mymoney.core.ui.components.FormCardContainer
-import com.sinxn.mymoney.core.ui.components.groupTransactionsByMonth
+import com.sinxn.mymoney.core.ui.components.groupTransactionsIntoMonthGroups
 import com.sinxn.mymoney.core.ui.components.monthGroupedTransactionItems
 import com.sinxn.mymoney.core.util.BudgetType
 import com.sinxn.mymoney.core.util.DateUtils
@@ -164,8 +164,20 @@ fun BudgetDetailsScreen(
                 val progressFraction = (percentage / 100.0).coerceIn(0.0, 1.0).toFloat()
 
                 var collapsedGroups by remember { mutableStateOf(setOf<String>()) }
-                val groupedItems = remember(uiState.transactions) {
-                    groupTransactionsByMonth(uiState.transactions)
+                val groupedItems = remember(
+                    uiState.transactions,
+                    uiState.currencyDecimals,
+                    uiState.currencyCode,
+                    uiState.formatterConfig,
+                    uiState.dateFormat
+                ) {
+                    groupTransactionsIntoMonthGroups(
+                        transactions = uiState.transactions,
+                        decimals = uiState.currencyDecimals,
+                        currencyCode = uiState.currencyCode,
+                        formatterConfig = uiState.formatterConfig,
+                        dateFormat = uiState.dateFormat
+                    )
                 }
 
                 val periodLabel = remember(budget.tag, budget.startDate, budget.endDate, uiState.dateFormat) {
@@ -469,7 +481,7 @@ fun BudgetDetailsScreen(
 
                     // 6. Month-grouped Transactions List with Sticky Headers
                     monthGroupedTransactionItems(
-                        items = groupedItems,
+                        monthGroups = groupedItems,
                         collapsedGroups = collapsedGroups,
                         onToggleGroup = { headerKey ->
                             collapsedGroups = if (headerKey in collapsedGroups) {

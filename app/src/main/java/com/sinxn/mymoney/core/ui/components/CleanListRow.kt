@@ -2,15 +2,17 @@ package com.sinxn.mymoney.core.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -69,8 +71,34 @@ fun CleanListRow(
     }
 }
 
+@Composable
 fun TransactionFormRowItem(
-
+    icon: ImageVector,
+    active: Boolean,
+    accentColor: Color,
+    label: String,
+    value: String,
+    trailingIconData: IconData? = null,
+    onClick: (() -> Unit)? = null
 ) {
 
+    CleanListRow(
+        icon = {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = if (active) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            )
+        },
+        label = label,
+        value = value,
+        active = active,
+        trailingIcon =  { if (trailingIconData != null)
+            CategoryIcon(
+                iconData = trailingIconData,
+                modifier = Modifier.size(32.dp)
+            )
+        },
+        onClick = onClick
+    )
 }

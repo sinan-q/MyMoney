@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
@@ -16,6 +17,8 @@ import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CleanListRow
 import com.sinxn.mymoney.core.ui.components.FormCardContainer
+import com.sinxn.mymoney.core.ui.components.TransactionFormRowItem
+import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.feature.transaction.TransactionAddEditUiState
 
@@ -39,25 +42,17 @@ fun EditTransactionFormOptions(
         Column {
             // Category Row
             val activeCategory = uiState.availableCategories.find { it.id == uiState.editCategoryId }
-            CleanListRow(
-                icon = {
-                    Icon(
-                        Icons.Default.Category,
-                        contentDescription = null,
-                        tint = accentColor,
-                    )
-                },
+            val iconData = remember(activeCategory?.icon, activeCategory?.name) {
+                if (activeCategory != null) parseIconData(activeCategory.icon, activeCategory.name) else null
+            }
+            TransactionFormRowItem(
+                icon = Icons.Default.Category,
+                active = true,
+                accentColor = accentColor,
                 label = "Category",
                 value = activeCategory?.name?.replace("  ↳ ", "") ?: "Select Category",
-                active = !activeCategory?.name.isNullOrEmpty(),
-                onClick = onCategoryClick,
-                trailingIcon =  { if (activeCategory != null)
-                    CategoryIcon(
-                        iconString = activeCategory.icon,
-                        categoryName = activeCategory.name,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
+                trailingIconData = iconData,
+                onClick = onCategoryClick
             )
 
             HorizontalDivider(
@@ -67,23 +62,16 @@ fun EditTransactionFormOptions(
 
             // Wallet Row
             val activeWallet = uiState.availableWallets.find { it.id == uiState.editWalletId }
-            CleanListRow(
-                icon = {
-                    Icon(
-                        Icons.Default.AccountBalanceWallet,
-                        contentDescription = null,
-                        tint = accentColor,
-                    )
-                },
+            val walletIconData = remember(activeWallet?.icon, activeWallet?.name) {
+                if (activeWallet != null) parseIconData(activeWallet.icon, activeWallet.name) else null
+            }
+            TransactionFormRowItem(
+                icon = Icons.Default.AccountBalanceWallet,
+                active = true,
+                accentColor = accentColor,
                 label = "Wallet",
                 value = activeWallet?.name ?: "Select Wallet",
-                trailingIcon =  { if (activeWallet != null)
-                    CategoryIcon(
-                        iconString = activeWallet.icon,
-                        categoryName = activeWallet.name,
-                        modifier = Modifier.size(32.dp)
-                    )
-                },
+                trailingIconData = walletIconData,
                 onClick = onWalletClick
             )
 
@@ -123,7 +111,6 @@ fun EditTransactionFormOptions(
             val selectedPeopleNames = selectedPeople.joinToString { it.name }.ifEmpty { "None" }
 
             CleanListRow(
-
                 icon = {
                     Icon(
                         Icons.Default.People,
@@ -144,24 +131,16 @@ fun EditTransactionFormOptions(
 
             // Place Row
             val activePlace = uiState.availablePlaces.find { it.id == uiState.editPlaceId }
-            CleanListRow(
-                icon = {
-                    Icon(
-                        Icons.Default.LocationOn,
-                        contentDescription = null,
-                        tint = if (activePlace != null) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                    )
-                },
+            val placeIconData = remember(activePlace?.icon, activePlace?.name) {
+                if (activePlace != null && activePlace.icon.isNotBlank()) parseIconData(activePlace.icon, activePlace.name) else null
+            }
+            TransactionFormRowItem(
+                icon = Icons.Default.LocationOn,
+                active = activePlace != null,
+                accentColor = accentColor,
                 label = "Place",
                 value = activePlace?.name ?: "None",
-                active = activePlace != null,
-                trailingIcon = {if ( activePlace != null && activePlace.icon.isNotBlank())
-                CategoryIcon(iconString = activePlace.icon,
-                    categoryName = activePlace.name,
-                    modifier = Modifier.size(32.dp)
-
-                )
-                },
+                trailingIconData = placeIconData,
                 onClick = onPlaceClick
             )
 
@@ -172,24 +151,16 @@ fun EditTransactionFormOptions(
 
             // Event Row
             val activeEvent = uiState.availableEvents.find { it.id == uiState.editEventId }
-            CleanListRow(
-                icon = {
-                    Icon(
-                        Icons.Default.Event,
-                        contentDescription = null,
-                        tint = if (activeEvent != null) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                    )
-                },
-                label = "Event",
-                value = activeEvent?.name?: "None",
+            val eventIconData = remember(activeEvent?.icon, activeEvent?.name) {
+                if (activeEvent != null && activeEvent.icon.isNotBlank()) parseIconData(activeEvent.icon, activeEvent.name) else null
+            }
+            TransactionFormRowItem(
+                icon = Icons.Default.Event,
                 active = !activeEvent?.name.isNullOrEmpty(),
-                trailingIcon =  { if (activeEvent != null && activeEvent.icon.isNotBlank())
-                    CategoryIcon(
-                        iconString = activeEvent.icon,
-                        categoryName = activeEvent.name,
-                        modifier = Modifier.size(32.dp)
-                    )
-                },
+                accentColor = accentColor,
+                label = "Event",
+                value = activeEvent?.name ?: "None",
+                trailingIconData = eventIconData,
                 onClick = onEventClick
             )
 

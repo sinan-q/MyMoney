@@ -24,6 +24,8 @@ import com.sinxn.mymoney.core.data.local.model.TransactionModelWithDetails
 import com.sinxn.mymoney.core.data.local.model.TransferModelWithDetails
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.FinanceListItem
+import com.sinxn.mymoney.core.ui.components.IconData
+import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.MoneyFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -176,7 +178,11 @@ fun TemplateListScreen(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(bottom = 88.dp)
                         ) {
-                            items(filteredTxTemplates, key = { it.model.id }) { item ->
+                            items(
+                                items = filteredTxTemplates,
+                                key = { it.model.id },
+                                contentType = { "tx_template" }
+                            ) { item ->
                                 TransactionTemplateListItem(
                                     item = item,
                                     onClick = { onTemplateClick(item.model.id, false) },
@@ -199,7 +205,11 @@ fun TemplateListScreen(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(bottom = 88.dp)
                         ) {
-                            items(filteredTransferTemplates, key = { it.model.id }) { item ->
+                            items(
+                                items = filteredTransferTemplates,
+                                key = { it.model.id },
+                                contentType = { "transfer_template" }
+                            ) { item ->
                                 TransferTemplateListItem(
                                     item = item,
                                     onClick = { onTemplateClick(item.model.id, true) },
@@ -239,6 +249,10 @@ private fun TransactionTemplateListItem(
         }
     }
 
+    val iconData = remember(item.categoryIcon, item.categoryName) {
+        parseIconData(item.categoryIcon ?: "ic_category_other", item.categoryName ?: "Category")
+    }
+
     FinanceListItem(
         icon = {
             Box(
@@ -248,8 +262,7 @@ private fun TransactionTemplateListItem(
                 contentAlignment = Alignment.Center
             ) {
                 CategoryIcon(
-                    iconString = item.categoryIcon ?: "ic_category_other",
-                    categoryName = item.categoryName ?: "Category",
+                    iconData = iconData,
                     modifier = Modifier.size(44.dp)
                 )
             }

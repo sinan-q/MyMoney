@@ -34,7 +34,7 @@ import com.sinxn.mymoney.core.data.local.model.SavingWithDetails
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CleanListRow
 import com.sinxn.mymoney.core.ui.components.FormCardContainer
-import com.sinxn.mymoney.core.ui.components.groupTransactionsByMonth
+import com.sinxn.mymoney.core.ui.components.groupTransactionsIntoMonthGroups
 import com.sinxn.mymoney.core.ui.components.monthGroupedTransactionItems
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
@@ -167,8 +167,18 @@ fun SavingDetailsScreen(
                 val progressFraction = (percentage / 100.0).coerceIn(0.0, 1.0).toFloat()
 
                 var collapsedGroups by remember { mutableStateOf(setOf<String>()) }
-                val groupedItems = remember(uiState.transactions) {
-                    groupTransactionsByMonth(uiState.transactions)
+                val groupedItems = remember(
+                    uiState.transactions,
+                    currency,
+                    uiState.formatterConfig,
+                    uiState.dateFormat
+                ) {
+                    groupTransactionsIntoMonthGroups(
+                        transactions = uiState.transactions,
+                        currencyCode = currency,
+                        formatterConfig = uiState.formatterConfig,
+                        dateFormat = uiState.dateFormat
+                    )
                 }
 
                 val targetDateLabel = remember(saving.endDate, uiState.dateFormat) {
@@ -532,7 +542,7 @@ fun SavingDetailsScreen(
 
                     // 6. Month-grouped Transactions List with Sticky Headers
                     monthGroupedTransactionItems(
-                        items = groupedItems,
+                        monthGroups = groupedItems,
                         collapsedGroups = collapsedGroups,
                         onToggleGroup = { headerKey ->
                             collapsedGroups = if (headerKey in collapsedGroups) {

@@ -25,6 +25,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.entity.EventEntity
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.FinanceListItem
+import com.sinxn.mymoney.core.ui.components.IconData
+import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 
@@ -145,7 +147,11 @@ fun EventListScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 88.dp)
                     ) {
-                        items(filteredEvents, key = { it.event.id }) { item ->
+                        items(
+                            items = filteredEvents,
+                            key = { it.event.id },
+                            contentType = { "event_item" }
+                        ) { item ->
                             EventListItem(
                                 item = item,
                                 formatterConfig = uiState.formatterConfig,
@@ -195,6 +201,10 @@ private fun EventListItem(
         )
     }
 
+    val iconData = remember(event.icon, event.name) {
+        parseIconData(event.icon.ifBlank { "ic_event" }, event.name)
+    }
+
     FinanceListItem(
         icon = {
             Box(
@@ -204,8 +214,7 @@ private fun EventListItem(
                 contentAlignment = Alignment.Center
             ) {
                 CategoryIcon(
-                    iconString = event.icon.ifBlank { "ic_event" },
-                    categoryName = event.name,
+                    iconData = iconData,
                     modifier = Modifier.size(44.dp)
                 )
             }
