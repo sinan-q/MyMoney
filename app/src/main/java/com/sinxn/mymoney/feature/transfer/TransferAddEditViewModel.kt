@@ -226,9 +226,7 @@ class TransferAddEditViewModel @Inject constructor(
         val fromWallet = fromWalletWithBalance?.wallet
 
         var targetWalletId = form.targetWalletId
-        if (targetWalletId == null && rawWallets.size > 1) {
-            targetWalletId = rawWallets.firstOrNull { it.id != effectiveWalletId }?.id
-        }
+
         val toWalletWithBalance = lists.wallets.find { it.wallet.id == targetWalletId }
         val toWallet = toWalletWithBalance?.wallet
 

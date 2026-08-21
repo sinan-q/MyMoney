@@ -10,6 +10,7 @@ import com.sinxn.mymoney.core.data.local.entity.EventEntity
 import com.sinxn.mymoney.core.data.local.entity.PersonEntity
 import com.sinxn.mymoney.core.data.local.entity.PlaceEntity
 import com.sinxn.mymoney.core.data.local.entity.TransferEntity
+import com.sinxn.mymoney.core.data.local.entity.WalletEntity
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
@@ -39,8 +40,8 @@ data class TransactionDetailsUiState(
     val currencyCode: String = "USD",
     val currencySymbol: String = "$",
     val currencyDecimals: Int = 2,
-    val walletName: String = "",
-    val targetWalletName: String = "",
+    val wallet: WalletEntity? = null,
+    val targetWallet: WalletEntity? = null,
     val categoryColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Gray,
     val isTransfer: Boolean = false,
     val transferEntity: TransferEntity? = null
@@ -109,8 +110,8 @@ class TransactionDetailsViewModel @Inject constructor(
                 activeWallet?.currencySymbol ?: activeWallet?.wallet?.currency ?: "$"
             },
             currencyDecimals = activeWallet?.decimals ?: 2,
-            walletName = activeWallet?.wallet?.name ?: "",
-            targetWalletName = targetWallet?.wallet?.name ?: "",
+            wallet = activeWallet?.wallet,
+            targetWallet = targetWallet?.wallet,
             categoryColor = transaction?.categoryName?.let { TransactionDetailsUiMapper.generateCategoryColor(it) } ?: androidx.compose.ui.graphics.Color.Gray,
             isTransfer = isTransfer,
             transferEntity = transfer

@@ -17,14 +17,15 @@ import androidx.compose.ui.unit.dp
 fun FormCardContainer(
     modifier: Modifier = Modifier,
     horizontalPadding: Dp = 16.dp,
+    verticalPadding: Dp = 3.dp,
     containerAlpha: Float = 0.35f,
     content: @Composable () -> Unit
 ) {
     Surface (
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = horizontalPadding),
-        shape = RoundedCornerShape(12.dp),
+            .padding(horizontal = horizontalPadding, vertical = verticalPadding),
+        shape = RoundedCornerShape(8.dp),
         color =  MaterialTheme.colorScheme.surfaceVariant.copy(alpha = containerAlpha),
         content = content
     )

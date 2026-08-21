@@ -353,7 +353,7 @@ fun BudgetAddEditScreen(
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 6.dp)
                         ) {
-                            FormCardContainer(horizontalPadding = 0.dp) {
+                            FormCardContainer {
                                 Column {
                                     val periodNames = listOf(
                                         BudgetPeriod.CUSTOM to "Custom (Fixed Dates)",

@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -17,10 +19,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
+import com.sinxn.mymoney.core.ui.components.DescriptionEditForm
 import com.sinxn.mymoney.core.ui.components.EditAmountHeader
+import com.sinxn.mymoney.core.ui.components.FormCardContainer
 import com.sinxn.mymoney.core.ui.components.FormPicker
 import com.sinxn.mymoney.core.ui.components.NumpadView
-import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.ui.components.rememberNumpadFormState
 import com.sinxn.mymoney.core.util.Direction
 import com.sinxn.mymoney.feature.transaction.TransactionAddEditUiState
@@ -87,16 +90,19 @@ fun EditTransactionContent(
             Spacer(modifier = Modifier.height(12.dp))
 
             // 2. Description Card
-            TransactionDescriptionCard(
-                description = uiState.editDescription,
-                accentColor = accentColor,
-                isEditable = true,
-                onDescriptionChange = viewModel::onDescriptionChange,
-                focusRequester = numpadState.focusRequester,
-                onFocusField = { numpadState.onFocusField() }
-            )
+            FormCardContainer {
+                DescriptionEditForm(
+                    icon = Icons.Default.Description,
+                    value = uiState.editDescription,
+                    accentColor = accentColor,
+                    onValueChange = viewModel::onDescriptionChange,
+                    focusRequester = numpadState.focusRequester,
+                    onFocusField = { numpadState.onFocusField() },
+                    label = "Description",
+                    placeHolder = "Add Description"
+                )
+            }
 
-            Spacer(modifier = Modifier.height(10.dp))
 
             // 3. Options Card
             EditTransactionFormOptions(
@@ -136,6 +142,7 @@ fun EditTransactionContent(
                     numpadState.dismiss()
                     viewModel.onCountInTotalChange(it)
                 },
+                focusRequester = numpadState.focusRequester,
                 onFocusField = { numpadState.onFocusField() }
             )
         }

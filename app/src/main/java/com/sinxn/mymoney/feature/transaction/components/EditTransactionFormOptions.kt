@@ -3,12 +3,15 @@ package com.sinxn.mymoney.feature.transaction.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -16,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CleanListRow
+import com.sinxn.mymoney.core.ui.components.DescriptionEditForm
 import com.sinxn.mymoney.core.ui.components.FormCardContainer
 import com.sinxn.mymoney.core.ui.components.TransactionFormRowItem
 import com.sinxn.mymoney.core.ui.components.parseIconData
@@ -36,6 +40,7 @@ fun EditTransactionFormOptions(
     onNoteChange: (String) -> Unit,
     onConfirmedChange: (Boolean) -> Unit,
     onCountInTotalChange: (Boolean) -> Unit,
+    focusRequester: FocusRequester,
     onFocusField: () -> Unit
 ) {
     FormCardContainer {
@@ -109,18 +114,12 @@ fun EditTransactionFormOptions(
             // People Row
             val selectedPeople = uiState.availablePeople.filter { it.id in uiState.editPeopleIds }
             val selectedPeopleNames = selectedPeople.joinToString { it.name }.ifEmpty { "None" }
-
-            CleanListRow(
-                icon = {
-                    Icon(
-                        Icons.Default.People,
-                        contentDescription = null,
-                        tint = if (selectedPeople.isNotEmpty()) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                    )
-                },
+            TransactionFormRowItem(
+                icon = Icons.Default.People,
+                active = selectedPeople.isNotEmpty(),
+                accentColor = accentColor,
                 label = "People",
                 value = selectedPeopleNames,
-                active = selectedPeople.isNotEmpty(),
                 onClick = onPeopleClick
             )
 
@@ -155,7 +154,7 @@ fun EditTransactionFormOptions(
                 if (activeEvent != null && activeEvent.icon.isNotBlank()) parseIconData(activeEvent.icon, activeEvent.name) else null
             }
             TransactionFormRowItem(
-                icon = Icons.Default.Event,
+                icon = Icons.Default.Flag,
                 active = !activeEvent?.name.isNullOrEmpty(),
                 accentColor = accentColor,
                 label = "Event",
@@ -170,28 +169,17 @@ fun EditTransactionFormOptions(
             )
 
             // Note Field
-            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                OutlinedTextField(
-                    value = uiState.editNote,
-                    onValueChange = onNoteChange,
-                    label = { Text("Note") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onFocusChanged { focusState ->
-                            if (focusState.isFocused) {
-                                onFocusField()
-                            }
-                        },
-                    shape = RoundedCornerShape(14.dp),
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Notes,
-                            contentDescription = null,
-                            tint = accentColor
-                        )
-                    }
-                )
-            }
+            DescriptionEditForm(
+                modifier = Modifier,
+                focusRequester = focusRequester,
+                onFocusField = onFocusField,
+                icon = Icons.AutoMirrored.Filled.Notes,
+                accentColor = accentColor,
+                value = uiState.editNote,
+                onValueChange =  onNoteChange,
+                label = "Note",
+                placeHolder = "Add a note..."
+            )
 
             if (!settings.hideStatusAndImpact) {
                 HorizontalDivider(

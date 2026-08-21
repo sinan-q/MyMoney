@@ -8,9 +8,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,6 +27,8 @@ import com.sinxn.mymoney.core.ui.components.CleanListRow
 import com.sinxn.mymoney.core.ui.components.CreditEmeraldColor
 import com.sinxn.mymoney.core.ui.components.DebtRoseColor
 import com.sinxn.mymoney.core.ui.components.FormCardContainer
+import com.sinxn.mymoney.core.ui.components.TransactionFormRowItem
+import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.feature.transaction.TransactionDetailsUiState
@@ -55,6 +59,10 @@ fun ViewTransactionContent(
     val directionColor = if (isTransfer) Color(0xFF0284C7) else when (transaction.direction) {
         1 -> Color(0xFF10B981)
         else -> Color(0xFFE11D48)
+    }
+    val activeWallet = uiState.wallet
+    val walletIconData = remember(activeWallet?.icon, activeWallet?.name) {
+        if (activeWallet != null) parseIconData(activeWallet.icon, activeWallet.name) else null
     }
 
     Column(
@@ -137,99 +145,111 @@ fun ViewTransactionContent(
                     if (parentCategoryName != null) {
                         Text(
                             text = "$parentCategoryName • ",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = directionColor.copy(alpha = 0.8f)
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(0.65f)
                         )
                     }
                     Text(
                         text = categoryName,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
-                        color = directionColor
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
         // 2. Description Card (Reused)
         if (!transaction.description.isNullOrEmpty()) {
-            TransactionDescriptionCard(
-                description = transaction.description,
-                accentColor = directionColor,
-                isEditable = false
-            )
-            Spacer(modifier = Modifier.height(12.dp))
+            FormCardContainer {
+                TransactionFormRowItem(
+                    icon = Icons.Default.Description,
+                    accentColor = directionColor,
+                    label = "Description",
+                    value = transaction.description
+                )
+            }
         }
 
         // 3. Primary Details Card (Wallet, Date & Time, People)
+        if (uiState.isTransfer) {
+            FormCardContainer {
+                TransactionFormRowItem(
+                    icon = Icons.Default.AccountBalanceWallet,
+                    accentColor = directionColor,
+                    label = "From Wallet",
+                    value = activeWallet?.name ?: "Source Wallet",
+                    trailingIconData = walletIconData
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 40.dp)
+                )
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 3.dp,
+                    shadowElevation = 2.dp,
+                    border = BorderStroke(1.dp, directionColor.copy(alpha = 0.3f)),
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowDownward,
+                            contentDescription = "Wallet Direction",
+                            tint = directionColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+            FormCardContainer {
+                val activeTargetWallet = uiState.targetWallet
+                val targetWalletIconData = remember(activeTargetWallet?.icon, activeTargetWallet?.name) {
+                    if (activeTargetWallet != null) parseIconData(activeTargetWallet.icon, activeTargetWallet.name) else null
+                }
+                TransactionFormRowItem(
+                    icon = Icons.Default.AccountBalanceWallet,
+                    accentColor = directionColor,
+                    label = "To Wallet",
+                    value = activeTargetWallet?.name ?: "Target Wallet",
+                    trailingIconData = targetWalletIconData
+                )
+            }
+        }
         FormCardContainer {
             Column {
-                if (uiState.isTransfer) {
-                    CleanListRow(
-                        icon = {
-                            Icon(
-                                Icons.Default.AccountBalanceWallet,
-                                contentDescription = null,
-                                tint = directionColor,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        },
-                        label = "From Wallet",
-                        value = uiState.walletName.ifEmpty { "Source Wallet" }
+                if (!isTransfer) {
+                    TransactionFormRowItem(
+                        icon = Icons.Default.AccountBalanceWallet,
+                        accentColor = directionColor,
+                        label = "Wallet",
+                        value = activeWallet?.name ?: "Select Wallet",
+                        trailingIconData = walletIconData
                     )
+
 
                     HorizontalDivider(
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
-
-                    CleanListRow(
-                        icon = {
-                            Icon(
-                                Icons.Default.AccountBalanceWallet,
-                                contentDescription = null,
-                                tint = directionColor,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        },
-                        label = "To Wallet",
-                        value = uiState.targetWalletName.ifEmpty { "Target Wallet" }
-                    )
-                } else {
-                    CleanListRow(
-                        icon = {
-                            Icon(
-                                Icons.Default.AccountBalanceWallet,
-                                contentDescription = null,
-                                tint = directionColor,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        },
-                        label = "Wallet",
-                        value = uiState.walletName.ifEmpty { "Default Wallet" }
-                    )
                 }
 
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-
-                val parsedDate = DateUtils.parseDate(transaction.date)
+                val parsedDate = remember(transaction.date) { DateUtils.parseDate(transaction.date) }
                 val formattedDate = DateUtils.formatDate(parsedDate, settings.dateFormat)
                 val formattedTime = DateUtils.formatTime(parsedDate)
 
-                CleanListRow(
-                    icon = {
-                        Icon(
-                            Icons.Default.CalendarToday,
-                            contentDescription = null,
-                            tint = directionColor,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    },
+                TransactionFormRowItem(
+                    icon = Icons.Default.CalendarToday,
+                    accentColor = directionColor,
                     label = if (settings.hideTime) "Date" else "Date & Time",
                     value = if (settings.hideTime) formattedDate else "$formattedDate at $formattedTime"
                 )
@@ -239,92 +259,58 @@ fun ViewTransactionContent(
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
-                    CleanListRow(
-                        icon = {
-                            Icon(
-                                Icons.Default.People,
-                                contentDescription = null,
-                                tint = directionColor,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        },
+                    TransactionFormRowItem(
+                        icon = Icons.Default.People,
+                        accentColor = directionColor,
                         label = "People",
-                        value = uiState.people.joinToString { it.name }
+                        value = uiState.people.joinToString { it.name },
                     )
                 }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        FormCardContainer(containerAlpha = 0.25f) {
-            Column {
-                var hasPreviousRow = false
-
                 uiState.place?.let { place ->
-                    CleanListRow(
-                        icon = {
-                            Icon(
-                                Icons.Default.LocationOn,
-                                contentDescription = null,
-                                tint = directionColor,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        },
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                    TransactionFormRowItem(
+                        icon = Icons.Default.LocationOn,
+                        accentColor = directionColor,
                         label = "Place",
                         value = place.name
                     )
-                    hasPreviousRow = true
                 }
 
                 uiState.event?.let { event ->
-                    if (hasPreviousRow) {
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(
-                                alpha = 0.2f
-                            ), modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-                    }
-                    CleanListRow(
-                        icon = {
-                            Icon(
-                                Icons.Default.Event,
-                                contentDescription = null,
-                                tint = directionColor,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        },
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                    TransactionFormRowItem(
+                        icon = Icons.Default.Flag,
+                        accentColor = directionColor,
                         label = "Event",
                         value = event.name
                     )
-                    hasPreviousRow = true
                 }
-
                 if (!transaction.note.isNullOrEmpty()) {
-                    if (hasPreviousRow) {
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(
-                                alpha = 0.2f
-                            ), modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-                    }
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(
+                            alpha = 0.2f
+                        ), modifier = Modifier.padding(horizontal = 16.dp)
+                    )
                     ViewStackedDetailBlock(
-                        icon = Icons.Default.Notes,
+                        icon = Icons.AutoMirrored.Filled.Notes,
                         iconTint = directionColor,
                         label = "Note",
                         value = transaction.note
                     )
-                    hasPreviousRow = true
-                }
 
+                }
                 if (uiState.attachments.isNotEmpty()) {
-                    if (hasPreviousRow) {
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(
-                                alpha = 0.2f
-                            ), modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-                    }
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(
+                            alpha = 0.2f
+                        ), modifier = Modifier.padding(horizontal = 16.dp)
+                    )
                     CleanListRow(
                         icon = {
                             Icon(
@@ -337,17 +323,14 @@ fun ViewTransactionContent(
                         label = "Attachments",
                         value = "${uiState.attachments.size} files"
                     )
-                    hasPreviousRow = true
                 }
 
                 if (!transaction.recurrenceId.isNullOrEmpty()) {
-                    if (hasPreviousRow) {
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(
-                                alpha = 0.2f
-                            ), modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-                    }
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(
+                            alpha = 0.2f
+                        ), modifier = Modifier.padding(horizontal = 16.dp)
+                    )
                     CleanListRow(
                         icon = {
                             Icon(
@@ -360,18 +343,17 @@ fun ViewTransactionContent(
                         label = "Recurrence",
                         value = "Recurring Transaction"
                     )
-                    hasPreviousRow = true
                 }
-
-                if (!settings.hideStatusAndImpact) {
-                    if (hasPreviousRow) {
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(
-                                alpha = 0.2f
-                            ), modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-                    }
-
+            }
+        }
+        if (!settings.hideStatusAndImpact) {
+            FormCardContainer(containerAlpha = 0.25f) {
+                Column {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(
+                            alpha = 0.2f
+                        ), modifier = Modifier.padding(horizontal = 16.dp)
+                    )
                     // Status Row
                     CleanListRow(
                         icon = {
@@ -474,9 +456,8 @@ private fun ViewStackedDetailBlock(
                 imageVector = icon,
                 contentDescription = null,
                 tint = iconTint,
-                modifier = Modifier.size(18.dp)
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(16.dp))
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
@@ -486,7 +467,7 @@ private fun ViewStackedDetailBlock(
         }
 
         Surface(
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(8.dp),
             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.4f),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
             modifier = Modifier.fillMaxWidth()
@@ -496,8 +477,7 @@ private fun ViewStackedDetailBlock(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface,
-                lineHeight = 22.sp,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
             )
         }
     }

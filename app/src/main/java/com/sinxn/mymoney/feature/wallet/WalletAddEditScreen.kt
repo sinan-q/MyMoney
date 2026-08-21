@@ -135,6 +135,7 @@ fun WalletAddEditScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0,0,0,0),
         topBar = {
             TopAppBar(
                 title = {
@@ -179,7 +180,6 @@ fun WalletAddEditScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Header Card: Avatar & Name
@@ -251,7 +251,7 @@ fun WalletAddEditScreen(
 
                 // Currency Selection Card
                 item {
-                    FormCardContainer(horizontalPadding = 0.dp) {
+                    FormCardContainer() {
                         CleanListRow(
                             icon = {
                                 Icon(

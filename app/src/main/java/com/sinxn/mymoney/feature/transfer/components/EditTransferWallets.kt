@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -19,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import com.sinxn.mymoney.core.data.local.entity.WalletEntity
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CleanListRow
+import com.sinxn.mymoney.core.ui.components.TransactionFormRowItem
+import com.sinxn.mymoney.core.ui.components.parseIconData
 
 @Composable
 fun EditTransferWallets(
@@ -50,25 +53,15 @@ fun EditTransferWallets(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        CleanListRow(
-            icon = {
-                if (activeFromWallet != null) {
-                    CategoryIcon(
-                        iconString = activeFromWallet.icon,
-                        categoryName = activeFromWallet.name,
-                        modifier = Modifier.size(24.dp)
-                    )
-                } else {
-                    Icon(
-                        Icons.Default.AccountBalanceWallet,
-                        contentDescription = null,
-                        tint = accentColor,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            },
+        val activeFromWalletIconData = remember(activeFromWallet?.icon, activeFromWallet?.name) {
+            if (activeFromWallet != null) parseIconData(activeFromWallet.icon, activeFromWallet.name) else null
+        }
+        TransactionFormRowItem(
+            icon = Icons.Default.AccountBalanceWallet,
+            accentColor = accentColor,
             label = "From Wallet",
             value = activeFromWallet?.name ?: "Select Source Wallet",
+            trailingIconData = activeFromWalletIconData,
             onClick = onFromWalletClick
         )
     }
@@ -77,7 +70,7 @@ fun EditTransferWallets(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = 12.dp),
         contentAlignment = Alignment.Center
     ) {
         HorizontalDivider(
@@ -117,25 +110,15 @@ fun EditTransferWallets(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        CleanListRow(
-            icon = {
-                if (activeToWallet != null) {
-                    CategoryIcon(
-                        iconString = activeToWallet.icon,
-                        categoryName = activeToWallet.name,
-                        modifier = Modifier.size(24.dp)
-                    )
-                } else {
-                    Icon(
-                        Icons.Default.AccountBalanceWallet,
-                        contentDescription = null,
-                        tint = accentColor,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            },
+        val activeToWalletIconData = remember(activeToWallet?.icon, activeToWallet?.name) {
+            if (activeToWallet != null) parseIconData(activeToWallet.icon, activeToWallet.name) else null
+        }
+        TransactionFormRowItem(
+            icon = Icons.Default.AccountBalanceWallet,
+            accentColor = accentColor,
             label = "To Wallet",
             value = activeToWallet?.name ?: "Select Target Wallet",
+            trailingIconData = activeToWalletIconData,
             onClick = onToWalletClick
         )
     }

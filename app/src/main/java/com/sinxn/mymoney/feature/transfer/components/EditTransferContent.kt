@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Place
@@ -24,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.ui.components.CleanListRow
+import com.sinxn.mymoney.core.ui.components.DescriptionEditForm
 import com.sinxn.mymoney.core.ui.components.EditAmountHeader
 import com.sinxn.mymoney.core.ui.components.EventSelectionDialog
 import com.sinxn.mymoney.core.ui.components.FormDatePickerDialog
@@ -34,7 +36,6 @@ import com.sinxn.mymoney.core.ui.components.PlaceSelectionDialog
 import com.sinxn.mymoney.core.ui.components.WalletSelectionDialog
 import com.sinxn.mymoney.core.ui.components.rememberNumpadFormState
 import com.sinxn.mymoney.core.util.DateUtils
-import com.sinxn.mymoney.feature.transaction.components.TransactionDescriptionCard
 import com.sinxn.mymoney.feature.transfer.TransferAddEditUiState
 import com.sinxn.mymoney.feature.transfer.TransferAddEditViewModel
 import java.util.Date
@@ -88,13 +89,15 @@ fun EditTransferContent(
             Spacer(modifier = Modifier.height(12.dp))
 
             // 2. Description Card
-            TransactionDescriptionCard(
-                description = uiState.editDescription,
+            DescriptionEditForm(
+                value = uiState.editDescription,
                 accentColor = accentColor,
-                isEditable = true,
-                onDescriptionChange = viewModel::onDescriptionChange,
+                onValueChange = viewModel::onDescriptionChange,
                 focusRequester = numpadState.focusRequester,
-                onFocusField = { numpadState.onFocusField() }
+                onFocusField = { numpadState.onFocusField() },
+                icon = Icons.Default.Description,
+                label = "Description",
+                placeHolder = "Add a description"
             )
 
             Spacer(modifier = Modifier.height(10.dp))

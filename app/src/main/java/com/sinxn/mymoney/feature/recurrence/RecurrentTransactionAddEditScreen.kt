@@ -29,7 +29,6 @@ import com.sinxn.mymoney.core.ui.components.*
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.Direction
 import com.sinxn.mymoney.core.util.RecurrenceSetting
-import com.sinxn.mymoney.feature.transaction.components.TransactionDescriptionCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -154,13 +153,15 @@ fun RecurrentTransactionAddEditScreen(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         // 2. Description Card
-                        TransactionDescriptionCard(
-                            description = uiState.description,
+                        DescriptionEditForm(
+                            icon = Icons.Default.Description,
+                            value = uiState.description,
                             accentColor = accentColor,
-                            isEditable = true,
-                            onDescriptionChange = viewModel::onDescriptionChanged,
+                            onValueChange = viewModel::onDescriptionChanged,
                             focusRequester = numpadState.focusRequester,
-                            onFocusField = { numpadState.onFocusField() }
+                            onFocusField = { numpadState.onFocusField() },
+                            label = "Description",
+                            placeHolder = "Add Description"
                         )
 
                         Spacer(modifier = Modifier.height(12.dp))
