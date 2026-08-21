@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
@@ -15,19 +16,16 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun FormCardContainer(
     modifier: Modifier = Modifier,
-    horizontalPadding: Dp = 20.dp,
+    horizontalPadding: Dp = 16.dp,
     containerAlpha: Float = 0.35f,
-    content: @Composable ColumnScope.() -> Unit
+    content: @Composable () -> Unit
 ) {
-    Card(
+    Surface (
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = horizontalPadding),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = containerAlpha)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        shape = RoundedCornerShape(12.dp),
+        color =  MaterialTheme.colorScheme.surfaceVariant.copy(alpha = containerAlpha),
         content = content
     )
 }

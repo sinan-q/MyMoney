@@ -18,8 +18,8 @@ import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 
-private val DebtRoseColor = Color(0xFFE11D48)
-private val CreditEmeraldColor = Color(0xFF10B981)
+val DebtRoseColor = Color(0xFFE11D48)
+val CreditEmeraldColor = Color(0xFF10B981)
 
 @Composable
 fun TransactionItem(

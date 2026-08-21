@@ -1,6 +1,7 @@
 package com.sinxn.mymoney.feature.transaction.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -12,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -20,6 +22,8 @@ import androidx.compose.ui.unit.sp
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CleanListRow
+import com.sinxn.mymoney.core.ui.components.CreditEmeraldColor
+import com.sinxn.mymoney.core.ui.components.DebtRoseColor
 import com.sinxn.mymoney.core.ui.components.FormCardContainer
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
@@ -27,6 +31,7 @@ import com.sinxn.mymoney.feature.transaction.TransactionDetailsUiState
 import com.sinxn.mymoney.feature.transaction.util.resolveCategoryHierarchy
 import java.text.SimpleDateFormat
 import java.util.Locale
+import androidx.compose.ui.platform.LocalLocale
 
 @Composable
 fun ViewTransactionContent(
@@ -46,8 +51,8 @@ fun ViewTransactionContent(
             fallbackName = uiState.transaction.categoryName
         )
     }
-    val categoryIcon = if (isTransfer) "{\"type\":\"color\",\"color\":\"#0284C7\",\"name\":\"⇄\"}" else (uiState.transaction.categoryIcon
-        ?: uiState.availableCategories.find { it.id == transaction.categoryId }?.icon)
+    val categoryIcon =  uiState.transaction.categoryIcon
+        ?: uiState.availableCategories.find { it.id == transaction.categoryId }?.icon
 
     val directionColor = if (isTransfer) Color(0xFF0284C7) else when (transaction.direction) {
         1 -> Color(0xFF10B981)
@@ -84,11 +89,9 @@ fun ViewTransactionContent(
                     fontWeight = FontWeight.Bold,
                     color = directionColor
                 )
-                Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = formattedAmountValue,
+                    text = MoneyFormatter.formatBalanceWithNonBoldDecimals(formattedAmountValue, baseWeight = FontWeight.Bold) ,
                     fontSize = 58.sp,
-                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     letterSpacing = (-1.5).sp
                 )
@@ -106,11 +109,32 @@ fun ViewTransactionContent(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
                 ) {
-                    CategoryIcon(
-                        iconString = categoryIcon,
-                        categoryName = categoryName,
-                        modifier = Modifier.size(18.dp)
-                    )
+                    if (isTransfer) {
+                        val isIncomeTransfer = transaction.direction == 1
+                        val transferAccentColor = if (isIncomeTransfer) CreditEmeraldColor else DebtRoseColor
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(transferAccentColor.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isIncomeTransfer) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
+                                contentDescription = null,
+                                tint = transferAccentColor,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                    } else {
+                        CategoryIcon(
+                            iconString = categoryIcon,
+                            categoryName = categoryName,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+
                     Spacer(modifier = Modifier.width(8.dp))
                     if (parentCategoryName != null) {
                         Text(
@@ -198,7 +222,7 @@ fun ViewTransactionContent(
                 val parsedDate = DateUtils.parseDate(transaction.date)
                 val formattedDate = DateUtils.formatDate(parsedDate, settings.dateFormat)
                 val formattedTime =
-                    SimpleDateFormat("HH:mm", Locale.getDefault()).format(parsedDate)
+                    SimpleDateFormat("HH:mm", LocalLocale.current.platformLocale).format(parsedDate)
 
                 CleanListRow(
                     icon = {

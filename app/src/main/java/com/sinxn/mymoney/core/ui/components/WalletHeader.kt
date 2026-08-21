@@ -1,7 +1,5 @@
 package com.sinxn.mymoney.core.ui.components
 
-import android.graphics.Color.HSVToColor
-import android.graphics.Color.colorToHSV
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -21,7 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -41,54 +38,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.util.MoneyFormatter
-import java.text.DecimalFormat
-import java.text.NumberFormat
-
-private fun formatBalanceWithNonBoldDecimals(
-    formattedBalance: String,
-    baseWeight: FontWeight = FontWeight.Black,
-    decimalWeight: FontWeight = FontWeight.Normal
-): AnnotatedString {
-    val decimalSeparator = try {
-        (NumberFormat.getInstance() as? DecimalFormat)?.decimalFormatSymbols?.decimalSeparator ?: '.'
-    } catch (e: Exception) {
-        '.'
-    }
-
-    val decimalIndex = formattedBalance.lastIndexOf(decimalSeparator)
-    if (decimalIndex == -1) {
-        return buildAnnotatedString {
-            withStyle(SpanStyle(fontWeight = baseWeight)) {
-                append(formattedBalance)
-            }
-        }
-    }
-
-    return buildAnnotatedString {
-        withStyle(SpanStyle(fontWeight = baseWeight)) {
-            append(formattedBalance.substring(0, decimalIndex))
-        }
-        withStyle(SpanStyle(fontWeight = decimalWeight, fontSize = 0.65.em)) {
-            append(formattedBalance.substring(decimalIndex))
-        }
-    }
-}
 
 @Composable
 fun WalletHeader(
@@ -125,7 +84,7 @@ fun WalletHeader(
     }
 
     val formattedBalanceAnnotated = remember(formattedBalance) {
-        formatBalanceWithNonBoldDecimals(formattedBalance)
+        MoneyFormatter.formatBalanceWithNonBoldDecimals(formattedBalance)
     }
 
     Box(

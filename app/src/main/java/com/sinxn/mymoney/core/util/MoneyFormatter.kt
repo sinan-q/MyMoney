@@ -4,7 +4,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.em
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import java.text.DecimalFormat
 import java.text.NumberFormat
@@ -206,5 +208,34 @@ object MoneyFormatter {
         expenseColor = expenseColor,
         neutralColor = neutralColor
     )
+    fun formatBalanceWithNonBoldDecimals(
+        formattedBalance: String,
+        baseWeight: FontWeight = FontWeight.Black,
+        decimalWeight: FontWeight = FontWeight.Normal
+    ): AnnotatedString {
+        val decimalSeparator = try {
+            (NumberFormat.getInstance() as? DecimalFormat)?.decimalFormatSymbols?.decimalSeparator ?: '.'
+        } catch (e: Exception) {
+            '.'
+        }
+
+        val decimalIndex = formattedBalance.lastIndexOf(decimalSeparator)
+        if (decimalIndex == -1) {
+            return buildAnnotatedString {
+                withStyle(SpanStyle(fontWeight = baseWeight)) {
+                    append(formattedBalance)
+                }
+            }
+        }
+
+        return buildAnnotatedString {
+            withStyle(SpanStyle(fontWeight = baseWeight)) {
+                append(formattedBalance.substring(0, decimalIndex))
+            }
+            withStyle(SpanStyle(fontWeight = decimalWeight, fontSize = 0.65.em)) {
+                append(formattedBalance.substring(decimalIndex))
+            }
+        }
+    }
 }
 
