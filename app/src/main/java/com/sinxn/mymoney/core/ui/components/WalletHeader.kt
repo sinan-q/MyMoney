@@ -2,26 +2,40 @@ package com.sinxn.mymoney.core.ui.components
 
 import android.graphics.Color.HSVToColor
 import android.graphics.Color.colorToHSV
-import androidx.compose.foundation.Canvas
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,31 +45,59 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.util.MoneyFormatter
+import java.text.DecimalFormat
+import java.text.NumberFormat
+
+private fun formatBalanceWithNonBoldDecimals(
+    formattedBalance: String,
+    baseWeight: FontWeight = FontWeight.Black,
+    decimalWeight: FontWeight = FontWeight.Normal
+): AnnotatedString {
+    val decimalSeparator = try {
+        (NumberFormat.getInstance() as? DecimalFormat)?.decimalFormatSymbols?.decimalSeparator ?: '.'
+    } catch (e: Exception) {
+        '.'
+    }
+
+    val decimalIndex = formattedBalance.lastIndexOf(decimalSeparator)
+    if (decimalIndex == -1) {
+        return buildAnnotatedString {
+            withStyle(SpanStyle(fontWeight = baseWeight)) {
+                append(formattedBalance)
+            }
+        }
+    }
+
+    return buildAnnotatedString {
+        withStyle(SpanStyle(fontWeight = baseWeight)) {
+            append(formattedBalance.substring(0, decimalIndex))
+        }
+        withStyle(SpanStyle(fontWeight = decimalWeight, fontSize = 0.65.em)) {
+            append(formattedBalance.substring(decimalIndex))
+        }
+    }
+}
 
 @Composable
 fun WalletHeader(
+    modifier: Modifier = Modifier,
     wallet: WalletWithBalance? = null,
     formatterConfig: MoneyFormatter.Config? = null,
     isExpanded: Boolean = false,
     onToggleExpand: () -> Unit = {},
-    onMenuClick: (() -> Unit)? = null,
     isReduced: Boolean = false,
-    modifier: Modifier = Modifier,
     viewModel: WalletHeaderViewModel = hiltViewModel()
 ) {
     val currentWalletState by viewModel.currentWallet.collectAsState()
@@ -64,28 +106,10 @@ fun WalletHeader(
     val effectiveWallet = wallet ?: currentWalletState ?: return
     val effectiveConfig = formatterConfig ?: defaultFormatterConfig
 
-    val baseColor = remember(effectiveWallet.wallet.name) { generateColor(effectiveWallet.wallet.name) }
-    val secondaryColor = remember(baseColor) { 
-        // Derive a darker/different hue for gradient
-        Color(HSVToColor(FloatArray(3).apply {
-            colorToHSV(baseColor.toArgb(), this)
-            this[2] *= 0.7f // Darken
-            this[0] = (this[0] + 30) % 360 // Shift hue
-        }))
+    val baseColor = remember(effectiveWallet.wallet.icon, effectiveWallet.wallet.name) {
+        parseIconData(effectiveWallet.wallet.icon, effectiveWallet.wallet.name).color
     }
 
-    val animatedVerticalPadding by animateDpAsState(
-        targetValue = if (isReduced) 4.dp else 16.dp,
-        label = "walletHeaderVerticalPadding"
-    )
-    val animatedHorizontalPadding by animateDpAsState(
-        targetValue = 16.dp,
-        label = "walletHeaderHorizontalPadding"
-    )
-    val animatedCornerRadius by animateDpAsState(
-        targetValue = if (isReduced) 16.dp else 24.dp,
-        label = "walletHeaderCornerRadius"
-    )
     val animatedInnerPadding by animateDpAsState(
         targetValue = if (isReduced) 12.dp else 20.dp,
         label = "walletHeaderInnerPadding"
@@ -100,16 +124,16 @@ fun WalletHeader(
         )
     }
 
+    val formattedBalanceAnnotated = remember(formattedBalance) {
+        formatBalanceWithNonBoldDecimals(formattedBalance)
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = animatedHorizontalPadding, vertical = animatedVerticalPadding)
-            .clip(RoundedCornerShape(animatedCornerRadius))
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(baseColor, secondaryColor)
-                )
-            )
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(color = baseColor)
             .animateContentSize(
                 animationSpec = spring(
                     dampingRatio = Spring.DampingRatioNoBouncy,
@@ -118,42 +142,58 @@ fun WalletHeader(
             )
             .clickable { onToggleExpand() }
     ) {
-        if (isReduced) {
-            // Compact / Reduced Single-Row Layout
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = animatedInnerPadding),
+            horizontalAlignment = Alignment.Start,
+
+        ) {
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = animatedInnerPadding),
+                    .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = effectiveWallet.wallet.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Column() {
+                    Text(
+                        text = effectiveWallet.wallet.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (!isReduced) {
+                        Text(
+                            text = "Current Balance",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.End,
                     modifier = Modifier.weight(1f, fill = false)
                 ) {
+                    if (isReduced) {
+                        Text(
+                            text = if (effectiveWallet.isTotalValid) formattedBalanceAnnotated else AnnotatedString("Multi-Currency"),
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                shadow = Shadow(
+                                    color = Color.Black.copy(alpha = 0.15f),
+                                    offset = Offset(1f, 2f),
+                                    blurRadius = 4f
+                                )
+                            ),
+                            color = Color.White,
+                            maxLines = 1
+                        )
+                    }
 
-                    Text(
-                        text = if (effectiveWallet.isTotalValid) formattedBalance else "Multi-Currency",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            shadow = Shadow(
-                                color = Color.Black.copy(alpha = 0.15f),
-                                offset = Offset(1f, 2f),
-                                blurRadius = 4f
-                            )
-                        ),
-                        color = Color.White,
-                        fontWeight = FontWeight.Black,
-                        maxLines = 1
-                    )
+
                     // Dropdown Pill
                     Surface(
                         onClick = onToggleExpand,
@@ -175,60 +215,12 @@ fun WalletHeader(
                     }
                 }
             }
-        } else {
-            // Expanded Layout
-            Column(
-                modifier = Modifier
-                    .padding(animatedInnerPadding)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.Start
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column {
-                            Text(
-                                text = effectiveWallet.wallet.name,
-                                style = MaterialTheme.typography.titleLarge,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Current Balance",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
 
-                    // Dropdown Pill (Toggles list below replacing transaction list, same as sidebar)
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = Color.White.copy(alpha = 0.2f)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (isExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-                                contentDescription = "Toggle wallet list",
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-                }
-
+            if (!isReduced) {
                 Spacer(modifier = Modifier.height(16.dp))
-
-                // Large Bold Balance
+                // Large Bold Balance with normal weight decimal digits
                 Text(
-                    text = if (effectiveWallet.isTotalValid) formattedBalance else "Multi-Currency",
+                    text = if (effectiveWallet.isTotalValid) formattedBalanceAnnotated else AnnotatedString("Multi-Currency"),
                     style = if (effectiveWallet.isTotalValid) {
                         MaterialTheme.typography.displayMedium.copy(
                             shadow = Shadow(
@@ -244,7 +236,6 @@ fun WalletHeader(
                         )
                     },
                     color = Color.White,
-                    fontWeight = FontWeight.Black,
                     letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified
                 )
 
@@ -265,11 +256,11 @@ fun WalletHeader(
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
-                
+
                 if (!effectiveWallet.wallet.note.isNullOrEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = effectiveWallet.wallet.note!!,
+                        text = effectiveWallet.wallet.note,
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.8f),
                         fontStyle = FontStyle.Italic
@@ -337,20 +328,11 @@ fun WalletProfileRow(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(
-                shape = CircleShape,
-                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+            CategoryIcon(
+                iconString = wallet.wallet.icon,
+                categoryName = wallet.wallet.name,
                 modifier = Modifier.size(36.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = wallet.wallet.name.take(1).uppercase(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+            )
 
             Spacer(modifier = Modifier.width(16.dp))
 

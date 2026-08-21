@@ -225,59 +225,20 @@ fun AppNavHost(
         }
         composable("wallet_details/{walletId}") {
             WalletDetailsScreen(
-                onNavigateUp = {
-                    if (navController.previousBackStackEntry != null) {
-                        navController.navigateUp()
-                    } else {
-                        // If launched directly here, back should go home
-                        navController.navigate("home") {
-                            popUpTo("wallet_details/{walletId}") { inclusive = true }
-                        }
-                    }
-                },
                 onTransactionClick = { transactionId ->
                     navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
-                },
-                onNavigateToRecap = {
-                    navController.navigate(Screen.Recap.routePattern)
                 },
                 onAddTransaction = {
                     navController.navigate(Screen.TransactionAddEdit.createRoute())
                 },
-                onNavigateToDebts = { _ ->
-                    navController.navigate(Screen.Debts.routePattern)
-                },
-                onAddDebt = { _, type ->
-                    navController.navigate(Screen.DebtAddEdit.createRoute(type = type))
-                },
-                onDebtClick = { debtId ->
-                    navController.navigate(Screen.DebtDetails.createRoute(debtId))
-                },
-                onNavigateToBudgets = { _ ->
-                    navController.navigate(Screen.Budgets.routePattern)
-                },
-                onNavigateToSavings = { _ ->
-                    navController.navigate(Screen.Savings.routePattern)
-                },
                 onNavigateToWallet = { walletId ->
                     navController.navigate(Screen.Transactions.createRoute(walletId))
-                },
-                onNavigateToSettings = {
-                    navController.navigate(Screen.Settings.routePattern)
                 },
                 onAddWallet = {
                     navController.navigate(Screen.WalletAddEdit.createRoute())
                 },
                 onManageWallets = {
                     navController.navigate(Screen.Wallets.routePattern)
-                },
-                onNavigateMenuItem = { itemId ->
-                    handleSidebarNavigation(
-                        context = context,
-                        navController = navController,
-                        itemId = itemId,
-                        currentWalletId = currentWalletId
-                    )
                 }
             )
         }

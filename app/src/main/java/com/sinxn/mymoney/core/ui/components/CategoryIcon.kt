@@ -111,7 +111,12 @@ fun parseIconData(iconString: String?, categoryName: String): IconData {
                 
                 val color = if (colorHex.isNotEmpty()) {
                     try {
-                        Color(colorHex.toColorInt())
+                        val parsedInt = colorHex.toColorInt()
+                        if (parsedInt == android.graphics.Color.BLACK || parsedInt == android.graphics.Color.TRANSPARENT) {
+                            defaultColor
+                        } else {
+                            Color(parsedInt)
+                        }
                     } catch (e: Exception) { defaultColor }
                 } else defaultColor
                 
