@@ -143,285 +143,283 @@ fun RecurrentTransferAddEditScreen(
 
                         // 3. Transfer Accounts & Options Card
                         FormCardContainer {
-                            Column {
-                                // From Wallet Row
-                                val fromWallet = uiState.availableWallets.find { it.id == uiState.walletFromId }
-                                CleanListRow(
-                                    icon = {
-                                        if (fromWallet != null) {
-                                            CategoryIcon(
-                                                iconString = fromWallet.icon,
-                                                categoryName = fromWallet.name,
-                                                modifier = Modifier.size(24.dp)
-                                            )
-                                        } else {
-                                            Icon(
-                                                Icons.Default.AccountBalanceWallet,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.error,
-                                                modifier = Modifier.size(22.dp)
-                                            )
-                                        }
-                                    },
-                                    label = "From Wallet",
-                                    value = fromWallet?.name ?: "Select Source Wallet",
-                                    onClick = {
-                                        numpadState.dismiss()
-                                        activeWalletPickerForTarget = false
-                                        activePicker = FormPicker.Wallet
+                            // From Wallet Row
+                            val fromWallet = uiState.availableWallets.find { it.id == uiState.walletFromId }
+                            CleanListRow(
+                                icon = {
+                                    if (fromWallet != null) {
+                                        CategoryIcon(
+                                            iconString = fromWallet.icon,
+                                            categoryName = fromWallet.name,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    } else {
+                                        Icon(
+                                            Icons.Default.AccountBalanceWallet,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(22.dp)
+                                        )
                                     }
-                                )
-
-                                HorizontalDivider(
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                                    modifier = Modifier.padding(horizontal = 16.dp)
-                                )
-
-                                // To Wallet Row
-                                val toWallet = uiState.availableWallets.find { it.id == uiState.walletToId }
-                                CleanListRow(
-                                    icon = {
-                                        if (toWallet != null) {
-                                            CategoryIcon(
-                                                iconString = toWallet.icon,
-                                                categoryName = toWallet.name,
-                                                modifier = Modifier.size(24.dp)
-                                            )
-                                        } else {
-                                            Icon(
-                                                Icons.Default.AccountBalanceWallet,
-                                                contentDescription = null,
-                                                tint = Color(0xFF10B981),
-                                                modifier = Modifier.size(22.dp)
-                                            )
-                                        }
-                                    },
-                                    label = "To Wallet",
-                                    value = toWallet?.name ?: "Select Destination Wallet",
-                                    onClick = {
-                                        numpadState.dismiss()
-                                        activeWalletPickerForTarget = true
-                                        activePicker = FormPicker.Wallet
-                                    }
-                                )
-
-                                HorizontalDivider(
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                                    modifier = Modifier.padding(horizontal = 16.dp)
-                                )
-
-                                // Recurrence Frequency Row
-                                val setting = remember(uiState.startDate, uiState.rule) {
-                                    RecurrenceSetting.fromStringOrFallback(uiState.startDate, uiState.rule)
+                                },
+                                label = "From Wallet",
+                                value = fromWallet?.name ?: "Select Source Wallet",
+                                onClick = {
+                                    numpadState.dismiss()
+                                    activeWalletPickerForTarget = false
+                                    activePicker = FormPicker.Wallet
                                 }
-                                CleanListRow(
-                                    icon = {
+                            )
+
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+
+                            // To Wallet Row
+                            val toWallet = uiState.availableWallets.find { it.id == uiState.walletToId }
+                            CleanListRow(
+                                icon = {
+                                    if (toWallet != null) {
+                                        CategoryIcon(
+                                            iconString = toWallet.icon,
+                                            categoryName = toWallet.name,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    } else {
                                         Icon(
-                                            Icons.Default.Repeat,
+                                            Icons.Default.AccountBalanceWallet,
                                             contentDescription = null,
-                                            tint = accentColor,
+                                            tint = Color(0xFF10B981),
                                             modifier = Modifier.size(22.dp)
                                         )
-                                    },
-                                    label = "Frequency",
-                                    value = setting.getUserReadableString(context),
-                                    onClick = {
-                                        numpadState.dismiss()
-                                        showRecurrencePicker = true
                                     }
-                                )
-
-                                HorizontalDivider(
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                                    modifier = Modifier.padding(horizontal = 16.dp)
-                                )
-
-                                // Start Date Row
-                                val formattedStartDate = remember(uiState.startDate, formattingSettings.dateFormat) {
-                                    DateUtils.formatDate(uiState.startDate, formattingSettings.dateFormat)
+                                },
+                                label = "To Wallet",
+                                value = toWallet?.name ?: "Select Destination Wallet",
+                                onClick = {
+                                    numpadState.dismiss()
+                                    activeWalletPickerForTarget = true
+                                    activePicker = FormPicker.Wallet
                                 }
-                                CleanListRow(
-                                    icon = {
-                                        Icon(
-                                            Icons.Default.CalendarToday,
-                                            contentDescription = null,
-                                            tint = accentColor,
-                                            modifier = Modifier.size(22.dp)
+                            )
+
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+
+                            // Recurrence Frequency Row
+                            val setting = remember(uiState.startDate, uiState.rule) {
+                                RecurrenceSetting.fromStringOrFallback(uiState.startDate, uiState.rule)
+                            }
+                            CleanListRow(
+                                icon = {
+                                    Icon(
+                                        Icons.Default.Repeat,
+                                        contentDescription = null,
+                                        tint = accentColor,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                },
+                                label = "Frequency",
+                                value = setting.getUserReadableString(context),
+                                onClick = {
+                                    numpadState.dismiss()
+                                    showRecurrencePicker = true
+                                }
+                            )
+
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+
+                            // Start Date Row
+                            val formattedStartDate = remember(uiState.startDate, formattingSettings.dateFormat) {
+                                DateUtils.formatDate(uiState.startDate, formattingSettings.dateFormat)
+                            }
+                            CleanListRow(
+                                icon = {
+                                    Icon(
+                                        Icons.Default.CalendarToday,
+                                        contentDescription = null,
+                                        tint = accentColor,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                },
+                                label = "Start Date",
+                                value = formattedStartDate,
+                                onClick = {
+                                    numpadState.dismiss()
+                                    activePicker = FormPicker.Date
+                                }
+                            )
+
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+
+                            // Place Row
+                            val activePlace = uiState.availablePlaces.find { it.id == uiState.placeId }
+                            CleanListRow(
+                                icon = {
+                                    Icon(
+                                        Icons.Default.Place,
+                                        contentDescription = null,
+                                        tint = if (activePlace != null) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                },
+                                label = "Place",
+                                value = activePlace?.name ?: "None",
+                                onClick = {
+                                    numpadState.dismiss()
+                                    activePicker = FormPicker.Place
+                                }
+                            )
+
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+
+                            // Event Row
+                            val activeEvent = uiState.availableEvents.find { it.id == uiState.eventId }
+                            CleanListRow(
+                                icon = {
+                                    Icon(
+                                        Icons.Default.Event,
+                                        contentDescription = null,
+                                        tint = if (activeEvent != null) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                },
+                                label = "Event",
+                                value = activeEvent?.name ?: "None",
+                                onClick = {
+                                    numpadState.dismiss()
+                                    activePicker = FormPicker.Event
+                                }
+                            )
+
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+
+                            // Note TextField Row
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Notes,
+                                    contentDescription = null,
+                                    tint = if (uiState.note.isNotBlank()) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(16.dp))
+                                TextField(
+                                    value = uiState.note,
+                                    onValueChange = viewModel::onNoteChanged,
+                                    placeholder = {
+                                        Text(
+                                            "Add a note...",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                                         )
                                     },
-                                    label = "Start Date",
-                                    value = formattedStartDate,
-                                    onClick = {
-                                        numpadState.dismiss()
-                                        activePicker = FormPicker.Date
-                                    }
-                                )
-
-                                HorizontalDivider(
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                                    modifier = Modifier.padding(horizontal = 16.dp)
-                                )
-
-                                // Place Row
-                                val activePlace = uiState.availablePlaces.find { it.id == uiState.placeId }
-                                CleanListRow(
-                                    icon = {
-                                        Icon(
-                                            Icons.Default.Place,
-                                            contentDescription = null,
-                                            tint = if (activePlace != null) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                            modifier = Modifier.size(22.dp)
-                                        )
-                                    },
-                                    label = "Place",
-                                    value = activePlace?.name ?: "None",
-                                    onClick = {
-                                        numpadState.dismiss()
-                                        activePicker = FormPicker.Place
-                                    }
-                                )
-
-                                HorizontalDivider(
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                                    modifier = Modifier.padding(horizontal = 16.dp)
-                                )
-
-                                // Event Row
-                                val activeEvent = uiState.availableEvents.find { it.id == uiState.eventId }
-                                CleanListRow(
-                                    icon = {
-                                        Icon(
-                                            Icons.Default.Event,
-                                            contentDescription = null,
-                                            tint = if (activeEvent != null) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                            modifier = Modifier.size(22.dp)
-                                        )
-                                    },
-                                    label = "Event",
-                                    value = activeEvent?.name ?: "None",
-                                    onClick = {
-                                        numpadState.dismiss()
-                                        activePicker = FormPicker.Event
-                                    }
-                                )
-
-                                HorizontalDivider(
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                                    modifier = Modifier.padding(horizontal = 16.dp)
-                                )
-
-                                // Note TextField Row
-                                Row(
+                                    colors = TextFieldDefaults.colors(
+                                        focusedContainerColor = Color.Transparent,
+                                        unfocusedContainerColor = Color.Transparent,
+                                        disabledContainerColor = Color.Transparent,
+                                        focusedIndicatorColor = Color.Transparent,
+                                        unfocusedIndicatorColor = Color.Transparent
+                                    ),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
+                                        .onFocusChanged {
+                                            if (it.isFocused) numpadState.onFocusField()
+                                        }
+                                )
+                            }
+
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+
+                            // Auto Confirmed Switch Row
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.Notes,
+                                        imageVector = Icons.Default.CheckCircle,
                                         contentDescription = null,
-                                        tint = if (uiState.note.isNotBlank()) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        tint = if (uiState.confirmed) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                         modifier = Modifier.size(22.dp)
                                     )
                                     Spacer(modifier = Modifier.width(16.dp))
-                                    TextField(
-                                        value = uiState.note,
-                                        onValueChange = viewModel::onNoteChanged,
-                                        placeholder = {
-                                            Text(
-                                                "Add a note...",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                            )
-                                        },
-                                        colors = TextFieldDefaults.colors(
-                                            focusedContainerColor = Color.Transparent,
-                                            unfocusedContainerColor = Color.Transparent,
-                                            disabledContainerColor = Color.Transparent,
-                                            focusedIndicatorColor = Color.Transparent,
-                                            unfocusedIndicatorColor = Color.Transparent
-                                        ),
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .onFocusChanged {
-                                                if (it.isFocused) numpadState.onFocusField()
-                                            }
+                                    Text(
+                                        "Auto Confirmed",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Medium
                                     )
                                 }
-
-                                HorizontalDivider(
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                Switch(
+                                    checked = uiState.confirmed,
+                                    onCheckedChange = {
+                                        numpadState.dismiss()
+                                        viewModel.onConfirmedChanged(it)
+                                    },
+                                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = accentColor)
                                 )
+                            }
 
-                                // Auto Confirmed Switch Row
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Default.CheckCircle,
-                                            contentDescription = null,
-                                            tint = if (uiState.confirmed) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                            modifier = Modifier.size(22.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(16.dp))
-                                        Text(
-                                            "Auto Confirmed",
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
-                                    Switch(
-                                        checked = uiState.confirmed,
-                                        onCheckedChange = {
-                                            numpadState.dismiss()
-                                            viewModel.onConfirmedChanged(it)
-                                        },
-                                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = accentColor)
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+
+                            // Count in Total Switch Row
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.QueryStats,
+                                        contentDescription = null,
+                                        tint = if (uiState.countInTotal) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Text(
+                                        "Count in Total",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Medium
                                     )
                                 }
-
-                                HorizontalDivider(
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                Switch(
+                                    checked = uiState.countInTotal,
+                                    onCheckedChange = {
+                                        numpadState.dismiss()
+                                        viewModel.onCountInTotalChanged(it)
+                                    },
+                                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = accentColor)
                                 )
-
-                                // Count in Total Switch Row
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Default.QueryStats,
-                                            contentDescription = null,
-                                            tint = if (uiState.countInTotal) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                            modifier = Modifier.size(22.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(16.dp))
-                                        Text(
-                                            "Count in Total",
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
-                                    Switch(
-                                        checked = uiState.countInTotal,
-                                        onCheckedChange = {
-                                            numpadState.dismiss()
-                                            viewModel.onCountInTotalChanged(it)
-                                        },
-                                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = accentColor)
-                                    )
-                                }
                             }
                         }
                     }

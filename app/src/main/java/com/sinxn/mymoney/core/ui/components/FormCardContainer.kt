@@ -1,5 +1,6 @@
 package com.sinxn.mymoney.core.ui.components
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -19,7 +20,7 @@ fun FormCardContainer(
     horizontalPadding: Dp = 16.dp,
     verticalPadding: Dp = 3.dp,
     containerAlpha: Float = 0.35f,
-    content: @Composable () -> Unit
+    content: @Composable (ColumnScope.() -> Unit)
 ) {
     Surface (
         modifier = modifier
@@ -27,6 +28,10 @@ fun FormCardContainer(
             .padding(horizontal = horizontalPadding, vertical = verticalPadding),
         shape = RoundedCornerShape(8.dp),
         color =  MaterialTheme.colorScheme.surfaceVariant.copy(alpha = containerAlpha),
-        content = content
+        content = {
+            Column(
+                content = content
+            )
+        }
     )
 }

@@ -24,6 +24,7 @@ import com.sinxn.mymoney.core.ui.components.FormCardContainer
 import com.sinxn.mymoney.core.ui.components.TransactionFormRowItem
 import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.DateUtils
+import com.sinxn.mymoney.feature.settings.SettingsSwitchItem
 import com.sinxn.mymoney.feature.transaction.TransactionAddEditUiState
 
 @Composable
@@ -43,12 +44,16 @@ fun EditTransactionFormOptions(
     focusRequester: FocusRequester,
     onFocusField: () -> Unit
 ) {
-    FormCardContainer {
-        Column {
+    Column {
+        FormCardContainer {
             // Category Row
-            val activeCategory = uiState.availableCategories.find { it.id == uiState.editCategoryId }
+            val activeCategory =
+                uiState.availableCategories.find { it.id == uiState.editCategoryId }
             val iconData = remember(activeCategory?.icon, activeCategory?.name) {
-                if (activeCategory != null) parseIconData(activeCategory.icon, activeCategory.name) else null
+                if (activeCategory != null) parseIconData(
+                    activeCategory.icon,
+                    activeCategory.name
+                ) else null
             }
             TransactionFormRowItem(
                 icon = Icons.Default.Category,
@@ -68,7 +73,10 @@ fun EditTransactionFormOptions(
             // Wallet Row
             val activeWallet = uiState.availableWallets.find { it.id == uiState.editWalletId }
             val walletIconData = remember(activeWallet?.icon, activeWallet?.name) {
-                if (activeWallet != null) parseIconData(activeWallet.icon, activeWallet.name) else null
+                if (activeWallet != null) parseIconData(
+                    activeWallet.icon,
+                    activeWallet.name
+                ) else null
             }
             TransactionFormRowItem(
                 icon = Icons.Default.AccountBalanceWallet,
@@ -112,7 +120,8 @@ fun EditTransactionFormOptions(
             )
 
             // People Row
-            val selectedPeople = uiState.availablePeople.filter { it.id in uiState.editPeopleIds }
+            val selectedPeople =
+                uiState.availablePeople.filter { it.id in uiState.editPeopleIds }
             val selectedPeopleNames = selectedPeople.joinToString { it.name }.ifEmpty { "None" }
             TransactionFormRowItem(
                 icon = Icons.Default.People,
@@ -131,7 +140,10 @@ fun EditTransactionFormOptions(
             // Place Row
             val activePlace = uiState.availablePlaces.find { it.id == uiState.editPlaceId }
             val placeIconData = remember(activePlace?.icon, activePlace?.name) {
-                if (activePlace != null && activePlace.icon.isNotBlank()) parseIconData(activePlace.icon, activePlace.name) else null
+                if (activePlace != null && activePlace.icon.isNotBlank()) parseIconData(
+                    activePlace.icon,
+                    activePlace.name
+                ) else null
             }
             TransactionFormRowItem(
                 icon = Icons.Default.LocationOn,
@@ -151,7 +163,10 @@ fun EditTransactionFormOptions(
             // Event Row
             val activeEvent = uiState.availableEvents.find { it.id == uiState.editEventId }
             val eventIconData = remember(activeEvent?.icon, activeEvent?.name) {
-                if (activeEvent != null && activeEvent.icon.isNotBlank()) parseIconData(activeEvent.icon, activeEvent.name) else null
+                if (activeEvent != null && activeEvent.icon.isNotBlank()) parseIconData(
+                    activeEvent.icon,
+                    activeEvent.name
+                ) else null
             }
             TransactionFormRowItem(
                 icon = Icons.Default.Flag,
@@ -176,59 +191,30 @@ fun EditTransactionFormOptions(
                 icon = Icons.AutoMirrored.Filled.Notes,
                 accentColor = accentColor,
                 value = uiState.editNote,
-                onValueChange =  onNoteChange,
+                onValueChange = onNoteChange,
                 label = "Note",
                 placeHolder = "Add a note..."
             )
-
-            if (!settings.hideStatusAndImpact) {
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-
+        }
+        if (!settings.hideStatusAndImpact) {
+            FormCardContainer {
                 // Confirmed Switch Row
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        "Confirmed",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Switch(
-                        checked = uiState.editConfirmed,
-                        onCheckedChange = onConfirmedChange
-                    )
-                }
-
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                    modifier = Modifier.padding(horizontal = 16.dp)
+                SettingsSwitchItem(
+                    title = "Confirmed",
+                    checked = uiState.editConfirmed,
+                    onCheckedChange = onConfirmedChange,
+                    accentColor = accentColor,
+                    horizontalPadding = 16.dp,
                 )
 
                 // Count in Total Switch Row
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        "Count in Total",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Switch(
-                        checked = uiState.editCountInTotal,
-                        onCheckedChange = onCountInTotalChange
-                    )
-                }
+                SettingsSwitchItem(
+                    title = "Count in Total",
+                    checked = uiState.editCountInTotal,
+                    onCheckedChange = onCountInTotalChange,
+                    accentColor = accentColor,
+                    horizontalPadding = 16.dp,
+                )
             }
         }
     }
