@@ -14,10 +14,9 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.ui.components.DescriptionEditForm
 import com.sinxn.mymoney.core.ui.components.EditAmountHeader
@@ -35,32 +34,23 @@ fun EditTransactionContent(
     uiState: TransactionAddEditUiState,
     settings: FormattingSettings,
     viewModel: TransactionAddEditViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    evaluatedAmountStr: String,
+    hasOperatorInAmount: Boolean,
+    isNumpadVisible: Boolean,
+    showNumpad: () -> Unit,
+    focusRequester: FocusRequester,
+    onFocusField: () -> Unit,
+    numpadDismiss: () -> Unit,
+    numpadOnNext: () -> Unit
 ) {
     val scrollState = rememberScrollState()
-    val numpadState = rememberNumpadFormState(initialNumpadVisible = uiState.isNewTransaction)
     var activePicker by remember { mutableStateOf<FormPicker?>(null) }
 
     // Direction Accent Color
     val accentColor = remember(uiState.editDirection) {
         if (uiState.editDirection == Direction.INCOME) Color(0xFF10B981) else Color(0xFFE11D48)
     }
-
-    val hasOperatorInAmount = remember(uiState.editAmount) {
-        numpadState.hasOperator(uiState.editAmount)
-    }
-
-    val evaluatedAmountStr = remember(uiState.editAmount) {
-        numpadState.getImmediateResult(uiState.editAmount, uiState.currencyDecimals)
-    }
-    val amountValue = remember(evaluatedAmountStr) {
-        evaluatedAmountStr.toDoubleOrNull()
-    }
-    val isCategorySelected = !uiState.editCategoryId.isNullOrBlank()
-    val isWalletSelected = uiState.editWalletId.isNotBlank()
-    val isAmountNonNegative = amountValue != null && amountValue >= 0.0
-
-    val isSaveEnabled = !uiState.isSaving && isCategorySelected && isWalletSelected && isAmountNonNegative
 
     val actionBtnText = if (uiState.isNewTransaction) {
         val dirName = if (uiState.editDirection == Direction.INCOME) "Income" else "Expense"
@@ -83,8 +73,8 @@ fun EditTransactionContent(
                 evaluatedResult = evaluatedAmountStr,
                 hasOperatorInAmount = hasOperatorInAmount,
                 accentColor = accentColor,
-                isNumpadVisible = numpadState.isNumpadVisible,
-                onHeaderClick = { numpadState.showNumpad() }
+                isNumpadVisible = isNumpadVisible,
+                onHeaderClick = showNumpad
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -96,8 +86,8 @@ fun EditTransactionContent(
                     value = uiState.editDescription,
                     accentColor = accentColor,
                     onValueChange = viewModel::onDescriptionChange,
-                    focusRequester = numpadState.focusRequester,
-                    onFocusField = { numpadState.onFocusField() },
+                    focusRequester = focusRequester,
+                    onFocusField = onFocusField,
                     label = "Description",
                     placeHolder = "Add Description"
                 )
@@ -110,40 +100,39 @@ fun EditTransactionContent(
                 settings = settings,
                 accentColor = accentColor,
                 onCategoryClick = {
-                    numpadState.dismiss()
+                    numpadDismiss()
                     activePicker = FormPicker.Category
                 },
                 onWalletClick = {
-                    numpadState.dismiss()
+                    numpadDismiss()
                     activePicker = FormPicker.Wallet
                 },
                 onDateClick = {
-                    numpadState.dismiss()
+                    numpadDismiss()
                     activePicker = FormPicker.Date
                 },
                 onPeopleClick = {
-                    numpadState.dismiss()
+                    numpadDismiss()
                     activePicker = FormPicker.People
                 },
                 onPlaceClick = {
-                    numpadState.dismiss()
+                    numpadDismiss()
                     activePicker = FormPicker.Place
                 },
                 onEventClick = {
-                    numpadState.dismiss()
+                    numpadDismiss()
                     activePicker = FormPicker.Event
                 },
                 onNoteChange = viewModel::onNoteChange,
                 onConfirmedChange = {
-                    numpadState.dismiss()
+                    numpadDismiss()
                     viewModel.onConfirmedChange(it)
                 },
                 onCountInTotalChange = {
-                    numpadState.dismiss()
+                    numpadDismiss()
                     viewModel.onCountInTotalChange(it)
                 },
-                focusRequester = numpadState.focusRequester,
-                onFocusField = { numpadState.onFocusField() }
+                onFocusField = { onFocusField() }
             )
         }
 
@@ -156,58 +145,18 @@ fun EditTransactionContent(
         ) {
             Column {
                 AnimatedVisibility(
-                    visible = numpadState.isNumpadVisible,
+                    visible = isNumpadVisible,
                     enter = fadeIn() + expandVertically(),
                     exit = fadeOut() + shrinkVertically()
                 ) {
                     NumpadView(
                         onKeyPress = viewModel::onNumpadKeyPress,
                         onEvaluate = viewModel::evaluateMathExpression,
-                        onSave = {
-                            numpadState.dismiss()
-                            viewModel.saveChanges {
-                                onNavigateBack()
-                            }
-                        },
-                        onNext = { numpadState.onNext() },
+                        onNext = numpadOnNext,
                         hasOperatorInAmount = hasOperatorInAmount,
                         saveButtonText = actionBtnText,
-                        saveButtonColor = accentColor,
-                        isSaving = uiState.isSaving,
-                        isSaveEnabled = isSaveEnabled
+                        saveButtonColor = accentColor
                     )
-                }
-
-                if (!numpadState.isNumpadVisible) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 10.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                numpadState.dismiss()
-                                viewModel.saveChanges {
-                                    onNavigateBack()
-                                }
-                            },
-                            enabled = isSaveEnabled,
-                            shape = RoundedCornerShape(20.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = accentColor,
-                                contentColor = Color.White
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(54.dp)
-                        ) {
-                            Text(
-                                text = actionBtnText,
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
                 }
             }
         }

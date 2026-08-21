@@ -278,7 +278,7 @@ class TransferAddEditViewModel @Inject constructor(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = TransferAddEditUiState()
+        initialValue = TransferAddEditUiState(isNewTransfer = isNewTransfer)
     )
 
     fun onAmountChange(amount: String) {

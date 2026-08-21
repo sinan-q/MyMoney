@@ -463,16 +463,10 @@ fun RecurrentTransactionAddEditScreen(
                                 NumpadView(
                                     onKeyPress = viewModel::onNumpadKeyPress,
                                     onEvaluate = viewModel::evaluateMathExpression,
-                                    onSave = {
-                                        numpadState.dismiss()
-                                        viewModel.save(onSuccess = onNavigateBack)
-                                    },
                                     onNext = { numpadState.onNext() },
                                     hasOperatorInAmount = hasOperatorInAmount,
                                     saveButtonText = actionBtnText,
-                                    saveButtonColor = accentColor,
-                                    isSaving = uiState.isSaving,
-                                    isSaveEnabled = isSaveEnabled
+                                    saveButtonColor = accentColor
                                 )
                             }
 

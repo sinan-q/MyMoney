@@ -28,6 +28,7 @@ import com.sinxn.mymoney.core.ui.components.CleanListRow
 import com.sinxn.mymoney.core.ui.components.DescriptionEditForm
 import com.sinxn.mymoney.core.ui.components.EditAmountHeader
 import com.sinxn.mymoney.core.ui.components.EventSelectionDialog
+import com.sinxn.mymoney.core.ui.components.FormCardContainer
 import com.sinxn.mymoney.core.ui.components.FormDatePickerDialog
 import com.sinxn.mymoney.core.ui.components.FormPicker
 import com.sinxn.mymoney.core.ui.components.NumpadView
@@ -89,16 +90,18 @@ fun EditTransferContent(
             Spacer(modifier = Modifier.height(12.dp))
 
             // 2. Description Card
-            DescriptionEditForm(
-                value = uiState.editDescription,
-                accentColor = accentColor,
-                onValueChange = viewModel::onDescriptionChange,
-                focusRequester = numpadState.focusRequester,
-                onFocusField = { numpadState.onFocusField() },
-                icon = Icons.Default.Description,
-                label = "Description",
-                placeHolder = "Add a description"
-            )
+            FormCardContainer {
+                DescriptionEditForm(
+                    value = uiState.editDescription,
+                    accentColor = accentColor,
+                    onValueChange = viewModel::onDescriptionChange,
+                    focusRequester = numpadState.focusRequester,
+                    onFocusField = { numpadState.onFocusField() },
+                    icon = Icons.Default.Description,
+                    label = "Description",
+                    placeHolder = "Add a description"
+                )
+            }
 
             Spacer(modifier = Modifier.height(10.dp))
 
@@ -308,18 +311,10 @@ fun EditTransferContent(
                     NumpadView(
                         onKeyPress = viewModel::onNumpadKeyPress,
                         onEvaluate = viewModel::evaluateMathExpression,
-                        onSave = {
-                            numpadState.dismiss()
-                            viewModel.saveTransfer {
-                                onNavigateBack()
-                            }
-                        },
                         onNext = { numpadState.onNext() },
                         hasOperatorInAmount = hasOperatorInAmount,
                         saveButtonText = if (uiState.isNewTransfer) "Add Transfer" else "Save Changes",
-                        saveButtonColor = accentColor,
-                        isSaving = uiState.isSaving,
-                        isSaveEnabled = isSaveEnabled
+                        saveButtonColor = accentColor
                     )
                 }
 

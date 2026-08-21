@@ -41,7 +41,6 @@ fun EditTransactionFormOptions(
     onNoteChange: (String) -> Unit,
     onConfirmedChange: (Boolean) -> Unit,
     onCountInTotalChange: (Boolean) -> Unit,
-    focusRequester: FocusRequester,
     onFocusField: () -> Unit
 ) {
     Column {
@@ -186,7 +185,7 @@ fun EditTransactionFormOptions(
             // Note Field
             DescriptionEditForm(
                 modifier = Modifier,
-                focusRequester = focusRequester,
+                focusRequester = remember { FocusRequester() },
                 onFocusField = onFocusField,
                 icon = Icons.AutoMirrored.Filled.Notes,
                 accentColor = accentColor,

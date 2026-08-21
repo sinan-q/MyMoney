@@ -561,16 +561,10 @@ fun BudgetAddEditScreen(
                                 NumpadView(
                                     onKeyPress = viewModel::onNumpadKeyPress,
                                     onEvaluate = viewModel::evaluateMathExpression,
-                                    onSave = {
-                                        numpadState.dismiss()
-                                        viewModel.saveBudget { onNavigateBack() }
-                                    },
                                     onNext = { numpadState.onNext() },
                                     hasOperatorInAmount = hasOperatorInAmount,
                                     saveButtonText = actionBtnText,
-                                    saveButtonColor = accentColor,
-                                    isSaving = uiState.isSaving,
-                                    isSaveEnabled = isSaveEnabled
+                                    saveButtonColor = accentColor
                                 )
                             }
                         }

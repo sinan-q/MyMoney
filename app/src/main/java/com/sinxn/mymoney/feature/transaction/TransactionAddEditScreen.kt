@@ -6,6 +6,8 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.ui.components.TabPill
+import com.sinxn.mymoney.core.ui.components.rememberNumpadFormState
 import com.sinxn.mymoney.core.util.Direction
 import com.sinxn.mymoney.feature.transaction.components.EditTransactionContent
 import com.sinxn.mymoney.feature.transfer.TransferAddEditViewModel
@@ -48,8 +51,41 @@ fun TransactionAddEditScreen(
         "Edit Transaction"
     }
 
+    val fabText = if (uiState.isNewTransaction) {
+        if (pagerState.currentPage == 1) "Add Transfer" else "Add Transaction"
+    } else {
+        "Save Transaction"
+    }
+    val numpadState = rememberNumpadFormState(initialNumpadVisible = uiState.isNewTransaction)
+    val hasOperatorInAmount = remember(uiState.editAmount) {
+        numpadState.hasOperator(uiState.editAmount)
+    }
+    val evaluatedAmountStr = remember(uiState.editAmount) {
+        numpadState.getImmediateResult(uiState.editAmount, uiState.currencyDecimals)
+    }
+    val amountValue = remember(evaluatedAmountStr) {
+        evaluatedAmountStr.toDoubleOrNull()
+    }
+    val isCategorySelected = !uiState.editCategoryId.isNullOrBlank()
+    val isWalletSelected = uiState.editWalletId.isNotBlank()
+    val isAmountNonNegative = amountValue != null && amountValue >= 0.0
+
+    val isSaveEnabled = !uiState.isSaving && isCategorySelected && isWalletSelected && isAmountNonNegative
+
+
+
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        floatingActionButton = {
+            if (isSaveEnabled && !numpadState.isNumpadVisible)
+            ExtendedFloatingActionButton(
+                onClick = {
+                    numpadState.dismiss()
+                    viewModel.saveChanges { onNavigateBack() } },
+                icon = { Icon( if (uiState.isNewTransaction) Icons.Default.Add else Icons.Default.Check, null) },
+                text = { Text(fabText) }
+            )
+        },
         topBar = {
             Row(
                 modifier = Modifier
@@ -91,7 +127,15 @@ fun TransactionAddEditScreen(
                     uiState = uiState,
                     settings = settings,
                     viewModel = viewModel,
-                    onNavigateBack = onNavigateBack
+                    onNavigateBack = onNavigateBack,
+                    isNumpadVisible = numpadState.isNumpadVisible,
+                    showNumpad = { numpadState.showNumpad() },
+                    evaluatedAmountStr = evaluatedAmountStr,
+                    hasOperatorInAmount = hasOperatorInAmount,
+                    onFocusField = { numpadState.onFocusField() },
+                    focusRequester = numpadState.focusRequester,
+                    numpadDismiss = { numpadState.dismiss() },
+                    numpadOnNext = { numpadState.onNext() }
                 )
             } else {
                 // Creating new item: Swipeable HorizontalPager between Transaction and Transfer
@@ -119,7 +163,15 @@ fun TransactionAddEditScreen(
                                 uiState = uiState,
                                 settings = settings,
                                 viewModel = viewModel,
-                                onNavigateBack = onNavigateBack
+                                onNavigateBack = onNavigateBack,
+                                isNumpadVisible = numpadState.isNumpadVisible,
+                                showNumpad = { numpadState.showNumpad() },
+                                evaluatedAmountStr = evaluatedAmountStr,
+                                hasOperatorInAmount = hasOperatorInAmount,
+                                onFocusField = { numpadState.onFocusField() },
+                                focusRequester = numpadState.focusRequester,
+                                numpadDismiss = { numpadState.dismiss() },
+                                numpadOnNext = { numpadState.onNext() }
                             )
                         } else {
                             EditTransferContent(

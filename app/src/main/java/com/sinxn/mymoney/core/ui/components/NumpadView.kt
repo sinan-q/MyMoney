@@ -14,7 +14,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Backspace
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -32,14 +31,11 @@ import androidx.compose.ui.unit.sp
 fun NumpadView(
     onKeyPress: (String) -> Unit,
     onEvaluate: () -> Unit,
-    onSave: () -> Unit,
     onNext: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     hasOperatorInAmount: Boolean = false,
     saveButtonText: String = "Save",
-    saveButtonColor: Color = MaterialTheme.colorScheme.primary,
-    isSaving: Boolean = false,
-    isSaveEnabled: Boolean = true
+    saveButtonColor: Color = MaterialTheme.colorScheme.primary
 ) {
     Column(
         modifier = modifier
@@ -129,13 +125,9 @@ fun NumpadView(
                 // Primary Action Button (Save or Calculate =)
                 Button(
                     onClick = {
-                        if (hasOperatorInAmount) {
-                            onEvaluate()
-                        } else {
-                            onSave()
-                        }
+                        onEvaluate()
                     },
-                    enabled = if (hasOperatorInAmount) !isSaving else (!isSaving && isSaveEnabled),
+                    enabled = hasOperatorInAmount,
                     shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (hasOperatorInAmount) MaterialTheme.colorScheme.tertiary else saveButtonColor,
@@ -164,14 +156,8 @@ fun NumpadView(
         } else {
             // Clean Single Primary Action Button
             Button(
-                onClick = {
-                    if (hasOperatorInAmount) {
-                        onEvaluate()
-                    } else {
-                        onSave()
-                    }
-                },
-                enabled = if (hasOperatorInAmount) !isSaving else (!isSaving && isSaveEnabled),
+                onClick = onEvaluate,
+                enabled = hasOperatorInAmount,
                 shape = RoundedCornerShape(20.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (hasOperatorInAmount) MaterialTheme.colorScheme.tertiary else saveButtonColor,

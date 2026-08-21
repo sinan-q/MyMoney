@@ -123,8 +123,8 @@ fun TransactionFormRowItem(
 @Composable
 fun DescriptionEditForm(
     modifier: Modifier = Modifier,
-    focusRequester: FocusRequester,
-    onFocusField: () -> Unit,
+    focusRequester: FocusRequester = remember { FocusRequester() },
+    onFocusField: () -> Unit = {},
     icon: ImageVector,
     accentColor: Color,
     label: String,
@@ -132,14 +132,16 @@ fun DescriptionEditForm(
     value: String,
     onValueChange: ((String) -> Unit),
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .focusRequester(focusRequester)
-            .onFocusChanged { focusState ->
-                if (focusState.isFocused) {
-                    onFocusField.invoke()
-                }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null
+            ) {
+                focusRequester.requestFocus()
             }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -154,14 +156,13 @@ fun DescriptionEditForm(
                 tint = if (value.isNotEmpty()) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
             )
             Spacer(modifier = Modifier.width(16.dp))
-            Column() {
+            Column {
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
                 )
-                val interactionSource = remember { MutableInteractionSource() }
 
                 BasicTextField(
                     value = value,
@@ -172,8 +173,11 @@ fun DescriptionEditForm(
                     interactionSource = interactionSource,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .onFocusChanged {
-                            // if (it.isFocused) numpadState.onFocusField()
+                        .focusRequester(focusRequester)
+                        .onFocusChanged { focusState ->
+                            if (focusState.isFocused) {
+                                onFocusField()
+                            }
                         },
                     decorationBox = { innerTextField ->
                         TextFieldDefaults.DecorationBox(

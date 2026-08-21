@@ -301,7 +301,7 @@ class TransactionAddEditViewModel @Inject constructor(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = TransactionAddEditUiState()
+        initialValue = TransactionAddEditUiState(isNewTransaction = isNewTransaction)
     )
 
     val formattingSettings = settingsRepository.formattingSettings
