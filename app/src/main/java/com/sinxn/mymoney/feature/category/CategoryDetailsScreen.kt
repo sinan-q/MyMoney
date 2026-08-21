@@ -3,6 +3,7 @@ package com.sinxn.mymoney.feature.category
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -31,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
+import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.TransactionItem
 import com.sinxn.mymoney.core.ui.components.groupTransactionsByMonth
@@ -91,14 +93,7 @@ fun CategoryDetailsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        text = uiState.category?.name ?: "Category Details",
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
+                title = {},
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -134,7 +129,8 @@ fun CategoryDetailsScreen(
                     Icon(Icons.Default.Edit, contentDescription = "Edit Category")
                 }
             }
-        }
+        },
+        contentWindowInsets = WindowInsets(0,0,0,0)
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -190,6 +186,22 @@ fun CategoryDetailsScreen(
                                     }
 
                                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = if (category.type == CategoryType.INCOME) {
+                                                Color(0xFF43A047).copy(alpha = 0.15f)
+                                            } else {
+                                                Color(0xFFE53935).copy(alpha = 0.15f)
+                                            }
+                                        ) {
+                                            Text(
+                                                text = if (category.type == CategoryType.INCOME) "Income" else "Expense",
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (category.type == CategoryType.INCOME) Color(0xFF2E7D32) else Color(0xFFC62828)
+                                            )
+                                        }
                                         Text(
                                             text = category.name,
                                             style = MaterialTheme.typography.titleLarge,
@@ -197,39 +209,38 @@ fun CategoryDetailsScreen(
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
 
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Surface(
-                                                shape = RoundedCornerShape(6.dp),
-                                                color = if (category.type == CategoryType.INCOME) {
-                                                    Color(0xFF43A047).copy(alpha = 0.15f)
-                                                } else {
-                                                    Color(0xFFE53935).copy(alpha = 0.15f)
-                                                }
-                                            ) {
-                                                Text(
-                                                    text = if (category.type == CategoryType.INCOME) "Income" else "Expense",
-                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = if (category.type == CategoryType.INCOME) Color(0xFF2E7D32) else Color(0xFFC62828)
-                                                )
-                                            }
 
-                                            if (parentCat != null) {
+                                        if (parentCat != null) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
                                                 Text(
-                                                    text = "Subcategory of ${parentCat.name}",
+                                                    text = "Subcategory of ",
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
-                                            } else if (subcategories.isNotEmpty()) {
-                                                Text(
-                                                    text = "${subcategories.size} subcategories",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
+                                                Surface(
+                                                    modifier = Modifier.clickable { onSubcategoryClick(parentCat.id) },
+                                                    shape = RoundedCornerShape(12.dp),
+                                                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
+                                                    // border = CardDefaults.outlinedCardBorder()
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                    ) {
+                                                        CategoryIcon(
+                                                            iconString = parentCat.icon,
+                                                            categoryName = parentCat.name,
+                                                            modifier = Modifier.size(22.dp)
+                                                        )
+                                                        Text(
+                                                            text = parentCat.name,
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            fontWeight = FontWeight.Medium,
+                                                            color = MaterialTheme.colorScheme.onSurface
+                                                        )
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -248,28 +259,11 @@ fun CategoryDetailsScreen(
                         ) {
                             CategoryMetricCard(
                                 modifier = Modifier.weight(1f),
-                                title = "Total Expense",
-                                value = MoneyFormatter.format(
-                                    amount = uiState.totalExpense,
-                                    currencyCode = uiState.currencyCode,
-                                    decimals = uiState.decimals,
-                                    config = uiState.formatterConfig
-                                ),
-                                icon = Icons.AutoMirrored.Filled.TrendingDown,
-                                color = Color(0xFFE53935)
-                            )
-
-                            CategoryMetricCard(
-                                modifier = Modifier.weight(1f),
-                                title = "Total Income",
-                                value = MoneyFormatter.format(
-                                    amount = uiState.totalIncome,
-                                    currencyCode = uiState.currencyCode,
-                                    decimals = uiState.decimals,
-                                    config = uiState.formatterConfig
-                                ),
-                                icon = Icons.Default.TrendingUp,
-                                color = Color(0xFF43A047)
+                                income = uiState.totalIncome,
+                                expense = uiState.totalExpense,
+                                currencyCode = uiState.currencyCode,
+                                decimals = uiState.decimals,
+                                config = uiState.formatterConfig
                             )
                         }
                     }
@@ -283,12 +277,6 @@ fun CategoryDetailsScreen(
                                     .padding(start = 16.dp, end= 16.dp,  top = 12.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Text(
-                                    text = "Subcategories (${subcategories.size})",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
 
                                 LazyRow(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -297,7 +285,6 @@ fun CategoryDetailsScreen(
                                         Surface(
                                             modifier = Modifier.clickable { onSubcategoryClick(sub.id) },
                                             shape = RoundedCornerShape(12.dp),
-                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                                             border = CardDefaults.outlinedCardBorder()
                                         ) {
                                             Row(
@@ -362,115 +349,88 @@ fun CategoryDetailsScreen(
 @Composable
 private fun CategoryMetricCard(
     modifier: Modifier = Modifier,
-    title: String,
-    value: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    color: Color
+    config: MoneyFormatter.Config,
+    decimals: Int,
+    currencyCode: String,
+    income: Long,
+    expense: Long
 ) {
+    val formattedIncome = MoneyFormatter.format(
+        amount = income,
+        currencyCode = currencyCode,
+        decimals = decimals,
+        config = config
+    )
+    val formattedExpense = MoneyFormatter.format(
+        amount = expense,
+        currencyCode = currencyCode,
+        decimals = decimals,
+        config = config
+    )
+    val formattedTotal = MoneyFormatter.format(
+        amount = income - expense,
+        currencyCode = currencyCode,
+        decimals = decimals,
+        config = config
+    )
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-    }
-}
-
-@Composable
-private fun CategoryTransactionItemCard(
-    item: TransactionWithCategory,
-    onClick: () -> Unit
-) {
-    val isIncome = item.transaction.direction == 1
-    val currency = item.currencySymbol ?: item.currencyCode ?: "$"
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            CategoryIcon(
-                iconString = item.categoryIcon ?: "ic_category",
-                categoryName = item.categoryName ?: "Uncategorized",
-                modifier = Modifier.size(40.dp)
+            Text(
+                text = "Summary",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
+            Column() {
                 Text(
-                    text = item.transaction.note.takeIf { !it.isNullOrEmpty() }
-                        ?: item.transaction.description.takeIf { !it.isNullOrEmpty() }
-                        ?: item.categoryName ?: "Transaction",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    text = formattedTotal,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = item.transaction.date,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    if (!item.categoryName.isNullOrEmpty()) {
-                        Text(
-                            text = "• ${item.categoryName}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                if (income > 0 && expense > 0) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = Color(0xFF43A047).copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "+$formattedIncome",
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFF2E7D32),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = Color(0xFFE53935).copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "-$formattedExpense",
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFFC62828),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
 
-            Text(
-                text = (if (isIncome) "+" else "-") + MoneyFormatter.format(item.transaction.money, currency),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = if (isIncome) Color(0xFF43A047) else Color(0xFFE53935)
-            )
         }
     }
 }
-
-private fun String?.isNullOrEmpty(): Boolean = this == null || this.trim().isEmpty()
