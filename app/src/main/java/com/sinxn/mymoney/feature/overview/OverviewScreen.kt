@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -42,10 +43,9 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLa
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
+import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.feature.overview.component.OverviewSettingsSheet
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,8 +56,6 @@ fun OverviewScreen(
     viewModel: OverviewViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val dateFormat = remember { SimpleDateFormat("MMM d", Locale.getDefault()) }
-    val fullDateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
 
     if (uiState.showSettingsSheet && uiState.settings != null) {
         OverviewSettingsSheet(
@@ -88,7 +86,7 @@ fun OverviewScreen(
                     )
                     uiState.settings?.let { settings ->
                         Text(
-                            text = "${fullDateFormat.format(settings.startDate)} – ${fullDateFormat.format(settings.endDate)}",
+                            text = "${DateUtils.formatMonthDayYear(settings.startDate)} – ${DateUtils.formatMonthDayYear(settings.endDate)}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -206,23 +204,14 @@ fun OverviewScreen(
                     )
                 }
 
-                itemsIndexed(
-                    items = overviewData.periods,
-                    key = { index, _ -> "period_$index" }
-                ) { index, period ->
+                items(
+                    items = uiState.periodsUi,
+                    key = { it.id },
+                    contentType = { "period_row" }
+                ) { item ->
                     PeriodRow(
-                        period = period,
-                        index = index,
-                        dateFormat = dateFormat,
-                        fullDateFormat = fullDateFormat,
-                        currencyCode = uiState.currencyCode,
-                        decimals = uiState.currencyDecimals,
-                        cashFlowFilter = uiState.settings?.cashFlowFilter ?: CashFlowFilter.NET_INCOMES,
-                        formattingSettings = uiState.formattingSettings,
-                        onClick = {
-                            val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                            onPeriodClick(sdf.format(period.startDate), sdf.format(period.endDate))
-                        }
+                        item = item,
+                        onClick = { onPeriodClick(item.startDateTimeSql, item.endDateTimeSql) }
                     )
                 }
             } else {
@@ -476,31 +465,17 @@ private fun TotalSummaryCard(
     }
 }
 
+private val PeriodCardShape = RoundedCornerShape(14.dp)
+
 @Composable
 private fun PeriodRow(
-    period: PeriodMoney,
-    index: Int,
-    dateFormat: SimpleDateFormat,
-    fullDateFormat: SimpleDateFormat,
-    currencyCode: String,
-    decimals: Int,
-    cashFlowFilter: CashFlowFilter,
-    formattingSettings: com.sinxn.mymoney.core.data.preferences.FormattingSettings,
+    item: OverviewPeriodUiModel,
     onClick: () -> Unit
 ) {
-    val config = remember(formattingSettings) {
-        MoneyFormatter.Config(
-            showCurrency = formattingSettings.showCurrency,
-            groupDigits = formattingSettings.groupDigits,
-            roundDecimals = formattingSettings.roundDecimals,
-            showPlusMinus = true
-        )
-    }
-
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = PeriodCardShape,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
@@ -519,7 +494,7 @@ private fun PeriodRow(
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
-                        text = "${index + 1}",
+                        text = "${item.index}",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -532,27 +507,25 @@ private fun PeriodRow(
             // Date range
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "${dateFormat.format(period.startDate)} — ${dateFormat.format(period.endDate)}",
+                    text = item.dateRangeText,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
                 // Show income/expense breakdown
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val incomeAmt = period.incomes.getMoney(currencyCode)
-                    val expenseAmt = period.expenses.getMoney(currencyCode)
-                    if (incomeAmt > 0 || expenseAmt > 0) {
-                        if (incomeAmt > 0) {
+                if (item.formattedIncome != null || item.formattedExpense != null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (item.formattedIncome != null) {
                             Text(
-                                text = "↑ ${MoneyFormatter.format(incomeAmt, currencyCode, decimals, config.copy(showPlusMinus = false))}",
+                                text = item.formattedIncome,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color(0xFF2E7D32)
                             )
                         }
-                        if (expenseAmt > 0) {
+                        if (item.formattedExpense != null) {
                             Text(
-                                text = "↓ ${MoneyFormatter.format(expenseAmt, currencyCode, decimals, config.copy(showPlusMinus = false))}",
+                                text = item.formattedExpense,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color(0xFFC62828)
                             )
@@ -562,16 +535,13 @@ private fun PeriodRow(
             }
 
             // Net amount for the period
-            val displayMoney = period.netIncomes
-            val amount = displayMoney.getMoney(currencyCode)
-            val formatted = MoneyFormatter.format(amount, currencyCode, decimals, config)
-            val color = when {
-                amount > 0 -> Color(0xFF2E7D32)
-                amount < 0 -> Color(0xFFC62828)
+            val color = when (item.netAmountColorType) {
+                1 -> Color(0xFF2E7D32)
+                -1 -> Color(0xFFC62828)
                 else -> MaterialTheme.colorScheme.onSurfaceVariant
             }
             Text(
-                text = formatted,
+                text = item.formattedNetAmount,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = color

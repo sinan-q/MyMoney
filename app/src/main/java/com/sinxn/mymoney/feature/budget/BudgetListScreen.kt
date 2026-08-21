@@ -51,16 +51,9 @@ fun BudgetListScreen(
             uiState.budgets
         } else {
             uiState.budgets.filter { item ->
-                val typeName = when (item.budget.type) {
-                    BudgetType.EXPENSES -> "Expenses"
-                    BudgetType.INCOMES -> "Incomes"
-                    BudgetType.CATEGORY -> item.categoryName ?: "Category"
-                    else -> "Budget"
-                }
-                typeName.contains(searchQuery, ignoreCase = true) ||
-                        (!item.categoryName.isNullOrBlank() && item.categoryName.contains(searchQuery, ignoreCase = true)) ||
-                        (!item.budget.tag.isNullOrBlank() && item.budget.tag.contains(searchQuery, ignoreCase = true)) ||
-                        item.wallets.any { it.name.contains(searchQuery, ignoreCase = true) }
+                item.title.contains(searchQuery, ignoreCase = true) ||
+                        item.periodLabel.contains(searchQuery, ignoreCase = true) ||
+                        item.walletNames.any { it.contains(searchQuery, ignoreCase = true) }
             }
         }
     }
@@ -151,12 +144,14 @@ fun BudgetListScreen(
                         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(filteredBudgets, key = { it.budget.id }) { item ->
+                        items(
+                            items = filteredBudgets,
+                            key = { it.id },
+                            contentType = { "budget_card" }
+                        ) { item ->
                             BudgetItemCard(
                                 item = item,
-                                formatterConfig = uiState.formatterConfig,
-                                dateFormat = uiState.dateFormat,
-                                onClick = { onBudgetClick(item.budget.id) }
+                                onClick = { onBudgetClick(item.id) }
                             )
                         }
                     }
@@ -166,84 +161,24 @@ fun BudgetListScreen(
     }
 }
 
+private val BudgetCardShape = RoundedCornerShape(16.dp)
+
 @Composable
 fun BudgetItemCard(
-    item: BudgetWithDetails,
-    formatterConfig: MoneyFormatter.Config,
-    dateFormat: Int,
+    item: BudgetUiModel,
     onClick: () -> Unit
 ) {
-    val budget = item.budget
-    val targetAmount = budget.money
-    val progressAmount = item.progress
-    val currency = budget.currency
-
-    val percentage = if (targetAmount > 0) {
-        ((progressAmount.toDouble() / targetAmount.toDouble()) * 100.0)
-    } else 0.0
-
-    val progressFraction = (percentage / 100.0).coerceIn(0.0, 1.0).toFloat()
-    val isOverBudget = percentage >= 100.0
-
-    val (typeName, iconView, baseColor) = when (budget.type) {
-        BudgetType.EXPENSES -> Triple(
-            "Expenses",
-            @Composable {
-                Icon(
-                    Icons.AutoMirrored.Filled.TrendingDown,
-                    contentDescription = null,
-                    tint = Color(0xFFE53935),
-                    modifier = Modifier.size(24.dp)
-                )
-            },
-            Color(0xFFE53935)
-        )
-        BudgetType.INCOMES -> Triple(
-            "Incomes",
-            @Composable {
-                Icon(
-                    Icons.AutoMirrored.Filled.TrendingUp,
-                    contentDescription = null,
-                    tint = Color(0xFF43A047),
-                    modifier = Modifier.size(24.dp)
-                )
-            },
-            Color(0xFF43A047)
-        )
-        else -> Triple(
-            item.categoryName ?: "Category",
-            @Composable {
-                CategoryIcon(
-                    iconString = item.categoryIcon ?: "ic_category",
-                    categoryName = item.categoryName ?: "Category",
-                    modifier = Modifier.size(44.dp)
-                )
-            },
-            Color(0xFF1E88E5)
-        )
-    }
-
-    val periodLabel = remember(budget.tag, budget.startDate, budget.endDate, dateFormat) {
-        val periodType = BudgetPeriod.fromTag(budget.tag)
-        val periodName = when (periodType) {
-            BudgetPeriod.WEEKLY -> "Weekly"
-            BudgetPeriod.MONTHLY -> "Monthly"
-            BudgetPeriod.ANNUAL -> "Annual"
-            else -> "Custom"
-        }
-        val startObj = DateUtils.parseDate(budget.startDate)
-        val endObj = DateUtils.parseDate(budget.endDate)
-        val startStr = DateUtils.formatDate(startObj, dateFormat)
-        val endStr = DateUtils.formatDate(endObj, dateFormat)
-        val dateWindow = if (startStr == endStr) startStr else "$startStr - $endStr"
-        if (periodType == BudgetPeriod.CUSTOM) dateWindow else "$periodName • $dateWindow"
+    val baseColor = when (item.type) {
+        BudgetType.EXPENSES -> Color(0xFFE53935)
+        BudgetType.INCOMES -> Color(0xFF43A047)
+        else -> Color(0xFF1E88E5)
     }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
+        shape = BudgetCardShape,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
         ),
@@ -265,21 +200,46 @@ fun BudgetItemCard(
                         .background(baseColor.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    iconView()
+                    when (item.type) {
+                        BudgetType.EXPENSES -> {
+                            Icon(
+                                Icons.AutoMirrored.Filled.TrendingDown,
+                                contentDescription = null,
+                                tint = Color(0xFFE53935),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        BudgetType.INCOMES -> {
+                            Icon(
+                                Icons.AutoMirrored.Filled.TrendingUp,
+                                contentDescription = null,
+                                tint = Color(0xFF43A047),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        else -> {
+                            if (item.iconData != null) {
+                                CategoryIcon(
+                                    iconData = item.iconData,
+                                    modifier = Modifier.size(44.dp)
+                                )
+                            }
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = typeName,
+                        text = item.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = periodLabel,
+                        text = item.periodLabel,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -290,17 +250,17 @@ fun BudgetItemCard(
                 // Status / percentage badge
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = if (isOverBudget) MaterialTheme.colorScheme.errorContainer
-                    else if (percentage >= 80) Color(0xFFFFE082)
+                    color = if (item.isOverBudget) MaterialTheme.colorScheme.errorContainer
+                    else if (item.percentage >= 80) Color(0xFFFFE082)
                     else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
                 ) {
                     Text(
-                        text = "${percentage.toInt()}%",
+                        text = "${item.percentage}%",
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = if (isOverBudget) MaterialTheme.colorScheme.onErrorContainer
-                        else if (percentage >= 80) Color(0xFFE65100)
+                        color = if (item.isOverBudget) MaterialTheme.colorScheme.onErrorContainer
+                        else if (item.percentage >= 80) Color(0xFFE65100)
                         else MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
@@ -309,13 +269,13 @@ fun BudgetItemCard(
             // Progress Bar Section
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 val progressColor = when {
-                    isOverBudget -> MaterialTheme.colorScheme.error
-                    percentage >= 80 -> Color(0xFFFB8C00)
+                    item.isOverBudget -> MaterialTheme.colorScheme.error
+                    item.percentage >= 80 -> Color(0xFFFB8C00)
                     else -> baseColor
                 }
 
                 LinearProgressIndicator(
-                    progress = { progressFraction },
+                    progress = { item.progressFraction },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(8.dp)
@@ -330,13 +290,13 @@ fun BudgetItemCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Spent: ${MoneyFormatter.format(amount = progressAmount, currencyCode = currency, config = formatterConfig)}",
+                        text = item.spentFormatted,
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "Limit: ${MoneyFormatter.format(amount = targetAmount, currencyCode = currency, config = formatterConfig)}",
+                        text = item.limitFormatted,
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -345,7 +305,7 @@ fun BudgetItemCard(
             }
 
             // Linked Wallets
-            if (item.wallets.isNotEmpty()) {
+            if (item.walletNames.isNotEmpty()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -356,13 +316,13 @@ fun BudgetItemCard(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
-                    item.wallets.take(3).forEach { wallet ->
+                    item.walletNames.take(3).forEach { walletName ->
                         Surface(
                             shape = RoundedCornerShape(6.dp),
                             color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
                         ) {
                             Text(
-                                text = wallet.name,
+                                text = walletName,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontSize = 10.sp,
@@ -371,9 +331,9 @@ fun BudgetItemCard(
                             )
                         }
                     }
-                    if (item.wallets.size > 3) {
+                    if (item.walletNames.size > 3) {
                         Text(
-                            text = "+${item.wallets.size - 3}",
+                            text = "+${item.walletNames.size - 3}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

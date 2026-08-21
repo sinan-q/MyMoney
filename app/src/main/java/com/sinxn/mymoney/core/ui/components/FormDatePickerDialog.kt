@@ -9,9 +9,7 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.sinxn.mymoney.core.util.DateUtils
-import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 /**
  * Reusable date picker dialog that accepts milliseconds.
@@ -75,8 +73,7 @@ fun FormDatePickerDialog(
     FormDatePickerDialog(
         initialDateMillis = initialMillis,
         onDateSelected = { millis ->
-            val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-            onDateStringSelected(formatter.format(Date(millis)))
+            onDateStringSelected(DateUtils.getSQLDateTimeString(Date(millis)))
         },
         onDismissRequest = onDismissRequest
     )

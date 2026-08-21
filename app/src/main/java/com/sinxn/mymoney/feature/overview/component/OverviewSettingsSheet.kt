@@ -16,14 +16,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.feature.overview.CashFlowFilter
 import com.sinxn.mymoney.feature.overview.GroupType
 import com.sinxn.mymoney.feature.overview.OverviewSettings
 import com.sinxn.mymoney.feature.overview.OverviewType
-import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
-import java.util.Locale
 
 /**
  * Bottom sheet for configuring overview settings.
@@ -45,8 +44,6 @@ fun OverviewSettingsSheet(
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
 
-    val dateFormatter = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
-
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
@@ -58,16 +55,16 @@ fun OverviewSettingsSheet(
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
                 text = "Overview Settings",
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            // Date Range
+            // Date Range Section
             Text(
                 text = "Date Range",
                 style = MaterialTheme.typography.labelLarge,
@@ -80,13 +77,13 @@ fun OverviewSettingsSheet(
             ) {
                 DateChip(
                     label = "From",
-                    date = dateFormatter.format(startDate),
+                    date = DateUtils.formatMonthDayYear(startDate),
                     onClick = { showStartDatePicker = true },
                     modifier = Modifier.weight(1f)
                 )
                 DateChip(
                     label = "To",
-                    date = dateFormatter.format(endDate),
+                    date = DateUtils.formatMonthDayYear(endDate),
                     onClick = { showEndDatePicker = true },
                     modifier = Modifier.weight(1f)
                 )

@@ -28,12 +28,42 @@ object DateUtils {
         }
     }
 
+    private val timeFormat = object : ThreadLocal<SimpleDateFormat>() {
+        override fun initialValue(): SimpleDateFormat {
+            return SimpleDateFormat("HH:mm", Locale.getDefault())
+        }
+    }
+
+    private val monthDayFormat = object : ThreadLocal<SimpleDateFormat>() {
+        override fun initialValue(): SimpleDateFormat {
+            return SimpleDateFormat("MMM d", Locale.getDefault())
+        }
+    }
+
+    private val monthDayYearFormat = object : ThreadLocal<SimpleDateFormat>() {
+        override fun initialValue(): SimpleDateFormat {
+            return SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+        }
+    }
+
     private val parseDateCache = java.util.concurrent.ConcurrentHashMap<String, Date>()
     private val formattedDateCache = java.util.concurrent.ConcurrentHashMap<Long, String>()
     private val monthHeaderCache = java.util.concurrent.ConcurrentHashMap<Long, String>()
 
     fun getSQLDateTimeString(date: Date): String {
         return sqlDateFormat.get()?.format(date) ?: ""
+    }
+
+    fun formatTime(date: Date): String {
+        return timeFormat.get()?.format(date) ?: SimpleDateFormat("HH:mm", Locale.getDefault()).format(date)
+    }
+
+    fun formatMonthDay(date: Date): String {
+        return monthDayFormat.get()?.format(date) ?: SimpleDateFormat("MMM d", Locale.getDefault()).format(date)
+    }
+
+    fun formatMonthDayYear(date: Date): String {
+        return monthDayYearFormat.get()?.format(date) ?: SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(date)
     }
 
     private fun fallbackParse(dateString: String): Date {

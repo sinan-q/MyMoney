@@ -1,5 +1,6 @@
 package com.sinxn.mymoney.feature.overview
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.dao.MoneyDao
@@ -21,8 +22,23 @@ import kotlinx.coroutines.launch
 import java.util.Date
 import javax.inject.Inject
 
+@Immutable
+data class OverviewPeriodUiModel(
+    val id: String,
+    val index: Int,
+    val dateRangeText: String,
+    val startDateTimeSql: String,
+    val endDateTimeSql: String,
+    val formattedIncome: String?,
+    val formattedExpense: String?,
+    val formattedNetAmount: String,
+    val netAmountColorType: Int // 1: positive, -1: negative, 0: neutral
+)
+
+@Immutable
 data class OverviewUiState(
     val overviewData: OverviewData? = null,
+    val periodsUi: List<OverviewPeriodUiModel> = emptyList(),
     val settings: OverviewSettings? = null,
     val walletName: String = "Total",
     val currencyCode: String = "USD",
@@ -129,15 +145,77 @@ class OverviewViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true) }
         try {
             val data = overviewRepository.loadOverviewData(walletId, settings)
+            val currentState = _uiState.value
+            val periodsUi = buildPeriodUiModels(
+                periods = data.periods,
+                currencyCode = currentState.currencyCode,
+                decimals = currentState.currencyDecimals,
+                formattingSettings = currentState.formattingSettings
+            )
             _uiState.update {
                 it.copy(
                     overviewData = data,
+                    periodsUi = periodsUi,
                     settings = settings,
                     isLoading = false
                 )
             }
         } catch (e: Exception) {
             _uiState.update { it.copy(isLoading = false) }
+        }
+    }
+
+    private fun buildPeriodUiModels(
+        periods: List<PeriodMoney>,
+        currencyCode: String,
+        decimals: Int,
+        formattingSettings: FormattingSettings
+    ): List<OverviewPeriodUiModel> {
+        val config = MoneyFormatter.Config(
+            showCurrency = formattingSettings.showCurrency,
+            groupDigits = formattingSettings.groupDigits,
+            roundDecimals = formattingSettings.roundDecimals,
+            showPlusMinus = true
+        )
+        val noSignConfig = config.copy(showPlusMinus = false)
+
+        return periods.mapIndexed { index, period ->
+            val startStr = DateUtils.formatMonthDay(period.startDate)
+            val endStr = DateUtils.formatMonthDay(period.endDate)
+            val dateRangeText = "$startStr — $endStr"
+            val startDateTimeSql = DateUtils.getSQLDateTimeString(period.startDate)
+            val endDateTimeSql = DateUtils.getSQLDateTimeString(period.endDate)
+
+            val incomeAmt = period.incomes.getMoney(currencyCode)
+            val expenseAmt = period.expenses.getMoney(currencyCode)
+
+            val formattedIncome = if (incomeAmt > 0) {
+                "↑ " + MoneyFormatter.format(incomeAmt, currencyCode, decimals, noSignConfig)
+            } else null
+
+            val formattedExpense = if (expenseAmt > 0) {
+                "↓ " + MoneyFormatter.format(expenseAmt, currencyCode, decimals, noSignConfig)
+            } else null
+
+            val netAmount = period.netIncomes.getMoney(currencyCode)
+            val formattedNetAmount = MoneyFormatter.format(netAmount, currencyCode, decimals, config)
+            val netColorType = when {
+                netAmount > 0 -> 1
+                netAmount < 0 -> -1
+                else -> 0
+            }
+
+            OverviewPeriodUiModel(
+                id = "period_${index}_${period.startDate.time}",
+                index = index + 1,
+                dateRangeText = dateRangeText,
+                startDateTimeSql = startDateTimeSql,
+                endDateTimeSql = endDateTimeSql,
+                formattedIncome = formattedIncome,
+                formattedExpense = formattedExpense,
+                formattedNetAmount = formattedNetAmount,
+                netAmountColorType = netColorType
+            )
         }
     }
 

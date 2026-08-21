@@ -85,12 +85,14 @@ fun RecurrenceScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 88.dp)
                     ) {
-                        items(uiState.recurrentTransactions, key = { it.recurrentTransaction.id }) { item ->
+                        items(
+                            items = uiState.recurrentTransactions,
+                            key = { it.id },
+                            contentType = { "recurrent_tx" }
+                        ) { item ->
                             RecurrentTransactionCard(
                                 item = item,
-                                formatterConfig = uiState.formatterConfig,
-                                dateFormat = uiState.dateFormat,
-                                onClick = { onRecurrentTransactionClick(item.recurrentTransaction.id) }
+                                onClick = { onRecurrentTransactionClick(item.id) }
                             )
                         }
                     }
@@ -112,12 +114,14 @@ fun RecurrenceScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 88.dp)
                     ) {
-                        items(uiState.recurrentTransfers, key = { it.recurrentTransfer.id }) { item ->
+                        items(
+                            items = uiState.recurrentTransfers,
+                            key = { it.id },
+                            contentType = { "recurrent_transfer" }
+                        ) { item ->
                             RecurrentTransferCard(
                                 item = item,
-                                formatterConfig = uiState.formatterConfig,
-                                dateFormat = uiState.dateFormat,
-                                onClick = { onRecurrentTransferClick(item.recurrentTransfer.id) }
+                                onClick = { onRecurrentTransferClick(item.id) }
                             )
                         }
                     }
@@ -129,35 +133,10 @@ fun RecurrenceScreen(
 
 @Composable
 fun RecurrentTransactionCard(
-    item: RecurrentTransactionWithDetails,
-    formatterConfig: MoneyFormatter.Config,
-    dateFormat: Int,
+    item: RecurrentTxUiModel,
     onClick: () -> Unit
 ) {
-    val rt = item.recurrentTransaction
-    val isIncome = rt.direction == 1
-    val amountColor = if (isIncome) Color(0xFF2E7D32) else Color(0xFFC62828)
-    val amount = if (isIncome) rt.money else -rt.money
-    val decimals = remember(item.wallet.currency) {
-        MoneyFormatter.getCurrencyDecimals(item.wallet.currency)
-    }
-
-    val formattedMoney = remember(amount, item.wallet.currency, decimals, formatterConfig) {
-        MoneyFormatter.format(
-            amount = amount,
-            currencyCode = item.wallet.currency,
-            decimals = decimals,
-            config = formatterConfig
-        )
-    }
-
-    val finishedHint = stringResource(R.string.hint_recurrence_finished)
-    val formattedNextOccurrence = remember(rt.nextOccurrence, dateFormat, finishedHint) {
-        rt.nextOccurrence?.let { next ->
-            val nextDate = DateUtils.parseDate(next)
-            DateUtils.formatDate(nextDate, dateFormat)
-        } ?: finishedHint
-    }
+    val amountColor = if (item.isIncome) Color(0xFF2E7D32) else Color(0xFFC62828)
 
     FinanceListItem(
         icon = {
@@ -168,49 +147,25 @@ fun RecurrentTransactionCard(
                 contentAlignment = Alignment.Center
             ) {
                 CategoryIcon(
-                    iconString = item.category.icon,
-                    categoryName = item.category.name,
+                    iconData = item.iconData,
                     modifier = Modifier.size(44.dp)
                 )
             }
         },
-        title = item.category.name,
-        subtitle = rt.description?.takeIf { it.isNotBlank() },
-        amountText = (if (isIncome && !formattedMoney.startsWith("+")) "+" else "") + formattedMoney,
+        title = item.title,
+        subtitle = item.subtitle,
+        amountText = item.formattedAmount,
         amountColor = amountColor,
-        subAmountText = formattedNextOccurrence,
+        subAmountText = item.nextOccurrenceText,
         onClick = onClick
     )
 }
 
 @Composable
 fun RecurrentTransferCard(
-    item: RecurrentTransferWithDetails,
-    formatterConfig: MoneyFormatter.Config,
-    dateFormat: Int,
+    item: RecurrentTransferUiModel,
     onClick: () -> Unit
 ) {
-    val rtf = item.recurrentTransfer
-    val decimals = remember(item.walletFrom.currency) {
-        MoneyFormatter.getCurrencyDecimals(item.walletFrom.currency)
-    }
-    val formattedMoney = remember(rtf.moneyFrom, item.walletFrom.currency, decimals, formatterConfig) {
-        MoneyFormatter.format(
-            amount = rtf.moneyFrom,
-            currencyCode = item.walletFrom.currency,
-            decimals = decimals,
-            config = formatterConfig
-        )
-    }
-
-    val finishedHint = stringResource(R.string.hint_recurrence_finished)
-    val formattedNextOccurrence = remember(rtf.nextOccurrence, dateFormat, finishedHint) {
-        rtf.nextOccurrence?.let { next ->
-            val nextDate = DateUtils.parseDate(next)
-            DateUtils.formatDate(nextDate, dateFormat)
-        } ?: finishedHint
-    }
-
     FinanceListItem(
         icon = {
             Box(
@@ -228,11 +183,11 @@ fun RecurrentTransferCard(
                 )
             }
         },
-        title = "${item.walletFrom.name} → ${item.walletTo.name}",
-        subtitle = rtf.description?.takeIf { it.isNotBlank() },
-        amountText = formattedMoney,
+        title = item.title,
+        subtitle = item.subtitle,
+        amountText = item.formattedAmount,
         amountColor = Color(0xFF0284C7),
-        subAmountText = formattedNextOccurrence,
+        subAmountText = item.nextOccurrenceText,
         onClick = onClick
     )
 }

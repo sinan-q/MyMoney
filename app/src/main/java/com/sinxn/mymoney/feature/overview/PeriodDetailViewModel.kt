@@ -1,5 +1,6 @@
 package com.sinxn.mymoney.feature.overview
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,6 +8,8 @@ import com.sinxn.mymoney.core.data.local.dao.MoneyDao
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
+import com.sinxn.mymoney.core.ui.components.IconData
+import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.Constants
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
@@ -23,15 +26,19 @@ import kotlinx.coroutines.flow.update
 import java.util.Date
 import javax.inject.Inject
 
+@Immutable
 data class CategoryBreakdownItem(
     val categoryId: String?,
     val categoryName: String,
     val categoryIcon: String?,
+    val iconData: IconData,
     val amount: Long,
     val percentage: Float,
+    val percentageFormatted: String,
     val formattedAmount: String
 )
 
+@Immutable
 data class PeriodDetailUiState(
     val startDate: String = "",
     val endDate: String = "",
@@ -126,24 +133,34 @@ class PeriodDetailViewModel @Inject constructor(
 
             val incomeBreakdown = incomeAmountMap.map { (catId, amount) ->
                 val info = incomeGroupMap[catId]
+                val catName = info?.first ?: "Uncategorized"
+                val catIcon = info?.second ?: "ic_category"
+                val percentage = if (incomeSum > 0) (amount.toFloat() / incomeSum) * 100f else 0f
                 CategoryBreakdownItem(
                     categoryId = catId,
-                    categoryName = info?.first ?: "Uncategorized",
+                    categoryName = catName,
                     categoryIcon = info?.second,
+                    iconData = parseIconData(catIcon, catName),
                     amount = amount,
-                    percentage = if (incomeSum > 0) (amount.toFloat() / incomeSum) * 100f else 0f,
+                    percentage = percentage,
+                    percentageFormatted = String.format(java.util.Locale.US, "%.1f%%", percentage),
                     formattedAmount = MoneyFormatter.format(amount, currCode, decimals, config)
                 )
             }.sortedByDescending { it.amount }
 
             val expenseBreakdown = expenseAmountMap.map { (catId, amount) ->
                 val info = expenseGroupMap[catId]
+                val catName = info?.first ?: "Uncategorized"
+                val catIcon = info?.second ?: "ic_category"
+                val percentage = if (expenseSum > 0) (amount.toFloat() / expenseSum) * 100f else 0f
                 CategoryBreakdownItem(
                     categoryId = catId,
-                    categoryName = info?.first ?: "Uncategorized",
+                    categoryName = catName,
                     categoryIcon = info?.second,
+                    iconData = parseIconData(catIcon, catName),
                     amount = amount,
-                    percentage = if (expenseSum > 0) (amount.toFloat() / expenseSum) * 100f else 0f,
+                    percentage = percentage,
+                    percentageFormatted = String.format(java.util.Locale.US, "%.1f%%", percentage),
                     formattedAmount = MoneyFormatter.format(amount, currCode, decimals, config)
                 )
             }.sortedByDescending { it.amount }

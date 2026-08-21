@@ -52,8 +52,8 @@ import com.sinxn.mymoney.core.ui.components.CleanListRow
 import com.sinxn.mymoney.core.ui.components.FormCardContainer
 import com.sinxn.mymoney.core.ui.components.groupTransactionsIntoMonthGroups
 import com.sinxn.mymoney.core.ui.components.monthGroupedTransactionItems
+import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
-import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
@@ -93,12 +93,11 @@ fun DebtViewContent(
         )
     }
 
-    val isOverdue = remember(debt.expirationDate) {
+    val isOverdue = remember(debt.expirationDate, isFullyPaid) {
         debt.expirationDate?.let { exp ->
             try {
-                val format = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                val expDate = format.parse(exp)
-                expDate != null && expDate.before(Date()) && !isFullyPaid
+                val expDate = DateUtils.parseDate(exp)
+                expDate.before(Date()) && !isFullyPaid
             } catch (e: Exception) {
                 false
             }

@@ -259,7 +259,11 @@ fun PeriodDetailScreen(
                             EmptyStateMessage("No income categories recorded for this period")
                         }
                     } else {
-                        items(uiState.incomeCategories, key = { it.categoryId ?: it.categoryName }) { item ->
+                        items(
+                            items = uiState.incomeCategories,
+                            key = { it.categoryId ?: it.categoryName },
+                            contentType = { "category_breakdown" }
+                        ) { item ->
                             CategoryBreakdownRow(
                                 item = item,
                                 barColor = Color(0xFF2E7D32)
@@ -274,7 +278,11 @@ fun PeriodDetailScreen(
                             EmptyStateMessage("No expense categories recorded for this period")
                         }
                     } else {
-                        items(uiState.expenseCategories, key = { it.categoryId ?: it.categoryName }) { item ->
+                        items(
+                            items = uiState.expenseCategories,
+                            key = { it.categoryId ?: it.categoryName },
+                            contentType = { "category_breakdown" }
+                        ) { item ->
                             CategoryBreakdownRow(
                                 item = item,
                                 barColor = Color(0xFFC62828)
@@ -312,6 +320,9 @@ fun PeriodDetailScreen(
     }
 }
 
+private val BreakdownCardShape = RoundedCornerShape(14.dp)
+private val ProgressClipShape = RoundedCornerShape(3.dp)
+
 @Composable
 private fun CategoryBreakdownRow(
     item: CategoryBreakdownItem,
@@ -319,7 +330,7 @@ private fun CategoryBreakdownRow(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = BreakdownCardShape,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
@@ -334,8 +345,7 @@ private fun CategoryBreakdownRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 CategoryIcon(
-                    iconString = item.categoryIcon,
-                    categoryName = item.categoryName,
+                    iconData = item.iconData,
                     modifier = Modifier.size(40.dp)
                 )
 
@@ -348,7 +358,7 @@ private fun CategoryBreakdownRow(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "${String.format(java.util.Locale.US, "%.1f", item.percentage)}%",
+                        text = item.percentageFormatted,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -367,7 +377,7 @@ private fun CategoryBreakdownRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp)),
+                    .clip(ProgressClipShape),
                 color = barColor,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant
             )

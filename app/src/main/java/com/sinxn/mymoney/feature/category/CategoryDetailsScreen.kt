@@ -57,6 +57,8 @@ import com.sinxn.mymoney.core.util.CategoryType
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import kotlinx.coroutines.flow.collectLatest
 
+private val SubcategoryChipShape = RoundedCornerShape(12.dp)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoryDetailsScreen(
@@ -206,11 +208,12 @@ fun CategoryDetailsScreen(
                                             .clip(CircleShape),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        CategoryIcon(
-                                            iconString = category.icon,
-                                            categoryName = category.name,
-                                            modifier = Modifier.size(44.dp)
-                                        )
+                                        uiState.categoryIconData?.let { iconData ->
+                                            CategoryIcon(
+                                                iconData = iconData,
+                                                modifier = Modifier.size(44.dp)
+                                            )
+                                        }
                                     }
 
                                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -238,7 +241,8 @@ fun CategoryDetailsScreen(
                                         )
 
 
-                                        if (parentCat != null) {
+                                        val parentIcon = uiState.parentCategoryIconData
+                                        if (parentCat != null && parentIcon != null) {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 Text(
                                                     text = "Subcategory of ",
@@ -247,7 +251,7 @@ fun CategoryDetailsScreen(
                                                 )
                                                 Surface(
                                                     modifier = Modifier.clickable { onSubcategoryClick(parentCat.id) },
-                                                    shape = RoundedCornerShape(12.dp),
+                                                    shape = SubcategoryChipShape,
                                                     color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
                                                     // border = CardDefaults.outlinedCardBorder()
                                                 ) {
@@ -257,8 +261,7 @@ fun CategoryDetailsScreen(
                                                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                                                     ) {
                                                         CategoryIcon(
-                                                            iconString = parentCat.icon,
-                                                            categoryName = parentCat.name,
+                                                            iconData = parentIcon,
                                                             modifier = Modifier.size(22.dp)
                                                         )
                                                         Text(
@@ -277,27 +280,22 @@ fun CategoryDetailsScreen(
                         }
                     }
 
-                    // Metrics Row (Expense Total, Income Total, Transaction Count)
+                    // Metrics Row
                     item {
-                        Row(
+                        CategoryMetricCard(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(start = 16.dp, end= 16.dp, top = 12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            CategoryMetricCard(
-                                modifier = Modifier.weight(1f),
-                                income = uiState.totalIncome,
-                                expense = uiState.totalExpense,
-                                currencyCode = uiState.currencyCode,
-                                decimals = uiState.decimals,
-                                config = uiState.formatterConfig
-                            )
-                        }
+                                .padding(start = 16.dp, end = 16.dp, top = 12.dp),
+                            income = uiState.totalIncome,
+                            expense = uiState.totalExpense,
+                            currencyCode = uiState.currencyCode,
+                            decimals = uiState.decimals,
+                            config = uiState.formatterConfig
+                        )
                     }
 
-                    // Subcategories List (if any)
-                    if (subcategories.isNotEmpty()) {
+                    // Subcategories Chips (if any)
+                    if (uiState.subcategoriesUi.isNotEmpty()) {
                         item {
                             Column(
                                 modifier = Modifier
@@ -306,14 +304,19 @@ fun CategoryDetailsScreen(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
 
+                                val chipBorder = CardDefaults.outlinedCardBorder()
                                 LazyRow(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    items(subcategories, key = { it.id }) { sub ->
+                                    items(
+                                        items = uiState.subcategoriesUi,
+                                        key = { it.id },
+                                        contentType = { "subcat_chip" }
+                                    ) { sub ->
                                         Surface(
                                             modifier = Modifier.clickable { onSubcategoryClick(sub.id) },
-                                            shape = RoundedCornerShape(12.dp),
-                                            border = CardDefaults.outlinedCardBorder()
+                                            shape = SubcategoryChipShape,
+                                            border = chipBorder
                                         ) {
                                             Row(
                                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -321,8 +324,7 @@ fun CategoryDetailsScreen(
                                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                                             ) {
                                                 CategoryIcon(
-                                                    iconString = sub.icon,
-                                                    categoryName = sub.name,
+                                                    iconData = sub.iconData,
                                                     modifier = Modifier.size(24.dp)
                                                 )
                                                 Text(

@@ -29,9 +29,7 @@ import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.feature.transaction.TransactionDetailsUiState
 import com.sinxn.mymoney.feature.transaction.util.resolveCategoryHierarchy
-import java.text.SimpleDateFormat
 import java.util.Locale
-import androidx.compose.ui.platform.LocalLocale
 
 @Composable
 fun ViewTransactionContent(
@@ -221,8 +219,7 @@ fun ViewTransactionContent(
 
                 val parsedDate = DateUtils.parseDate(transaction.date)
                 val formattedDate = DateUtils.formatDate(parsedDate, settings.dateFormat)
-                val formattedTime =
-                    SimpleDateFormat("HH:mm", LocalLocale.current.platformLocale).format(parsedDate)
+                val formattedTime = DateUtils.formatTime(parsedDate)
 
                 CleanListRow(
                     icon = {

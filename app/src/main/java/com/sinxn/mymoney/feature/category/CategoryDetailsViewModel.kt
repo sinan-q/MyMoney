@@ -1,12 +1,17 @@
 package com.sinxn.mymoney.feature.category
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
+import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.CategoryRepository
+import com.sinxn.mymoney.core.ui.components.IconData
+import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.CategoryType
+import com.sinxn.mymoney.core.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,18 +23,26 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-import com.sinxn.mymoney.core.data.preferences.SettingsRepository
-import com.sinxn.mymoney.core.util.MoneyFormatter
-
 sealed class CategoryDetailsEvent {
     object Deleted : CategoryDetailsEvent()
 }
 
+@Immutable
+data class SubcategoryChipUi(
+    val id: String,
+    val name: String,
+    val iconData: IconData
+)
+
+@Immutable
 data class CategoryDetailsUiState(
     val categoryId: String = "",
     val category: CategoryEntity? = null,
+    val categoryIconData: IconData? = null,
     val parentCategory: CategoryEntity? = null,
+    val parentCategoryIconData: IconData? = null,
     val subcategories: List<CategoryEntity> = emptyList(),
+    val subcategoriesUi: List<SubcategoryChipUi> = emptyList(),
     val allCategories: List<CategoryEntity> = emptyList(),
     val transactions: List<TransactionWithCategory> = emptyList(),
     val totalExpense: Long = 0L,
@@ -76,6 +89,10 @@ class CategoryDetailsViewModel @Inject constructor(
                 val parentCat = currentCat?.parentId?.let { pId -> allCategories.find { it.id == pId } }
                 val subCats = allCategories.filter { it.parentId == categoryId }
 
+                val currentCatIcon = currentCat?.let { parseIconData(it.icon, it.name) }
+                val parentCatIcon = parentCat?.let { parseIconData(it.icon, it.name) }
+                val subCatsUi = subCats.map { SubcategoryChipUi(it.id, it.name, parseIconData(it.icon, it.name)) }
+
                 var totalExpense = 0L
                 var totalIncome = 0L
 
@@ -100,8 +117,11 @@ class CategoryDetailsViewModel @Inject constructor(
 
                 _uiState.value = _uiState.value.copy(
                     category = currentCat,
+                    categoryIconData = currentCatIcon,
                     parentCategory = parentCat,
+                    parentCategoryIconData = parentCatIcon,
                     subcategories = subCats,
+                    subcategoriesUi = subCatsUi,
                     allCategories = allCategories,
                     transactions = transactions,
                     totalExpense = totalExpense,

@@ -42,13 +42,14 @@ import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.collections.listOf
 
 private val DebtRoseColor = Color(0xFFE11D48)
 private val CreditEmeraldColor = Color(0xFF10B981)
+private val DebtCardShape = RoundedCornerShape(12.dp)
+private val QuickPaymentButtonShape = RoundedCornerShape(12.dp)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -261,17 +262,26 @@ fun DebtListBodyContent(
                             selectedTab = page
                         )
                     } else {
+                        val outlineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                        val cardBorder = remember(outlineColor) {
+                            BorderStroke(1.dp, outlineColor)
+                        }
                         LazyColumn(
                             state = listState,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 88.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            items(currentDebts, key = { it.debt.id }) { debtItem ->
+                            items(
+                                items = currentDebts,
+                                key = { it.debt.id },
+                                contentType = { "debt_card" }
+                            ) { debtItem ->
                                 DebtCardItem(
                                     debtWithDetails = debtItem,
                                     formatterConfig = formatterConfig,
                                     dateFormat = uiState.formattingSettings.dateFormat,
+                                    cardBorder = cardBorder,
                                     onClick = { onDebtClick(debtItem.debt.id) },
                                     onQuickPayment = { onQuickPayment(debtItem.debt.id) }
                                 )
@@ -499,6 +509,7 @@ private fun DebtCardItem(
     debtWithDetails: DebtWithDetails,
     formatterConfig: MoneyFormatter.Config,
     dateFormat: Int = 2,
+    cardBorder: BorderStroke,
     onClick: () -> Unit,
     onQuickPayment: () -> Unit
 ) {
@@ -511,12 +522,11 @@ private fun DebtCardItem(
     val accentColor = if (isDebt) DebtRoseColor else CreditEmeraldColor
     val isFullyPaid = remaining == 0L && totalMoney > 0
 
-    val isOverdue = remember(debt.expirationDate) {
+    val isOverdue = remember(debt.expirationDate, isFullyPaid) {
         debt.expirationDate?.let { exp ->
             try {
-                val format = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                val expDate = format.parse(exp)
-                expDate != null && expDate.before(Date()) && !isFullyPaid
+                val expDate = DateUtils.parseDate(exp)
+                expDate.before(Date()) && !isFullyPaid
             } catch (e: Exception) {
                 false
             }
@@ -532,11 +542,11 @@ private fun DebtCardItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = DebtCardShape,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+        border = cardBorder
     ) {
         Column(
             modifier = Modifier
@@ -686,7 +696,7 @@ private fun DebtCardItem(
                 Button(
                     onClick = onQuickPayment,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = QuickPaymentButtonShape,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = accentColor.copy(alpha = 0.12f),
                         contentColor = accentColor
