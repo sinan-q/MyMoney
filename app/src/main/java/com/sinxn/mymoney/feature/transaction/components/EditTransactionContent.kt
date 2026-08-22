@@ -46,7 +46,6 @@ fun EditTransactionContent(
     isNumpadVisible: Boolean,
     showNumpad: () -> Unit,
     focusRequester: FocusRequester,
-    onFocusField: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -84,7 +83,6 @@ fun EditTransactionContent(
                 accentColor = accentColor,
                 onValueChange = viewModel::onDescriptionChange,
                 focusRequester = focusRequester,
-                onFocusField = onFocusField,
                 label = "Description",
                 placeHolder = "Add Description"
             )
@@ -203,11 +201,11 @@ fun EditTransactionContent(
                 DescriptionEditForm(
                     modifier = Modifier,
                     focusRequester = remember { FocusRequester() },
-                    onFocusField = onFocusField,
                     icon = Icons.AutoMirrored.Filled.Notes,
                     accentColor = accentColor,
                     value = uiState.editNote,
                     onValueChange = viewModel::onNoteChange,
+                    singleLine = false,
                     label = "Note",
                     placeHolder = "Add a note..."
                 )

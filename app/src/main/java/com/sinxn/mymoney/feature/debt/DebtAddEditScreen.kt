@@ -166,7 +166,6 @@ fun DebtAddEditScreen(
                             focusRequester = numpadState.focusRequester,
                             uiState = uiState,
                             viewModel = viewModel,
-                            onFocusField = numpadState::onFocusField,
                             onDismissKeyboardAndNumpad = numpadState::dismiss
                         )
                     }

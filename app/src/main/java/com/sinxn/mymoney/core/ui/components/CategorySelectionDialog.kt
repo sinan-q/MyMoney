@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
+import com.sinxn.mymoney.core.util.CategoryType
 import com.sinxn.mymoney.ui.theme.ExpenseColor
 import com.sinxn.mymoney.ui.theme.IncomeColor
 import kotlinx.coroutines.launch
@@ -61,18 +62,37 @@ private sealed class CategoryRow {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategorySelectionDialog(
-    showIncome: Boolean,
-    incomeCategories: List<CategoryEntity>,
-    expenseCategories: List<CategoryEntity>,
+    categories: List<CategoryEntity>,
     selectedCategoryId: String?,
-    onCategorySelected: (CategoryEntity) -> Unit,
-    onDismissRequest: () -> Unit
+    onCategorySelected: (CategoryEntity?) -> Unit,
+    onDismissRequest: () -> Unit,
+    showIncome: Boolean? = null,
+    showNoneOption: Boolean = false,
+    noneOptionLabel: String = "None (Top Level Category)",
+    title: String = "Category"
 ) {
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    val incomeCategories = remember(categories) {
+        categories.filter { it.type == CategoryType.INCOME }
+    }
+    val expenseCategories = remember(categories) {
+        categories.filter { it.type == CategoryType.EXPENSE }
+    }
+
+    val isInitialIncome = remember(categories, selectedCategoryId, showIncome) {
+        when {
+            showIncome != null -> showIncome
+            !selectedCategoryId.isNullOrBlank() -> {
+                categories.find { it.id == selectedCategoryId }?.type == CategoryType.INCOME
+            }
+            else -> false
+        }
+    }
+
     val pagerState = rememberPagerState(
-        initialPage = if (showIncome) 0 else 1,
+        initialPage = if (isInitialIncome) 0 else 1,
         pageCount = { 2 }
     )
 
@@ -81,7 +101,7 @@ fun CategorySelectionDialog(
 
     // Expanded parent category IDs (hidden by default, unless currently selected category is a subcategory)
     var expandedParentIds by remember(selectedCategoryId) {
-        mutableStateOf(getInitialExpandedParentIds(expenseCategories, incomeCategories, selectedCategoryId))
+        mutableStateOf(getInitialExpandedParentIds(categories, selectedCategoryId))
     }
 
     val toggleParentExpanded: (String) -> Unit = { parentId ->
@@ -170,7 +190,7 @@ fun CategorySelectionDialog(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Category",
+                    text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -221,7 +241,7 @@ fun CategorySelectionDialog(
                 val flatRows = if (page == 0) incomeFlatRows else expenseFlatRows
                 val listState = if (page == 0) incomeListState else expenseListState
 
-                if (flatRows.isEmpty()) {
+                if (flatRows.isEmpty() && !showNoneOption) {
                     EmptyState()
                 } else {
                     LazyColumn(
@@ -231,6 +251,26 @@ fun CategorySelectionDialog(
                             .nestedScroll(stopBottomOverscrollConnection),
                         contentPadding = PaddingValues(bottom = 32.dp)
                     ) {
+                        if (showNoneOption) {
+                            item(
+                                key = "none_option",
+                                contentType = "none_option"
+                            ) {
+                                val isNoneSelected = selectedCategoryId.isNullOrBlank()
+                                NoneCategoryRow(
+                                    label = noneOptionLabel,
+                                    isSelected = isNoneSelected,
+                                    onClick = {
+                                        onCategorySelected(null)
+                                        scope.launch {
+                                            sheetState.hide()
+                                            onDismissRequest()
+                                        }
+                                    }
+                                )
+                            }
+                        }
+
                         itemsIndexed(
                             items = flatRows,
                             key = { idx, row ->
@@ -337,6 +377,74 @@ fun aTabPill(
             }
         }
     }
+}
+
+// ── None Category Row ──
+
+@Composable
+private fun NoneCategoryRow(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val bgColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+        else Color.Transparent,
+        label = "NoneBg"
+    )
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(bgColor)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(14.dp))
+
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+            else MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+
+        if (isSelected) {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = "Selected",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+
+    HorizontalDivider(
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f),
+        modifier = Modifier.padding(horizontal = 16.dp)
+    )
 }
 
 // ── Parent Category Row ──
@@ -487,14 +595,12 @@ private fun EmptyState() {
 // ── Initial Expanded State Helper ──
 
 private fun getInitialExpandedParentIds(
-    expenseCategories: List<CategoryEntity>,
-    incomeCategories: List<CategoryEntity>,
+    categories: List<CategoryEntity>,
     selectedCategoryId: String?
 ): Set<String> {
     if (selectedCategoryId.isNullOrBlank()) return emptySet()
 
-    val allCategories = expenseCategories + incomeCategories
-    val selectedCat = allCategories.find { it.id == selectedCategoryId } ?: return emptySet()
+    val selectedCat = categories.find { it.id == selectedCategoryId } ?: return emptySet()
 
     if (selectedCat.parentId != null) {
         return setOf(selectedCat.parentId)
@@ -504,7 +610,7 @@ private fun getInitialExpandedParentIds(
     val isSubByName = cleanName.startsWith("↳") || cleanName.startsWith("  ↳ ")
     if (isSubByName) {
         var currentParentId: String? = null
-        for (cat in allCategories) {
+        for (cat in categories) {
             val name = cat.name.trim()
             val isSub = name.startsWith("↳") || name.startsWith("  ↳ ")
             if (!isSub && cat.parentId == null) {

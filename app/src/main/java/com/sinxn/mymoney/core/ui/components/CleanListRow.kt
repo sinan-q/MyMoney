@@ -11,7 +11,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -125,13 +124,14 @@ fun TransactionFormRowItem(
 fun DescriptionEditForm(
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester = remember { FocusRequester() },
-    onFocusField: () -> Unit = {},
+    onFocusChange: (Boolean) -> Unit = {},
     icon: ImageVector,
     accentColor: Color,
     label: String,
     placeHolder: String,
     value: String,
     onValueChange: ((String) -> Unit),
+    singleLine: Boolean = true,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -168,6 +168,7 @@ fun DescriptionEditForm(
 
                 BasicTextField(
                     value = value,
+                    singleLine = singleLine,
                     onValueChange = { onValueChange(it) },
                     textStyle = MaterialTheme.typography.bodyMedium.copy(
                         color = MaterialTheme.colorScheme.onSurface
@@ -178,16 +179,14 @@ fun DescriptionEditForm(
                         .fillMaxWidth()
                         .focusRequester(focusRequester)
                         .onFocusChanged { focusState ->
-                            if (focusState.isFocused) {
-                                onFocusField()
-                            }
+                            onFocusChange(focusState.isFocused)
                         },
                     decorationBox = { innerTextField ->
                         TextFieldDefaults.DecorationBox(
                             value = value,
                             innerTextField = innerTextField,
                             enabled = true,
-                            singleLine = false,
+                            singleLine = singleLine,
                             visualTransformation = VisualTransformation.None,
                             interactionSource = interactionSource,
                             placeholder = {

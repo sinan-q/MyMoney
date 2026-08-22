@@ -11,14 +11,11 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,7 +33,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -58,9 +54,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
+import com.sinxn.mymoney.core.ui.components.CategorySelectionDialog
 import com.sinxn.mymoney.core.ui.components.DescriptionEditForm
 import com.sinxn.mymoney.core.ui.components.FormCardContainer
 import com.sinxn.mymoney.core.ui.components.TabPill
@@ -83,6 +79,8 @@ fun CategoryAddEditScreen(
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var showIconPicker by remember { mutableStateOf(false) }
     var showParentPicker by remember { mutableStateOf(false) }
+    var iconPreviewName by remember(uiState.isLoading) { mutableStateOf(uiState.name) }
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     val accentColor = remember(uiState.type) {
         if (uiState.type == CategoryType.INCOME) IncomeColor else ExpenseColor
     }
@@ -124,7 +122,7 @@ fun CategoryAddEditScreen(
     if (showIconPicker) {
         IconColorPickerDialog(
             currentIcon = uiState.icon,
-            categoryName = uiState.name,
+            categoryName = iconPreviewName.ifBlank { "Category" },
             onDismiss = { showIconPicker = false },
             onIconSelected = { newIcon ->
                 viewModel.onIconChange(newIcon)
@@ -134,14 +132,18 @@ fun CategoryAddEditScreen(
     }
 
     if (showParentPicker) {
-        ParentCategoryPickerDialog(
-            selectedParentId = uiState.parentId,
-            availableParents = uiState.availableParentCategories,
-            onDismiss = { showParentPicker = false },
-            onParentSelected = { selectedId ->
-                viewModel.onParentIdChange(selectedId)
+        CategorySelectionDialog(
+            title = "Parent Category",
+            categories = uiState.availableParentCategories,
+            selectedCategoryId = uiState.parentId,
+            showIncome = uiState.type == CategoryType.INCOME,
+            showNoneOption = true,
+            noneOptionLabel = "None (Top Level Category)",
+            onCategorySelected = { category ->
+                viewModel.onParentIdChange(category?.id)
                 showParentPicker = false
-            }
+            },
+            onDismissRequest = { showParentPicker = false }
         )
     }
 
@@ -164,7 +166,10 @@ fun CategoryAddEditScreen(
                 },
                 actions = {
                     if (uiState.isEditMode && !uiState.isSystemCategory) {
-                        IconButton(onClick = { showDeleteConfirmation = true }) {
+                        IconButton(onClick = {
+                            focusManager.clearFocus()
+                            showDeleteConfirmation = true
+                        }) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = "Delete Category",
@@ -177,7 +182,10 @@ fun CategoryAddEditScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = viewModel::saveCategory,
+                onClick = {
+                    focusManager.clearFocus()
+                    viewModel.saveCategory()
+                },
                 containerColor = if (uiState.name.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                 contentColor = if (uiState.name.isNotBlank()) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                 shape = RoundedCornerShape(18.dp),
@@ -191,6 +199,12 @@ fun CategoryAddEditScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background)
+                .clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null
+                ) {
+                    focusManager.clearFocus()
+                }
         ) {
             if (uiState.isLoading) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
@@ -212,7 +226,10 @@ fun CategoryAddEditScreen(
                             // Interactive Icon Avatar
                             Box(
                                 modifier = Modifier
-                                    .clickable { showIconPicker = true },
+                                    .clickable {
+                                        focusManager.clearFocus()
+                                        showIconPicker = true
+                                    },
                                 contentAlignment = Alignment.Center
                             ) {
                                 CategoryIcon(
@@ -251,7 +268,12 @@ fun CategoryAddEditScreen(
                             label = "Category Name",
                             placeHolder = "Enter Category name",
                             value = uiState.name,
-                            onValueChange = viewModel::onNameChange
+                            onValueChange = viewModel::onNameChange,
+                            onFocusChange = { isFocused ->
+                                if (!isFocused) {
+                                    iconPreviewName = uiState.name
+                                }
+                            }
                         )
                         if (!uiState.isSystemCategory) {
                             Column(
@@ -271,15 +293,18 @@ fun CategoryAddEditScreen(
                                         "Expense" to ExpenseColor
                                     ),
                                     activeTab = uiState.type,
-                                    onTabChange = viewModel::onTypeChange
+                                    onTabChange = { newType ->
+                                        focusManager.clearFocus()
+                                        viewModel.onTypeChange(newType)
+                                    }
                                 )
                             }
 
                         }
 
                         // Parent Category Selector Card
-                        if (!uiState.isSystemCategory) {
-                            val selectedParent = uiState.allCategories.find { it.id == uiState.parentId }
+                        if (!uiState.isSystemCategory && !uiState.hasSubcategories) {
+                            val selectedParent = uiState.availableParentCategories.find { it.id == uiState.parentId }
                             val iconData = remember(selectedParent) {
                                 if (selectedParent != null) parseIconData(
                                     selectedParent.icon,
@@ -293,7 +318,10 @@ fun CategoryAddEditScreen(
                                 value = selectedParent?.name?: "None",
                                 label = "Parent Category",
                                 trailingIconData = iconData,
-                                onClick = { showParentPicker = true }
+                                onClick = {
+                                    focusManager.clearFocus()
+                                    showParentPicker = true
+                                }
                             )
                         }
 
@@ -302,7 +330,10 @@ fun CategoryAddEditScreen(
                         SettingsSwitchItem(
                             title = "Show in Reports",
                             checked = uiState.showReport,
-                            onCheckedChange = viewModel::onShowReportChange,
+                            onCheckedChange = { showReport ->
+                                focusManager.clearFocus()
+                                viewModel.onShowReportChange(showReport)
+                            },
                             accentColor = accentColor,
                             horizontalPadding = 16.dp,
                         )
@@ -315,81 +346,6 @@ fun CategoryAddEditScreen(
     }
 }
 
-
-@Composable
-private fun ParentCategoryPickerDialog(
-    selectedParentId: String?,
-    availableParents: List<CategoryEntity>,
-    onDismiss: () -> Unit,
-    onParentSelected: (String?) -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Select Parent Category", fontWeight = FontWeight.Bold) },
-        text = {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 360.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                item {
-                    ListItem(
-                        headlineContent = {
-                            Text(
-                                "None (Top Level Category)",
-                                fontWeight = if (selectedParentId == null) FontWeight.Bold else FontWeight.Normal
-                            )
-                        },
-                        leadingContent = {
-                            Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        },
-                        trailingContent = {
-                            if (selectedParentId == null) {
-                                Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            }
-                        },
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { onParentSelected(null) }
-                    )
-                }
-
-                items(availableParents) { parent ->
-                    val isSelected = parent.id == selectedParentId
-                    ListItem(
-                        headlineContent = {
-                            Text(
-                                parent.name,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                            )
-                        },
-                        leadingContent = {
-                            CategoryIcon(
-                                iconString = parent.icon,
-                                categoryName = parent.name,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        },
-                        trailingContent = {
-                            if (isSelected) {
-                                Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            }
-                        },
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { onParentSelected(parent.id) }
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
-}
 
 @Composable
 private fun IconColorPickerDialog(

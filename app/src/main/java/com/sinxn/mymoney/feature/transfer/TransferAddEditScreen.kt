@@ -131,7 +131,6 @@ fun TransferAddEditScreen(
                     isNumpadVisible = numpadState.isNumpadVisible,
                     showNumpad = { numpadState.showNumpad() },
                     focusRequester = numpadState.focusRequester,
-                    onFocusField = { numpadState.onFocusField() },
                     numpadDismiss = { numpadState.dismiss() }
                 )
             }

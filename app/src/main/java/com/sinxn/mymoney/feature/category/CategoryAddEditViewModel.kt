@@ -30,8 +30,8 @@ data class CategoryAddEditUiState(
     val parentId: String? = null,
     val showReport: Boolean = true,
     val isSystemCategory: Boolean = false,
+    val hasSubcategories: Boolean = false,
     val tag: String? = null,
-    val allCategories: List<CategoryEntity> = emptyList(),
     val availableParentCategories: List<CategoryEntity> = emptyList(),
     val isLoading: Boolean = true,
     val isEditMode: Boolean = false
@@ -72,9 +72,12 @@ class CategoryAddEditViewModel @Inject constructor(
                 if (existingCategory != null) {
                     val availableParents = filterParentCategories(
                         allCategories = allCategories,
-                        currentCategoryId = navCategoryId,
-                        currentType = existingCategory.type
+                        currentCategoryId = navCategoryId
                     )
+                    val isSystem = existingCategory.type == CategoryType.SYSTEM ||
+                                   existingCategory.tag?.startsWith("system::") == true
+                    val hasSubcategories = allCategories.any { it.parentId == existingCategory.id }
+
                     _uiState.value = _uiState.value.copy(
                         categoryId = existingCategory.id,
                         name = existingCategory.name,
@@ -82,9 +85,9 @@ class CategoryAddEditViewModel @Inject constructor(
                         type = existingCategory.type,
                         parentId = existingCategory.parentId,
                         showReport = existingCategory.showReport,
-                        isSystemCategory = existingCategory.tag != null || existingCategory.type == CategoryType.SYSTEM,
+                        isSystemCategory = isSystem,
+                        hasSubcategories = hasSubcategories,
                         tag = existingCategory.tag,
-                        allCategories = allCategories,
                         availableParentCategories = availableParents,
                         isLoading = false,
                         isEditMode = true
@@ -109,8 +112,7 @@ class CategoryAddEditViewModel @Inject constructor(
             val defaultIcon = if (selectedType == CategoryType.INCOME) "ic_income" else "ic_expense"
             val availableParents = filterParentCategories(
                 allCategories = allCategories,
-                currentCategoryId = null,
-                currentType = selectedType
+                currentCategoryId = null
             )
 
             _uiState.value = _uiState.value.copy(
@@ -120,8 +122,8 @@ class CategoryAddEditViewModel @Inject constructor(
                 parentId = selectedParentId,
                 showReport = true,
                 isSystemCategory = false,
+                hasSubcategories = false,
                 tag = null,
-                allCategories = allCategories,
                 availableParentCategories = availableParents,
                 isLoading = false,
                 isEditMode = false
@@ -131,8 +133,7 @@ class CategoryAddEditViewModel @Inject constructor(
 
     private fun filterParentCategories(
         allCategories: List<CategoryEntity>,
-        currentCategoryId: String?,
-        currentType: Int
+        currentCategoryId: String?
     ): List<CategoryEntity> {
         val excludeIds = mutableSetOf<String>()
         if (currentCategoryId != null) {
@@ -152,8 +153,8 @@ class CategoryAddEditViewModel @Inject constructor(
         return allCategories.filter { category ->
             category.parentId == null && // Only top-level categories can be parents
             category.id !in excludeIds &&
-            category.type == currentType &&
-            category.tag == null // Exclude system categories from parent selection
+            category.type != CategoryType.SYSTEM &&
+            category.tag?.startsWith("system::") != true // Exclude system categories from parent selection
         }
     }
 
@@ -171,17 +172,11 @@ class CategoryAddEditViewModel @Inject constructor(
 
         var newParentId = current.parentId
         if (newParentId != null) {
-            val parentCat = current.allCategories.find { it.id == newParentId }
+            val parentCat = current.availableParentCategories.find { it.id == newParentId }
             if (parentCat?.type != type) {
                 newParentId = null
             }
         }
-
-        val availableParents = filterParentCategories(
-            allCategories = current.allCategories,
-            currentCategoryId = current.categoryId,
-            currentType = type
-        )
 
         // Adjust icon if it was default
         val newIcon = if (current.icon == "ic_expense" || current.icon == "ic_income" || current.icon == "ic_category") {
@@ -193,8 +188,7 @@ class CategoryAddEditViewModel @Inject constructor(
         _uiState.value = current.copy(
             type = type,
             parentId = newParentId,
-            icon = newIcon,
-            availableParentCategories = availableParents
+            icon = newIcon
         )
     }
 
@@ -204,22 +198,23 @@ class CategoryAddEditViewModel @Inject constructor(
 
         var updatedType = current.type
         if (parentId != null) {
-            val parentCat = current.allCategories.find { it.id == parentId }
+            val parentCat = current.availableParentCategories.find { it.id == parentId }
             if (parentCat != null) {
                 updatedType = parentCat.type
             }
         }
 
-        val availableParents = filterParentCategories(
-            allCategories = current.allCategories,
-            currentCategoryId = current.categoryId,
-            currentType = updatedType
-        )
+        // Adjust icon if it was default
+        val newIcon = if (parentId != null && (current.icon == "ic_expense" || current.icon == "ic_income" || current.icon == "ic_category")) {
+            if (updatedType == CategoryType.INCOME) "ic_income" else "ic_expense"
+        } else {
+            current.icon
+        }
 
         _uiState.value = current.copy(
             parentId = parentId,
             type = updatedType,
-            availableParentCategories = availableParents
+            icon = newIcon
         )
     }
 

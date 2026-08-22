@@ -201,7 +201,6 @@ fun TransactionAddEditScreen(
                     showNumpad = { txNumpadState.showNumpad() },
                     evaluatedAmountStr = txEvaluatedAmountStr,
                     hasOperatorInAmount = txHasOperator,
-                    onFocusField = { txNumpadState.onFocusField() },
                     focusRequester = txNumpadState.focusRequester
                 )
             } else {
@@ -235,7 +234,6 @@ fun TransactionAddEditScreen(
                                 showNumpad = { txNumpadState.showNumpad() },
                                 evaluatedAmountStr = txEvaluatedAmountStr,
                                 hasOperatorInAmount = txHasOperator,
-                                onFocusField = { txNumpadState.onFocusField() },
                                 focusRequester = txNumpadState.focusRequester
                             )
                         } else {
@@ -249,7 +247,6 @@ fun TransactionAddEditScreen(
                                 isNumpadVisible = transferNumpadState.isNumpadVisible,
                                 showNumpad = { transferNumpadState.showNumpad() },
                                 focusRequester = transferNumpadState.focusRequester,
-                                onFocusField = { transferNumpadState.onFocusField() },
                                 numpadDismiss = { transferNumpadState.dismiss() }
                             )
                         }

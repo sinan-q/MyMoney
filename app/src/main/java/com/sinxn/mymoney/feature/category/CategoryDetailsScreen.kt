@@ -131,7 +131,8 @@ fun CategoryDetailsScreen(
                 },
                 actions = {
                     val cat = uiState.category
-                    if (cat != null && cat.tag == null) {
+                    val isSystem = cat?.type == CategoryType.SYSTEM || cat?.tag?.startsWith("system::") == true
+                    if (cat != null && !isSystem) {
                         IconButton(onClick = viewModel::toggleArchive) {
                             Icon(
                                 imageVector = if (cat.isArchived) Icons.Default.Unarchive else Icons.Default.Archive,

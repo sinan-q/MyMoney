@@ -53,7 +53,6 @@ fun EditTransferContent(
     isNumpadVisible: Boolean,
     showNumpad: () -> Unit,
     focusRequester: FocusRequester,
-    onFocusField: () -> Unit,
     numpadDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -89,7 +88,6 @@ fun EditTransferContent(
                 accentColor = accentColor,
                 onValueChange = viewModel::onDescriptionChange,
                 focusRequester = focusRequester,
-                onFocusField = onFocusField,
                 icon = Icons.Default.Description,
                 label = "Description",
                 placeHolder = "Add a description"
@@ -263,22 +261,16 @@ fun EditTransferContent(
                 }
             )
 
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-
             // Note Field
             DescriptionEditForm(
                 modifier = Modifier,
-                focusRequester = remember { FocusRequester() },
-                onFocusField = onFocusField,
                 icon = Icons.AutoMirrored.Filled.Notes,
                 accentColor = accentColor,
                 value = uiState.editNote,
                 onValueChange = viewModel::onNoteChange,
                 label = "Note",
-                placeHolder = "Add a note..."
+                placeHolder = "Add a note...",
+                singleLine = false
             )
         }
 

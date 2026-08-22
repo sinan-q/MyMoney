@@ -67,13 +67,6 @@ class NumpadFormState(
     fun dismiss() = dismissKeyboardAndNumpad()
 
     /**
-     * Called when a text input field (e.g., Description or Note) gains focus.
-     */
-    fun onFocusField() {
-        isNumpadVisible = false
-    }
-
-    /**
      * Called when the 'Next' action is triggered on the numpad.
      * Hides the numpad, requests focus on [targetFocusRequester] (defaulting to [focusRequester]),
      * and shows the software keyboard.

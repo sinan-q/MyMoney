@@ -23,12 +23,11 @@ fun EditTransactionDialogs(
     when (activePicker) {
         FormPicker.Category -> {
             CategorySelectionDialog(
+                categories = uiState.availableCategories,
                 showIncome = uiState.editDirection == Direction.INCOME,
-                incomeCategories = uiState.availableIncomeCategories,
-                expenseCategories = uiState.availableExpenseCategories,
                 selectedCategoryId = uiState.editCategoryId,
                 onCategorySelected = { category ->
-                    viewModel.onCategoryIdChange(category.id)
+                    category?.let { viewModel.onCategoryIdChange(it.id) }
                     onDismiss()
                 },
                 onDismissRequest = onDismiss

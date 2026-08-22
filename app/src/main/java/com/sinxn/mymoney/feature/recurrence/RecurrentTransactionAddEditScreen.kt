@@ -24,7 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sinxn.mymoney.core.ui.components.*
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.Direction
@@ -161,7 +161,6 @@ fun RecurrentTransactionAddEditScreen(
                             accentColor = accentColor,
                             onValueChange = viewModel::onDescriptionChanged,
                             focusRequester = numpadState.focusRequester,
-                            onFocusField = { numpadState.onFocusField() },
                             label = "Description",
                             placeHolder = "Add Description"
                         )
@@ -365,11 +364,7 @@ fun RecurrentTransactionAddEditScreen(
                                         focusedIndicatorColor = Color.Transparent,
                                         unfocusedIndicatorColor = Color.Transparent
                                     ),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .onFocusChanged {
-                                            if (it.isFocused) numpadState.onFocusField()
-                                        }
+                                    modifier = Modifier.fillMaxWidth()
                                 )
                             }
 
@@ -513,12 +508,11 @@ fun RecurrentTransactionAddEditScreen(
     when (activePicker) {
         FormPicker.Category -> {
             CategorySelectionDialog(
+                categories = uiState.availableCategories,
                 showIncome = uiState.direction == Direction.INCOME,
-                incomeCategories = uiState.availableIncomeCategories,
-                expenseCategories = uiState.availableExpenseCategories,
                 selectedCategoryId = uiState.categoryId,
                 onCategorySelected = { category ->
-                    viewModel.onCategoryChanged(category.id)
+                    category?.let { viewModel.onCategoryChanged(it.id) }
                     activePicker = null
                 },
                 onDismissRequest = { activePicker = null }

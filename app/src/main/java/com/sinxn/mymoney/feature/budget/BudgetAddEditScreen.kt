@@ -116,13 +116,14 @@ fun BudgetAddEditScreen(
 
     if (showCategoryDialog) {
         CategorySelectionDialog(
+            categories = uiState.availableCategories,
             showIncome = uiState.editType == BudgetType.INCOMES,
-            incomeCategories = uiState.incomeCategories,
-            expenseCategories = uiState.expenseCategories,
             selectedCategoryId = uiState.editCategoryId,
             onCategorySelected = { cat ->
-                viewModel.updateCategory(cat)
-                showCategoryDialog = false
+                cat?.let {
+                    viewModel.updateCategory(cat)
+                    showCategoryDialog = false
+                }
             },
             onDismissRequest = { showCategoryDialog = false }
         )

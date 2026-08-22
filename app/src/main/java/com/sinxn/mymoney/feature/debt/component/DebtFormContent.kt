@@ -57,7 +57,6 @@ fun DebtFormContent(
     focusRequester: FocusRequester,
     uiState: DebtAddEditUiState,
     viewModel: DebtAddEditViewModel,
-    onFocusField: () -> Unit,
     onDismissKeyboardAndNumpad: () -> Unit
 ) {
     var activePicker by remember { mutableStateOf<FormPicker?>(null) }
@@ -79,12 +78,7 @@ fun DebtFormContent(
             placeholder = { Text("e.g. Lunch with team, Loan for car...") },
             modifier = Modifier
                 .fillMaxWidth()
-                .focusRequester(focusRequester)
-                .onFocusChanged { focusState ->
-                    if (focusState.isFocused) {
-                        onFocusField()
-                    }
-                },
+                .focusRequester(focusRequester),
             shape = RoundedCornerShape(16.dp),
             singleLine = true
         )
@@ -177,13 +171,7 @@ fun DebtFormContent(
             onValueChange = viewModel::updateNote,
             label = { Text("Note (Optional)") },
             placeholder = { Text("Additional notes...") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .onFocusChanged { focusState ->
-                    if (focusState.isFocused) {
-                        onFocusField()
-                    }
-                },
+            modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             minLines = 3
         )

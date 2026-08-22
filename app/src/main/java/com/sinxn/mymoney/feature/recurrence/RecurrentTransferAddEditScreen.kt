@@ -136,7 +136,6 @@ fun RecurrentTransferAddEditScreen(
                             accentColor = accentColor,
                             onValueChange = viewModel::onDescriptionChanged,
                             focusRequester = numpadState.focusRequester,
-                            onFocusField = { numpadState.onFocusField() },
                             label = "Description",
                             placeHolder = "Add Description"
                         )
@@ -342,11 +341,7 @@ fun RecurrentTransferAddEditScreen(
                                         focusedIndicatorColor = Color.Transparent,
                                         unfocusedIndicatorColor = Color.Transparent
                                     ),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .onFocusChanged {
-                                            if (it.isFocused) numpadState.onFocusField()
-                                        }
+                                    modifier = Modifier.fillMaxWidth()
                                 )
                             }
 
