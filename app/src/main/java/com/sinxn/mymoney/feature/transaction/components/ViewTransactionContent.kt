@@ -33,6 +33,7 @@ import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.feature.transaction.TransactionDetailsUiState
 import com.sinxn.mymoney.feature.transaction.util.resolveCategoryHierarchy
+import com.sinxn.mymoney.feature.transfer.components.CentreSwapButton
 import java.util.Locale
 
 @Composable
@@ -181,36 +182,10 @@ fun ViewTransactionContent(
                     trailingIconData = walletIconData
                 )
             }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 6.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 40.dp)
-                )
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 3.dp,
-                    shadowElevation = 2.dp,
-                    border = BorderStroke(1.dp, directionColor.copy(alpha = 0.3f)),
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowDownward,
-                            contentDescription = "Wallet Direction",
-                            tint = directionColor,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-            }
+            CentreSwapButton(
+                icon = Icons.Default.ArrowDownward,
+                accentColor = directionColor,
+            )
             FormCardContainer {
                 val activeTargetWallet = uiState.targetWallet
                 val targetWalletIconData = remember(activeTargetWallet?.icon, activeTargetWallet?.name) {

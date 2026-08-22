@@ -105,8 +105,9 @@ fun TransactionAddEditScreen(
 
     // Active page state
     val isCurrentPageTx = pagerState.currentPage == 0 || !uiState.isNewTransaction
+    val activeNumpadState = if (isCurrentPageTx) txNumpadState else transferNumpadState
     val isSaveEnabled = if (isCurrentPageTx) isTxSaveEnabled else isTransferSaveEnabled
-    val isNumpadVisible = if (isCurrentPageTx) txNumpadState.isNumpadVisible else transferNumpadState.isNumpadVisible
+    val isNumpadVisible = activeNumpadState.isNumpadVisible
     val activeFabText = if (isCurrentPageTx) txFabText else transferFabText
     val activeFabIcon = if (isCurrentPageTx) txFabIcon else transferFabIcon
     val activeFabColor = if (isCurrentPageTx) txAccentColor else transferAccentColor
@@ -121,11 +122,10 @@ fun TransactionAddEditScreen(
             ) {
                 ExtendedFloatingActionButton(
                     onClick = {
+                        activeNumpadState.dismiss()
                         if (isCurrentPageTx) {
-                            txNumpadState.dismiss()
                             viewModel.saveChanges { onNavigateBack() }
                         } else {
-                            transferNumpadState.dismiss()
                             transferViewModel.saveTransfer { onNavigateBack() }
                         }
                     },
@@ -257,11 +257,11 @@ fun TransactionAddEditScreen(
         NumpadView(
             onKeyPress = if (isCurrentPageTx) viewModel::onNumpadKeyPress else transferViewModel::onNumpadKeyPress,
             onEvaluate = if (isCurrentPageTx) viewModel::evaluateMathExpression else transferViewModel::evaluateMathExpression,
-            onNext = { if (isCurrentPageTx) { txNumpadState.onNext() } else { transferNumpadState.onNext() } },
+            onNext = { activeNumpadState.onNext() },
             hasOperatorInAmount = if (isCurrentPageTx) txHasOperator else transferHasOperator,
-            saveButtonText = if (isCurrentPageTx) txFabText else transferFabText,
-            saveButtonColor = if (isCurrentPageTx) txAccentColor else transferAccentColor,
-            onDismiss = { txNumpadState.dismiss() }
+            saveButtonText = activeFabText,
+            saveButtonColor = activeFabColor,
+            onDismiss = { activeNumpadState.dismiss() }
         )
     }
 }

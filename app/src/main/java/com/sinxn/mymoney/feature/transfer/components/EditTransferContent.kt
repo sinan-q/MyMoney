@@ -3,13 +3,17 @@ package com.sinxn.mymoney.feature.transfer.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.SwapVert
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.ui.components.CleanListRow
@@ -28,11 +33,14 @@ import com.sinxn.mymoney.core.ui.components.FormDatePickerDialog
 import com.sinxn.mymoney.core.ui.components.FormPicker
 import com.sinxn.mymoney.core.ui.components.PeopleSelectionDialog
 import com.sinxn.mymoney.core.ui.components.PlaceSelectionDialog
+import com.sinxn.mymoney.core.ui.components.TransactionFormRowItem
 import com.sinxn.mymoney.core.ui.components.WalletSelectionDialog
+import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.feature.transfer.TransferAddEditUiState
 import com.sinxn.mymoney.feature.transfer.TransferAddEditViewModel
 import java.util.Date
+import kotlin.text.ifEmpty
 
 @Composable
 fun EditTransferContent(
@@ -88,201 +96,113 @@ fun EditTransferContent(
             )
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
-
         // 3. Wallets Selection (From & To Wallets, Target Amount, Transfer Fee)
-        EditTransferWallets(
-            availableWallets = uiState.availableWallets,
-            fromWalletId = uiState.editWalletId,
-            toWalletId = uiState.targetWalletId,
-            targetAmount = uiState.editTargetAmount,
-            transferFee = uiState.editTransferFee,
-            sourceCurrency = uiState.currencyCode,
-            targetCurrency = uiState.targetWalletCurrency,
-            accentColor = accentColor,
-            onFromWalletClick = {
-                numpadDismiss()
-                activePicker = FormPicker.Wallet
-            },
-            onToWalletClick = {
-                numpadDismiss()
-                activePicker = FormPicker.TargetWallet
-            },
+        val activeFromWallet = uiState.availableWallets.find { it.id == uiState.editWalletId }
+        val activeToWallet = uiState.availableWallets.find { it.id == uiState.targetWalletId }
+
+        // From Wallet Card
+        val activeFromWalletIconData = remember(activeFromWallet?.icon, activeFromWallet?.name) {
+            if (activeFromWallet != null) parseIconData(activeFromWallet.icon, activeFromWallet.name) else null
+        }
+        val activeToWalletIconData = remember(activeToWallet?.icon, activeToWallet?.name) {
+            if (activeToWallet != null) parseIconData(activeToWallet.icon, activeToWallet.name) else null
+        }
+
+        FormCardContainer {
+            TransactionFormRowItem(
+                icon = Icons.Default.AccountBalanceWallet,
+                accentColor = accentColor,
+                label = "From Wallet",
+                value = activeFromWallet?.name ?: "Select Source Wallet",
+                trailingIconData = activeFromWalletIconData,
+                onClick = {
+                    numpadDismiss()
+                    activePicker = FormPicker.Wallet }
+            )
+        }
+
+        // Centered Swap Button
+        CentreSwapButton(
             onSwapWallets = viewModel::swapWallets,
-            onTargetAmountChange = viewModel::onTargetAmountChange,
-            onTransferFeeChange = viewModel::onTransferFeeChange
+            icon = Icons.Default.SwapVert,
+            accentColor = accentColor
         )
 
-        Spacer(modifier = Modifier.height(10.dp))
+        // To Wallet Card
+        FormCardContainer {
+            TransactionFormRowItem(
+                icon = Icons.Default.AccountBalanceWallet,
+                accentColor = accentColor,
+                label = "To Wallet",
+                value = activeToWallet?.name ?: "Select Target Wallet",
+                trailingIconData = activeToWalletIconData,
+                onClick = {
+                    numpadDismiss()
+                    activePicker = FormPicker.TargetWallet
+                }
+            )
+        }
+
+        // Multi-currency Destination Amount Field
+        if (activeFromWallet != null && activeToWallet != null && !activeFromWallet.currency.equals(activeToWallet.currency, ignoreCase = true)) {
+            //Spacer(modifier = Modifier.height(10.dp))
+            FormCardContainer {
+                DescriptionEditForm(
+                    icon = Icons.Default.AccountBalanceWallet,
+                    accentColor = accentColor,
+                    label = "Destination Amount ($uiState.targetWalletCurrency)",
+                    placeHolder = "Received in $uiState.targetWalletCurrency",
+                    value = uiState.editTargetAmount,
+                    onValueChange = viewModel::onTargetAmountChange,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                )
+            }
+        }
+
+        // Transfer Fee / Tax Field
+        FormCardContainer {
+            DescriptionEditForm(
+                icon = Icons.Default.Tune,
+                accentColor = accentColor,
+                label = "Transfer Fee / Tax (${uiState.currencyCode})",
+                placeHolder = "0.00",
+                value = uiState.editTransferFee,
+                onValueChange = viewModel::onTransferFeeChange,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            )
+        }
 
         // 4. Options Card (Date, People, Place, Event, Confirmed, CountInTotal)
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-        ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                // Date Row
-                val parsedDate = DateUtils.parseDate(uiState.editDate)
-                val formattedDate = when {
-                    DateUtils.isToday(parsedDate) -> "Today"
-                    DateUtils.isYesterday(parsedDate) -> "Yesterday"
-                    else -> DateUtils.formatDate(parsedDate, settings.dateFormat)
-                }
-                CleanListRow(
-                    icon = {
-                        Icon(
-                            Icons.Default.CalendarToday,
-                            contentDescription = null,
-                            tint = accentColor,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    },
-                    label = "Date",
-                    value = formattedDate,
-                    onClick = {
-                        numpadDismiss()
-                        activePicker = FormPicker.Date
-                    }
-                )
-
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-
-                // People Row
-                val activePeopleCount = uiState.editPeopleIds.size
-                CleanListRow(
-                    icon = {
-                        Icon(
-                            Icons.Default.Group,
-                            contentDescription = null,
-                            tint = accentColor,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    },
-                    label = "People",
-                    value = when (activePeopleCount) {
-                        0 -> "None"
-                        1 -> uiState.availablePeople.find { it.id == uiState.editPeopleIds.first() }?.name ?: "1 Person"
-                        else -> "$activePeopleCount people"
-                    },
-                    onClick = {
-                        numpadDismiss()
-                        activePicker = FormPicker.People
-                    }
-                )
-
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-
-                // Place Row
-                val activePlace = uiState.availablePlaces.find { it.id == uiState.editPlaceId }
-                CleanListRow(
-                    icon = {
-                        Icon(
-                            Icons.Default.Place,
-                            contentDescription = null,
-                            tint = accentColor,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    },
-                    label = "Place",
-                    value = activePlace?.name ?: "None",
-                    onClick = {
-                        numpadDismiss()
-                        activePicker = FormPicker.Place
-                    }
-                )
-
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-
-                // Event Row
-                val activeEvent = uiState.availableEvents.find { it.id == uiState.editEventId }
-                CleanListRow(
-                    icon = {
-                        Icon(
-                            Icons.Default.Flag,
-                            contentDescription = null,
-                            tint = accentColor,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    },
-                    label = "Event",
-                    value = activeEvent?.name ?: "None",
-                    onClick = {
-                        numpadDismiss()
-                        activePicker = FormPicker.Event
-                    }
-                )
-
-                if (!settings.hideStatusAndImpact) {
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-
-                    // Confirmed Switch Row
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            "Confirmed",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Switch(
-                            checked = uiState.editConfirmed,
-                            onCheckedChange = {
-                                numpadDismiss()
-                                viewModel.onConfirmedChange(it)
-                            }
-                        )
-                    }
-
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-
-                    // Count in Total Switch Row
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            "Count in Total",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Switch(
-                            checked = uiState.editCountInTotal,
-                            onCheckedChange = {
-                                numpadDismiss()
-                                viewModel.onCountInTotalChange(it)
-                            }
-                        )
-                    }
-                }
+        FormCardContainer {
+            // Date Row
+            val parsedDate = DateUtils.parseDate(uiState.editDate)
+            val formattedDate = when {
+                DateUtils.isToday(parsedDate) -> "Today"
+                DateUtils.isYesterday(parsedDate) -> "Yesterday"
+                else -> DateUtils.formatDate(parsedDate, settings.dateFormat)
             }
+            TransactionFormRowItem(
+                icon = Icons.Default.CalendarToday,
+                accentColor = accentColor,
+                label = "Date",
+                value = formattedDate,
+                onClick = {
+                    activePicker = FormPicker.Date
+                }
+            )
+            // People Row
+            val selectedPeople = uiState.availablePeople.filter { it.id in uiState.editPeopleIds }
+            val selectedPeopleNames = selectedPeople.joinToString { it.name }.ifEmpty { "None" }
+            TransactionFormRowItem(
+                icon = Icons.Default.Group,
+                active = selectedPeople.isNotEmpty(),
+                accentColor = accentColor,
+                label =  "People",
+                value = selectedPeopleNames,
+                onClick = {
+                    activePicker = FormPicker.People
+                }
+            )
         }
     }
 
