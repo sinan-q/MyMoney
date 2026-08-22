@@ -17,6 +17,7 @@ import com.sinxn.mymoney.core.data.repository.TemplateRepository
 import com.sinxn.mymoney.core.data.repository.TransactionRepository
 import com.sinxn.mymoney.core.util.AmountUtils.parseAmountToLong
 import com.sinxn.mymoney.core.util.AmountUtils.toDecimalString
+import com.sinxn.mymoney.core.util.Constants
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.Direction
 import com.sinxn.mymoney.core.util.MathExpressionEvaluator
@@ -218,15 +219,30 @@ class TransferAddEditViewModel @Inject constructor(
     val uiState: StateFlow<TransferAddEditUiState> = combine(
         _formState,
         _isSaving,
+        settingsRepository.currentWalletId,
         listsFlow
-    ) { form, isSaving, lists ->
-        val rawWallets = lists.wallets.map { it.wallet }
-        val effectiveWalletId = form.walletId.ifEmpty { rawWallets.firstOrNull()?.id ?: "" }
-        val fromWalletWithBalance = lists.wallets.find { it.wallet.id == effectiveWalletId }
+    ) { form, isSaving, currentWalletId, lists ->
+        if (isNewTransfer && form.walletId.isEmpty() && lists.wallets.isNotEmpty()) {
+            if (currentWalletId.isNotEmpty() && currentWalletId != "total" && currentWalletId != Constants.TOTAL_WALLET_ID) {
+                val preferredWallet = lists.wallets.find { it.wallet.id == currentWalletId && !it.wallet.isArchived }
+                    ?: lists.wallets.find { it.wallet.id == currentWalletId }
+
+                if (preferredWallet != null) {
+                    _formState.update { it.copy(walletId = preferredWallet.wallet.id) }
+                }
+            }
+        }
+
+        val activeWalletIds = setOfNotNull(
+            form.walletId.takeIf { it.isNotEmpty() },
+            form.targetWalletId?.takeIf { it.isNotEmpty() }
+        )
+        val filteredWallets = lists.wallets.filter { !it.wallet.isArchived || it.wallet.id in activeWalletIds }.map { it.wallet }
+
+        val fromWalletWithBalance = lists.wallets.find { it.wallet.id == form.walletId }
         val fromWallet = fromWalletWithBalance?.wallet
 
-        var targetWalletId = form.targetWalletId
-
+        val targetWalletId = form.targetWalletId
         val toWalletWithBalance = lists.wallets.find { it.wallet.id == targetWalletId }
         val toWallet = toWalletWithBalance?.wallet
 
@@ -235,7 +251,7 @@ class TransferAddEditViewModel @Inject constructor(
         val fromSymbol = try {
             Currency.getInstance(fromCurrency).getSymbol(Locale.getDefault())
         } catch (_: Exception) {
-            fromCurrency
+            fromWalletWithBalance?.currencySymbol ?: fromCurrency
         }
 
         val toCurrency = toWallet?.currency ?: fromCurrency
@@ -243,7 +259,7 @@ class TransferAddEditViewModel @Inject constructor(
         val toSymbol = try {
             Currency.getInstance(toCurrency).getSymbol(Locale.getDefault())
         } catch (_: Exception) {
-            toCurrency
+            toWalletWithBalance?.currencySymbol ?: toCurrency
         }
 
         TransferAddEditUiState(
@@ -253,7 +269,7 @@ class TransferAddEditViewModel @Inject constructor(
             editAmount = form.amount,
             editTargetAmount = form.targetAmount,
             editTransferFee = form.transferFee,
-            editWalletId = effectiveWalletId,
+            editWalletId = form.walletId,
             targetWalletId = targetWalletId,
             editDescription = form.description,
             editNote = form.note,
@@ -263,10 +279,10 @@ class TransferAddEditViewModel @Inject constructor(
             editPeopleIds = form.peopleIds,
             editConfirmed = form.confirmed,
             editCountInTotal = form.countInTotal,
-            availableWallets = rawWallets,
-            availablePlaces = lists.places,
-            availableEvents = lists.events,
-            availablePeople = lists.people,
+            availableWallets = filteredWallets,
+            availablePlaces = lists.places.filter { !it.isArchived || it.id == form.placeId },
+            availableEvents = lists.events.filter { !it.isArchived || it.id == form.eventId },
+            availablePeople = lists.people.filter { !it.isArchived || it.id in form.peopleIds },
             currencyCode = fromCurrency,
             currencySymbol = fromSymbol,
             currencyDecimals = fromDecimals,
