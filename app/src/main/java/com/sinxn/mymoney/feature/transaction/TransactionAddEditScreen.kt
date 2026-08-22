@@ -1,5 +1,10 @@
 package com.sinxn.mymoney.feature.transaction
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -51,40 +56,91 @@ fun TransactionAddEditScreen(
         "Edit Transaction"
     }
 
-    val fabText = if (uiState.isNewTransaction) {
-        if (pagerState.currentPage == 1) "Add Transfer" else "Add Transaction"
+    // 1. Transaction Form State & Validation
+    val txNumpadState = rememberNumpadFormState(initialNumpadVisible = uiState.isNewTransaction)
+    val txHasOperator = remember(uiState.editAmount) {
+        txNumpadState.hasOperator(uiState.editAmount)
+    }
+    val txEvaluatedAmountStr = remember(uiState.editAmount) {
+        txNumpadState.getImmediateResult(uiState.editAmount, uiState.currencyDecimals)
+    }
+    val txAmountValue = remember(txEvaluatedAmountStr) {
+        txEvaluatedAmountStr.toDoubleOrNull()
+    }
+    val isTxCategorySelected = !uiState.editCategoryId.isNullOrBlank()
+    val isTxWalletSelected = uiState.editWalletId.isNotBlank()
+    val isTxAmountPositive = txAmountValue != null && txAmountValue > 0.0
+    val isTxSaveEnabled = !uiState.isSaving && isTxCategorySelected && isTxWalletSelected && isTxAmountPositive
+
+    val txFabText = if (uiState.isNewTransaction) {
+        if (uiState.editDirection == Direction.INCOME) "Add Income" else "Add Expense"
     } else {
-        "Save Transaction"
+        "Save Changes"
     }
-    val numpadState = rememberNumpadFormState(initialNumpadVisible = uiState.isNewTransaction)
-    val hasOperatorInAmount = remember(uiState.editAmount) {
-        numpadState.hasOperator(uiState.editAmount)
-    }
-    val evaluatedAmountStr = remember(uiState.editAmount) {
-        numpadState.getImmediateResult(uiState.editAmount, uiState.currencyDecimals)
-    }
-    val amountValue = remember(evaluatedAmountStr) {
-        evaluatedAmountStr.toDoubleOrNull()
-    }
-    val isCategorySelected = !uiState.editCategoryId.isNullOrBlank()
-    val isWalletSelected = uiState.editWalletId.isNotBlank()
-    val isAmountNonNegative = amountValue != null && amountValue >= 0.0
+    val txFabIcon = if (uiState.isNewTransaction) Icons.Default.Add else Icons.Default.Check
 
-    val isSaveEnabled = !uiState.isSaving && isCategorySelected && isWalletSelected && isAmountNonNegative
+    // 2. Transfer Form State & Validation
+    val transferNumpadState = rememberNumpadFormState(initialNumpadVisible = true)
+    val transferHasOperator = remember(transferUiState.editAmount) {
+        transferNumpadState.hasOperator(transferUiState.editAmount)
+    }
+    val transferEvaluatedAmountStr = remember(transferUiState.editAmount) {
+        transferNumpadState.getImmediateResult(transferUiState.editAmount, transferUiState.currencyDecimals)
+    }
+    val transferAmountValue = remember(transferEvaluatedAmountStr) {
+        transferEvaluatedAmountStr.toDoubleOrNull()
+    }
+    val isTransferWalletValid = transferUiState.editWalletId.isNotBlank() &&
+            !transferUiState.targetWalletId.isNullOrBlank() &&
+            transferUiState.editWalletId != transferUiState.targetWalletId
+    val isTransferAmountPositive = transferAmountValue != null && transferAmountValue > 0.0
+    val isTransferSaveEnabled = !transferUiState.isSaving && isTransferWalletValid && isTransferAmountPositive
 
+    val transferFabText = if (transferUiState.isNewTransfer) "Add Transfer" else "Save Changes"
+    val transferFabIcon = if (transferUiState.isNewTransfer) Icons.Default.Add else Icons.Default.Check
 
+    // Active page state
+    val isCurrentPageTx = pagerState.currentPage == 0 || !uiState.isNewTransaction
+    val isSaveEnabled = if (isCurrentPageTx) isTxSaveEnabled else isTransferSaveEnabled
+    val isNumpadVisible = if (isCurrentPageTx) txNumpadState.isNumpadVisible else transferNumpadState.isNumpadVisible
+    val activeFabText = if (isCurrentPageTx) txFabText else transferFabText
+    val activeFabIcon = if (isCurrentPageTx) txFabIcon else transferFabIcon
+    val activeFabColor = if (isCurrentPageTx) txAccentColor else transferAccentColor
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
-            if (isSaveEnabled && !numpadState.isNumpadVisible)
-            ExtendedFloatingActionButton(
-                onClick = {
-                    numpadState.dismiss()
-                    viewModel.saveChanges { onNavigateBack() } },
-                icon = { Icon( if (uiState.isNewTransaction) Icons.Default.Add else Icons.Default.Check, null) },
-                text = { Text(fabText) }
-            )
+            AnimatedVisibility(
+                visible = isSaveEnabled && !isNumpadVisible,
+                enter = fadeIn() + scaleIn(),
+                exit = fadeOut() + scaleOut()
+            ) {
+                ExtendedFloatingActionButton(
+                    onClick = {
+                        if (isCurrentPageTx) {
+                            txNumpadState.dismiss()
+                            viewModel.saveChanges { onNavigateBack() }
+                        } else {
+                            transferNumpadState.dismiss()
+                            transferViewModel.saveTransfer { onNavigateBack() }
+                        }
+                    },
+                    icon = {
+                        Icon(
+                            imageVector = activeFabIcon,
+                            contentDescription = activeFabText
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = activeFabText,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    containerColor = activeFabColor,
+                    contentColor = Color.White
+                )
+            }
         },
         topBar = {
             Row(
@@ -128,14 +184,14 @@ fun TransactionAddEditScreen(
                     settings = settings,
                     viewModel = viewModel,
                     onNavigateBack = onNavigateBack,
-                    isNumpadVisible = numpadState.isNumpadVisible,
-                    showNumpad = { numpadState.showNumpad() },
-                    evaluatedAmountStr = evaluatedAmountStr,
-                    hasOperatorInAmount = hasOperatorInAmount,
-                    onFocusField = { numpadState.onFocusField() },
-                    focusRequester = numpadState.focusRequester,
-                    numpadDismiss = { numpadState.dismiss() },
-                    numpadOnNext = { numpadState.onNext() }
+                    isNumpadVisible = txNumpadState.isNumpadVisible,
+                    showNumpad = { txNumpadState.showNumpad() },
+                    evaluatedAmountStr = txEvaluatedAmountStr,
+                    hasOperatorInAmount = txHasOperator,
+                    onFocusField = { txNumpadState.onFocusField() },
+                    focusRequester = txNumpadState.focusRequester,
+                    numpadDismiss = { txNumpadState.dismiss() },
+                    numpadOnNext = { txNumpadState.onNext() }
                 )
             } else {
                 // Creating new item: Swipeable HorizontalPager between Transaction and Transfer
@@ -164,21 +220,29 @@ fun TransactionAddEditScreen(
                                 settings = settings,
                                 viewModel = viewModel,
                                 onNavigateBack = onNavigateBack,
-                                isNumpadVisible = numpadState.isNumpadVisible,
-                                showNumpad = { numpadState.showNumpad() },
-                                evaluatedAmountStr = evaluatedAmountStr,
-                                hasOperatorInAmount = hasOperatorInAmount,
-                                onFocusField = { numpadState.onFocusField() },
-                                focusRequester = numpadState.focusRequester,
-                                numpadDismiss = { numpadState.dismiss() },
-                                numpadOnNext = { numpadState.onNext() }
+                                isNumpadVisible = txNumpadState.isNumpadVisible,
+                                showNumpad = { txNumpadState.showNumpad() },
+                                evaluatedAmountStr = txEvaluatedAmountStr,
+                                hasOperatorInAmount = txHasOperator,
+                                onFocusField = { txNumpadState.onFocusField() },
+                                focusRequester = txNumpadState.focusRequester,
+                                numpadDismiss = { txNumpadState.dismiss() },
+                                numpadOnNext = { txNumpadState.onNext() }
                             )
                         } else {
                             EditTransferContent(
                                 uiState = transferUiState,
                                 settings = transferSettings,
                                 viewModel = transferViewModel,
-                                onNavigateBack = onNavigateBack
+                                onNavigateBack = onNavigateBack,
+                                evaluatedAmountStr = transferEvaluatedAmountStr,
+                                hasOperatorInAmount = transferHasOperator,
+                                isNumpadVisible = transferNumpadState.isNumpadVisible,
+                                showNumpad = { transferNumpadState.showNumpad() },
+                                focusRequester = transferNumpadState.focusRequester,
+                                onFocusField = { transferNumpadState.onFocusField() },
+                                numpadDismiss = { transferNumpadState.dismiss() },
+                                numpadOnNext = { transferNumpadState.onNext() }
                             )
                         }
                     }
@@ -187,3 +251,4 @@ fun TransactionAddEditScreen(
         }
     }
 }
+

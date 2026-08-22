@@ -19,6 +19,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -35,7 +36,6 @@ import com.sinxn.mymoney.core.ui.components.NumpadView
 import com.sinxn.mymoney.core.ui.components.PeopleSelectionDialog
 import com.sinxn.mymoney.core.ui.components.PlaceSelectionDialog
 import com.sinxn.mymoney.core.ui.components.WalletSelectionDialog
-import com.sinxn.mymoney.core.ui.components.rememberNumpadFormState
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.feature.transfer.TransferAddEditUiState
 import com.sinxn.mymoney.feature.transfer.TransferAddEditViewModel
@@ -46,28 +46,20 @@ fun EditTransferContent(
     uiState: TransferAddEditUiState,
     settings: FormattingSettings,
     viewModel: TransferAddEditViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    evaluatedAmountStr: String,
+    hasOperatorInAmount: Boolean,
+    isNumpadVisible: Boolean,
+    showNumpad: () -> Unit,
+    focusRequester: FocusRequester,
+    onFocusField: () -> Unit,
+    numpadDismiss: () -> Unit,
+    numpadOnNext: () -> Unit
 ) {
     val scrollState = rememberScrollState()
-    val numpadState = rememberNumpadFormState(initialNumpadVisible = uiState.isNewTransfer)
     var activePicker by remember { mutableStateOf<FormPicker?>(null) }
 
     val accentColor = Color(0xFF0284C7)
-
-    val hasOperatorInAmount = remember(uiState.editAmount) {
-        numpadState.hasOperator(uiState.editAmount)
-    }
-
-    val evaluatedAmountStr = remember(uiState.editAmount) {
-        numpadState.getImmediateResult(uiState.editAmount, uiState.currencyDecimals)
-    }
-    val amountValue = remember(evaluatedAmountStr) {
-        evaluatedAmountStr.toDoubleOrNull()
-    }
-    val isWalletSelected = uiState.editWalletId.isNotBlank() && !uiState.targetWalletId.isNullOrBlank()
-    val isAmountNonNegative = amountValue != null && amountValue > 0.0
-
-    val isSaveEnabled = !uiState.isSaving && isWalletSelected && isAmountNonNegative
 
     Column(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -83,8 +75,8 @@ fun EditTransferContent(
                 evaluatedResult = evaluatedAmountStr,
                 hasOperatorInAmount = hasOperatorInAmount,
                 accentColor = accentColor,
-                isNumpadVisible = numpadState.isNumpadVisible,
-                onHeaderClick = { numpadState.showNumpad() }
+                isNumpadVisible = isNumpadVisible,
+                onHeaderClick = showNumpad
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -95,8 +87,8 @@ fun EditTransferContent(
                     value = uiState.editDescription,
                     accentColor = accentColor,
                     onValueChange = viewModel::onDescriptionChange,
-                    focusRequester = numpadState.focusRequester,
-                    onFocusField = { numpadState.onFocusField() },
+                    focusRequester = focusRequester,
+                    onFocusField = onFocusField,
                     icon = Icons.Default.Description,
                     label = "Description",
                     placeHolder = "Add a description"
@@ -116,11 +108,11 @@ fun EditTransferContent(
                 targetCurrency = uiState.targetWalletCurrency,
                 accentColor = accentColor,
                 onFromWalletClick = {
-                    numpadState.dismiss()
+                    numpadDismiss()
                     activePicker = FormPicker.Wallet
                 },
                 onToWalletClick = {
-                    numpadState.dismiss()
+                    numpadDismiss()
                     activePicker = FormPicker.TargetWallet
                 },
                 onSwapWallets = viewModel::swapWallets,
@@ -161,7 +153,7 @@ fun EditTransferContent(
                         label = "Date",
                         value = formattedDate,
                         onClick = {
-                            numpadState.dismiss()
+                            numpadDismiss()
                             activePicker = FormPicker.Date
                         }
                     )
@@ -189,7 +181,7 @@ fun EditTransferContent(
                             else -> "$activePeopleCount people"
                         },
                         onClick = {
-                            numpadState.dismiss()
+                            numpadDismiss()
                             activePicker = FormPicker.People
                         }
                     )
@@ -213,7 +205,7 @@ fun EditTransferContent(
                         label = "Place",
                         value = activePlace?.name ?: "None",
                         onClick = {
-                            numpadState.dismiss()
+                            numpadDismiss()
                             activePicker = FormPicker.Place
                         }
                     )
@@ -237,7 +229,7 @@ fun EditTransferContent(
                         label = "Event",
                         value = activeEvent?.name ?: "None",
                         onClick = {
-                            numpadState.dismiss()
+                            numpadDismiss()
                             activePicker = FormPicker.Event
                         }
                     )
@@ -263,7 +255,10 @@ fun EditTransferContent(
                             )
                             Switch(
                                 checked = uiState.editConfirmed,
-                                onCheckedChange = viewModel::onConfirmedChange
+                                onCheckedChange = {
+                                    numpadDismiss()
+                                    viewModel.onConfirmedChange(it)
+                                }
                             )
                         }
 
@@ -287,7 +282,10 @@ fun EditTransferContent(
                             )
                             Switch(
                                 checked = uiState.editCountInTotal,
-                                onCheckedChange = viewModel::onCountInTotalChange
+                                onCheckedChange = {
+                                    numpadDismiss()
+                                    viewModel.onCountInTotalChange(it)
+                                }
                             )
                         }
                     }
@@ -295,7 +293,7 @@ fun EditTransferContent(
             }
         }
 
-        // Docked Bottom Bar (Numpad or Save Button)
+        // Docked Bottom Bar (Numpad View)
         Surface(
             tonalElevation = 6.dp,
             shadowElevation = 8.dp,
@@ -304,50 +302,18 @@ fun EditTransferContent(
         ) {
             Column {
                 AnimatedVisibility(
-                    visible = numpadState.isNumpadVisible,
+                    visible = isNumpadVisible,
                     enter = fadeIn() + expandVertically(),
                     exit = fadeOut() + shrinkVertically()
                 ) {
                     NumpadView(
                         onKeyPress = viewModel::onNumpadKeyPress,
                         onEvaluate = viewModel::evaluateMathExpression,
-                        onNext = { numpadState.onNext() },
+                        onNext = numpadOnNext,
                         hasOperatorInAmount = hasOperatorInAmount,
                         saveButtonText = if (uiState.isNewTransfer) "Add Transfer" else "Save Changes",
                         saveButtonColor = accentColor
                     )
-                }
-
-                if (!numpadState.isNumpadVisible) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 10.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                numpadState.dismiss()
-                                viewModel.saveTransfer {
-                                    onNavigateBack()
-                                }
-                            },
-                            enabled = isSaveEnabled,
-                            shape = RoundedCornerShape(20.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = accentColor,
-                                contentColor = Color.White
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(54.dp)
-                        ) {
-                            Text(
-                                text = if (uiState.isNewTransfer) "Add Transfer" else "Save Changes",
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
                 }
             }
         }
