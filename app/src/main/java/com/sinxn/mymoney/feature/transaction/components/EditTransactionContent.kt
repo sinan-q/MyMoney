@@ -33,7 +33,6 @@ fun EditTransactionContent(
     showNumpad: () -> Unit,
     focusRequester: FocusRequester,
     onFocusField: () -> Unit,
-    numpadDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -44,13 +43,11 @@ fun EditTransactionContent(
         if (uiState.editDirection == Direction.INCOME) Color(0xFF10B981) else Color(0xFFE11D48)
     }
 
-    val bottomPadding = if (isNumpadVisible) 320.dp else 80.dp
-
     Column(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
-            .padding(bottom = bottomPadding)
+            .padding(bottom = 80.dp)
     ) {
         // 1. Amount Header Display
         EditAmountHeader(
@@ -84,39 +81,10 @@ fun EditTransactionContent(
             uiState = uiState,
             settings = settings,
             accentColor = accentColor,
-            onCategoryClick = {
-                numpadDismiss()
-                activePicker = FormPicker.Category
-            },
-            onWalletClick = {
-                numpadDismiss()
-                activePicker = FormPicker.Wallet
-            },
-            onDateClick = {
-                numpadDismiss()
-                activePicker = FormPicker.Date
-            },
-            onPeopleClick = {
-                numpadDismiss()
-                activePicker = FormPicker.People
-            },
-            onPlaceClick = {
-                numpadDismiss()
-                activePicker = FormPicker.Place
-            },
-            onEventClick = {
-                numpadDismiss()
-                activePicker = FormPicker.Event
-            },
+            activePicker = { activePicker = it },
             onNoteChange = viewModel::onNoteChange,
-            onConfirmedChange = {
-                numpadDismiss()
-                viewModel.onConfirmedChange(it)
-            },
-            onCountInTotalChange = {
-                numpadDismiss()
-                viewModel.onCountInTotalChange(it)
-            },
+            onConfirmedChange = { viewModel.onConfirmedChange(it) },
+            onCountInTotalChange = { viewModel.onCountInTotalChange(it) },
             onFocusField = { onFocusField() }
         )
     }

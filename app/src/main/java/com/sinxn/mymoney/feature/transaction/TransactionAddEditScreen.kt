@@ -1,17 +1,14 @@
 package com.sinxn.mymoney.feature.transaction
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -193,8 +190,7 @@ fun TransactionAddEditScreen(
                     evaluatedAmountStr = txEvaluatedAmountStr,
                     hasOperatorInAmount = txHasOperator,
                     onFocusField = { txNumpadState.onFocusField() },
-                    focusRequester = txNumpadState.focusRequester,
-                    numpadDismiss = { txNumpadState.dismiss() }
+                    focusRequester = txNumpadState.focusRequester
                 )
             } else {
                 // Creating new item: Swipeable HorizontalPager between Transaction and Transfer
@@ -228,8 +224,7 @@ fun TransactionAddEditScreen(
                                 evaluatedAmountStr = txEvaluatedAmountStr,
                                 hasOperatorInAmount = txHasOperator,
                                 onFocusField = { txNumpadState.onFocusField() },
-                                focusRequester = txNumpadState.focusRequester,
-                                numpadDismiss = { txNumpadState.dismiss() }
+                                focusRequester = txNumpadState.focusRequester
                             )
                         } else {
                             EditTransferContent(

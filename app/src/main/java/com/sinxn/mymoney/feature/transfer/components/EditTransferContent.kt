@@ -2,25 +2,23 @@ package com.sinxn.mymoney.feature.transfer.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Flag
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
@@ -37,6 +35,7 @@ import com.sinxn.mymoney.core.ui.components.TransactionFormRowItem
 import com.sinxn.mymoney.core.ui.components.WalletSelectionDialog
 import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.DateUtils
+import com.sinxn.mymoney.feature.settings.SettingsSwitchItem
 import com.sinxn.mymoney.feature.transfer.TransferAddEditUiState
 import com.sinxn.mymoney.feature.transfer.TransferAddEditViewModel
 import java.util.Date
@@ -117,7 +116,8 @@ fun EditTransferContent(
                 trailingIconData = activeFromWalletIconData,
                 onClick = {
                     numpadDismiss()
-                    activePicker = FormPicker.Wallet }
+                    activePicker = FormPicker.Wallet
+                }
             )
         }
 
@@ -137,7 +137,6 @@ fun EditTransferContent(
                 value = activeToWallet?.name ?: "Select Target Wallet",
                 trailingIconData = activeToWalletIconData,
                 onClick = {
-                    numpadDismiss()
                     activePicker = FormPicker.TargetWallet
                 }
             )
@@ -145,13 +144,12 @@ fun EditTransferContent(
 
         // Multi-currency Destination Amount Field
         if (activeFromWallet != null && activeToWallet != null && !activeFromWallet.currency.equals(activeToWallet.currency, ignoreCase = true)) {
-            //Spacer(modifier = Modifier.height(10.dp))
             FormCardContainer {
                 DescriptionEditForm(
                     icon = Icons.Default.AccountBalanceWallet,
                     accentColor = accentColor,
-                    label = "Destination Amount ($uiState.targetWalletCurrency)",
-                    placeHolder = "Received in $uiState.targetWalletCurrency",
+                    label = "Destination Amount (${uiState.targetWalletCurrency})",
+                    placeHolder = "Received in ${uiState.targetWalletCurrency}",
                     value = uiState.editTargetAmount,
                     onValueChange = viewModel::onTargetAmountChange,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -172,7 +170,7 @@ fun EditTransferContent(
             )
         }
 
-        // 4. Options Card (Date, People, Place, Event, Confirmed, CountInTotal)
+        // 4. Options Card (Date, People, Place, Event, Note)
         FormCardContainer {
             // Date Row
             val parsedDate = DateUtils.parseDate(uiState.editDate)
@@ -190,19 +188,95 @@ fun EditTransferContent(
                     activePicker = FormPicker.Date
                 }
             )
+
             // People Row
             val selectedPeople = uiState.availablePeople.filter { it.id in uiState.editPeopleIds }
             val selectedPeopleNames = selectedPeople.joinToString { it.name }.ifEmpty { "None" }
             TransactionFormRowItem(
-                icon = Icons.Default.Group,
+                icon = Icons.Default.People,
                 active = selectedPeople.isNotEmpty(),
                 accentColor = accentColor,
-                label =  "People",
+                label = "People",
                 value = selectedPeopleNames,
                 onClick = {
                     activePicker = FormPicker.People
                 }
             )
+
+            // Place Row
+            val activePlace = uiState.availablePlaces.find { it.id == uiState.editPlaceId }
+            val placeIconData = remember(activePlace?.icon, activePlace?.name) {
+                if (activePlace != null && activePlace.icon.isNotBlank()) parseIconData(
+                    activePlace.icon,
+                    activePlace.name
+                ) else null
+            }
+            TransactionFormRowItem(
+                icon = Icons.Default.LocationOn,
+                active = activePlace != null,
+                accentColor = accentColor,
+                label = "Place",
+                value = activePlace?.name ?: "None",
+                trailingIconData = placeIconData,
+                onClick = {
+                    activePicker = FormPicker.Place
+                }
+            )
+
+            // Event Row
+            val activeEvent = uiState.availableEvents.find { it.id == uiState.editEventId }
+            val eventIconData = remember(activeEvent?.icon, activeEvent?.name) {
+                if (activeEvent != null && activeEvent.icon.isNotBlank()) parseIconData(
+                    activeEvent.icon,
+                    activeEvent.name
+                ) else null
+            }
+            TransactionFormRowItem(
+                icon = Icons.Default.Flag,
+                active = !activeEvent?.name.isNullOrEmpty(),
+                accentColor = accentColor,
+                label = "Event",
+                value = activeEvent?.name ?: "None",
+                trailingIconData = eventIconData,
+                onClick = {
+                    activePicker = FormPicker.Event
+                }
+            )
+            // Note Field
+            DescriptionEditForm(
+                modifier = Modifier,
+                focusRequester = remember { FocusRequester() },
+                onFocusField = onFocusField,
+                icon = Icons.AutoMirrored.Filled.Notes,
+                accentColor = accentColor,
+                value = uiState.editNote,
+                onValueChange = viewModel::onNoteChange,
+                label = "Note",
+                placeHolder = "Add a note..."
+            )
+        }
+
+        // 5. Status & Impact Card (Confirmed, Count in Total)
+        if (!settings.hideStatusAndImpact) {
+            FormCardContainer {
+                // Confirmed Switch Row
+                SettingsSwitchItem(
+                    title = "Confirmed",
+                    checked = uiState.editConfirmed,
+                    onCheckedChange = viewModel::onConfirmedChange,
+                    accentColor = accentColor,
+                    horizontalPadding = 16.dp,
+                )
+
+                // Count in Total Switch Row
+                SettingsSwitchItem(
+                    title = "Count in Total",
+                    checked = uiState.editCountInTotal,
+                    onCheckedChange = viewModel::onCountInTotalChange,
+                    accentColor = accentColor,
+                    horizontalPadding = 16.dp,
+                )
+            }
         }
     }
 
@@ -288,3 +362,4 @@ fun EditTransferContent(
         else -> Unit
     }
 }
+

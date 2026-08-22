@@ -21,6 +21,7 @@ import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CleanListRow
 import com.sinxn.mymoney.core.ui.components.DescriptionEditForm
 import com.sinxn.mymoney.core.ui.components.FormCardContainer
+import com.sinxn.mymoney.core.ui.components.FormPicker
 import com.sinxn.mymoney.core.ui.components.TransactionFormRowItem
 import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.DateUtils
@@ -32,12 +33,7 @@ fun EditTransactionFormOptions(
     uiState: TransactionAddEditUiState,
     settings: FormattingSettings,
     accentColor: Color,
-    onCategoryClick: () -> Unit,
-    onWalletClick: () -> Unit,
-    onDateClick: () -> Unit,
-    onPeopleClick: () -> Unit,
-    onPlaceClick: () -> Unit,
-    onEventClick: () -> Unit,
+    activePicker: (FormPicker) -> Unit,
     onNoteChange: (String) -> Unit,
     onConfirmedChange: (Boolean) -> Unit,
     onCountInTotalChange: (Boolean) -> Unit,
@@ -61,7 +57,7 @@ fun EditTransactionFormOptions(
                 label = "Category",
                 value = activeCategory?.name?.replace("  ↳ ", "") ?: "Select Category",
                 trailingIconData = iconData,
-                onClick = onCategoryClick
+                onClick = { activePicker(FormPicker.Category) }
             )
 
             HorizontalDivider(
@@ -84,7 +80,7 @@ fun EditTransactionFormOptions(
                 label = "Wallet",
                 value = activeWallet?.name ?: "Select Wallet",
                 trailingIconData = walletIconData,
-                onClick = onWalletClick
+                onClick = { activePicker(FormPicker.Wallet) }
             )
 
             HorizontalDivider(
@@ -110,7 +106,7 @@ fun EditTransactionFormOptions(
                 },
                 label = "Date",
                 value = dateText,
-                onClick = onDateClick
+                onClick = { activePicker(FormPicker.Date) }
             )
 
             HorizontalDivider(
@@ -119,8 +115,7 @@ fun EditTransactionFormOptions(
             )
 
             // People Row
-            val selectedPeople =
-                uiState.availablePeople.filter { it.id in uiState.editPeopleIds }
+            val selectedPeople = uiState.availablePeople.filter { it.id in uiState.editPeopleIds }
             val selectedPeopleNames = selectedPeople.joinToString { it.name }.ifEmpty { "None" }
             TransactionFormRowItem(
                 icon = Icons.Default.People,
@@ -128,7 +123,7 @@ fun EditTransactionFormOptions(
                 accentColor = accentColor,
                 label = "People",
                 value = selectedPeopleNames,
-                onClick = onPeopleClick
+                onClick = { activePicker(FormPicker.People) }
             )
 
             HorizontalDivider(
@@ -151,7 +146,7 @@ fun EditTransactionFormOptions(
                 label = "Place",
                 value = activePlace?.name ?: "None",
                 trailingIconData = placeIconData,
-                onClick = onPlaceClick
+                onClick = { activePicker(FormPicker.Place) }
             )
 
             HorizontalDivider(
@@ -174,7 +169,7 @@ fun EditTransactionFormOptions(
                 label = "Event",
                 value = activeEvent?.name ?: "None",
                 trailingIconData = eventIconData,
-                onClick = onEventClick
+                onClick = { activePicker(FormPicker.Event) }
             )
 
             HorizontalDivider(
