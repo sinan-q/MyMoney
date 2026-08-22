@@ -564,7 +564,8 @@ fun BudgetAddEditScreen(
                                     onNext = { numpadState.onNext() },
                                     hasOperatorInAmount = hasOperatorInAmount,
                                     saveButtonText = actionBtnText,
-                                    saveButtonColor = accentColor
+                                    saveButtonColor = accentColor,
+                                    onDismiss = { numpadState.dismiss() }
                                 )
                             }
                         }

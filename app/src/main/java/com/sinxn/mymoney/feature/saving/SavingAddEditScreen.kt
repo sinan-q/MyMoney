@@ -444,7 +444,8 @@ fun SavingAddEditScreen(
                                     onNext = { numpadState.onNext() },
                                     hasOperatorInAmount = hasOperatorInAmount,
                                     saveButtonText = actionBtnText,
-                                    saveButtonColor = SavingAccentColor
+                                    saveButtonColor = SavingAccentColor,
+                                    onDismiss = { numpadState.dismiss() }
                                 )
                             }
                         }

@@ -16,10 +16,14 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,106 +31,148 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NumpadView(
+    modifier: Modifier = Modifier,
+    sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     onKeyPress: (String) -> Unit,
     onEvaluate: () -> Unit,
     onNext: (() -> Unit)? = null,
-    modifier: Modifier = Modifier,
+    onDismiss: () -> Unit,
     hasOperatorInAmount: Boolean = false,
     saveButtonText: String = "Save",
     saveButtonColor: Color = MaterialTheme.colorScheme.primary
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 8.dp,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        dragHandle = null,
+        scrimColor = Color.Transparent,
     ) {
-        val rows = listOf(
-            listOf("1", "2", "3", "÷"),
-            listOf("4", "5", "6", "×"),
-            listOf("7", "8", "9", "-"),
-            listOf(".", "0", "⌫", "+")
-        )
+        Column(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            val rows = listOf(
+                listOf("1", "2", "3", "÷"),
+                listOf("4", "5", "6", "×"),
+                listOf("7", "8", "9", "-"),
+                listOf(".", "0", "⌫", "+")
+            )
 
-        rows.forEach { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                row.forEach { key ->
-                    CleanNumpadKey(
-                        key = key,
-                        backgroundColor = if (key in listOf("+", "-", "×", "÷")) {
-                            saveButtonColor.copy(alpha = 0.12f)
-                        } else {
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                        },
-                        contentColor = if (key in listOf("+", "-", "×", "÷")) {
-                            saveButtonColor
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        },
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            if (key == "⌫") {
-                                onKeyPress("BACKSPACE")
-                            } else {
-                                onKeyPress(key)
-                            }
-                        }
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        if (onNext != null) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Next Button (Hides Numpad)
-                Button(
-                    onClick = {
-                        if (hasOperatorInAmount) {
-                            onEvaluate()
-                        }
-                        onNext()
-                    },
-                    shape = RoundedCornerShape(20.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = saveButtonColor.copy(alpha = 0.15f),
-                        contentColor = saveButtonColor
-                    ),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(54.dp)
+            rows.forEach { row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = "Next",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "Next",
-                            modifier = Modifier.size(18.dp)
+                    row.forEach { key ->
+                        CleanNumpadKey(
+                            key = key,
+                            backgroundColor = if (key in listOf("+", "-", "×", "÷")) {
+                                saveButtonColor.copy(alpha = 0.12f)
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            },
+                            contentColor = if (key in listOf("+", "-", "×", "÷")) {
+                                saveButtonColor
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            },
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                if (key == "⌫") {
+                                    onKeyPress("BACKSPACE")
+                                } else {
+                                    onKeyPress(key)
+                                }
+                            }
                         )
                     }
                 }
+            }
 
-                // Primary Action Button (Save or Calculate =)
+            Spacer(modifier = Modifier.height(4.dp))
+
+            if (onNext != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Next Button (Hides Numpad)
+                    Button(
+                        onClick = {
+                            if (hasOperatorInAmount) {
+                                onEvaluate()
+                            }
+                            onNext()
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = saveButtonColor.copy(alpha = 0.15f),
+                            contentColor = saveButtonColor
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(54.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "Next",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = "Next",
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    // Primary Action Button (Save or Calculate =)
+                    Button(
+                        onClick = {
+                            onEvaluate()
+                        },
+                        enabled = hasOperatorInAmount,
+                        shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (hasOperatorInAmount) MaterialTheme.colorScheme.tertiary else saveButtonColor,
+                            contentColor = Color.White
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(54.dp)
+                    ) {
+                        if (hasOperatorInAmount) {
+                            Text(
+                                text = "=",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        } else {
+                            Text(
+                                text = saveButtonText,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+            } else {
+                // Clean Single Primary Action Button
                 Button(
-                    onClick = {
-                        onEvaluate()
-                    },
+                    onClick = onEvaluate,
                     enabled = hasOperatorInAmount,
                     shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -134,51 +180,22 @@ fun NumpadView(
                         contentColor = Color.White
                     ),
                     modifier = Modifier
-                        .weight(1f)
+                        .fillMaxWidth()
                         .height(54.dp)
                 ) {
                     if (hasOperatorInAmount) {
                         Text(
                             text = "=",
-                            fontSize = 22.sp,
+                            fontSize = 24.sp,
                             fontWeight = FontWeight.Bold
                         )
                     } else {
                         Text(
                             text = saveButtonText,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
-                }
-            }
-        } else {
-            // Clean Single Primary Action Button
-            Button(
-                onClick = onEvaluate,
-                enabled = hasOperatorInAmount,
-                shape = RoundedCornerShape(20.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (hasOperatorInAmount) MaterialTheme.colorScheme.tertiary else saveButtonColor,
-                    contentColor = Color.White
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp)
-            ) {
-                if (hasOperatorInAmount) {
-                    Text(
-                        text = "=",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                } else {
-                    Text(
-                        text = saveButtonText,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold
-                    )
                 }
             }
         }

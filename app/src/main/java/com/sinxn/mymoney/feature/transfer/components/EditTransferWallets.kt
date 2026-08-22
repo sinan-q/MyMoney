@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import com.sinxn.mymoney.core.data.local.entity.WalletEntity
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CleanListRow
+import com.sinxn.mymoney.core.ui.components.DescriptionEditForm
+import com.sinxn.mymoney.core.ui.components.FormCardContainer
 import com.sinxn.mymoney.core.ui.components.TransactionFormRowItem
 import com.sinxn.mymoney.core.ui.components.parseIconData
 
@@ -43,19 +45,10 @@ fun EditTransferWallets(
     val activeToWallet = availableWallets.find { it.id == toWalletId }
 
     // From Wallet Card
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        val activeFromWalletIconData = remember(activeFromWallet?.icon, activeFromWallet?.name) {
-            if (activeFromWallet != null) parseIconData(activeFromWallet.icon, activeFromWallet.name) else null
-        }
+    val activeFromWalletIconData = remember(activeFromWallet?.icon, activeFromWallet?.name) {
+        if (activeFromWallet != null) parseIconData(activeFromWallet.icon, activeFromWallet.name) else null
+    }
+    FormCardContainer() {
         TransactionFormRowItem(
             icon = Icons.Default.AccountBalanceWallet,
             accentColor = accentColor,
@@ -100,16 +93,7 @@ fun EditTransferWallets(
     }
 
     // To Wallet Card
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
+    FormCardContainer {
         val activeToWalletIconData = remember(activeToWallet?.icon, activeToWallet?.name) {
             if (activeToWallet != null) parseIconData(activeToWallet.icon, activeToWallet.name) else null
         }
@@ -125,55 +109,30 @@ fun EditTransferWallets(
 
     // Multi-currency Destination Amount Field
     if (activeFromWallet != null && activeToWallet != null && !activeFromWallet.currency.equals(activeToWallet.currency, ignoreCase = true)) {
-        Spacer(modifier = Modifier.height(10.dp))
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-        ) {
-            Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
-                OutlinedTextField(
-                    value = targetAmount,
-                    onValueChange = onTargetAmountChange,
-                    label = { Text("Destination Amount ($targetCurrency)") },
-                    placeholder = { Text("Received in $targetCurrency") },
-                    leadingIcon = { Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-                )
-            }
+        //Spacer(modifier = Modifier.height(10.dp))
+        FormCardContainer {
+            DescriptionEditForm(
+                icon = Icons.Default.AccountBalanceWallet,
+                accentColor = accentColor,
+                label = "Destination Amount ($targetCurrency)",
+                placeHolder = "Received in $targetCurrency",
+                value = targetAmount,
+                onValueChange = onTargetAmountChange,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            )
         }
     }
 
     // Transfer Fee / Tax Field
-    Spacer(modifier = Modifier.height(10.dp))
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
-            OutlinedTextField(
-                value = transferFee,
-                onValueChange = onTransferFeeChange,
-                label = { Text("Transfer Fee / Tax ($sourceCurrency)") },
-                placeholder = { Text("0.00") },
-                leadingIcon = { Icon(Icons.Default.Tune, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-            )
-        }
+    FormCardContainer {
+        DescriptionEditForm(
+            icon = Icons.Default.Tune,
+            accentColor = accentColor,
+            label = "Transfer Fee / Tax ($sourceCurrency)",
+            placeHolder = "0.00",
+            value = transferFee,
+            onValueChange = onTransferFeeChange,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        )
     }
 }
