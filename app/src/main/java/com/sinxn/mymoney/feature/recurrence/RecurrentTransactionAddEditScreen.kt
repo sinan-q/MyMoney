@@ -127,12 +127,12 @@ fun RecurrentTransactionAddEditScreen(
                             ) {
                                 TabPill(
                                     tabs = listOf(
-                                        "Expense" to Color(0xFFE11D48),
-                                        "Income" to Color(0xFF10B981)
+                                        "Income" to Color(0xFF10B981),
+                                        "Expense" to Color(0xFFE11D48)
                                     ),
-                                    activeTab = if (uiState.direction == Direction.EXPENSE) 0 else 1,
+                                    activeTab = if (uiState.direction == Direction.INCOME) 0 else 1,
                                     onTabChange = { index: Int ->
-                                        viewModel.onDirectionChanged(if (index == 0) Direction.EXPENSE else Direction.INCOME)
+                                        viewModel.onDirectionChanged(if (index == 0) Direction.INCOME else Direction.EXPENSE)
                                     }
                                 )
                             }

@@ -70,7 +70,7 @@ fun CategorySelectionDialog(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val pagerState = rememberPagerState(
-        initialPage = if (showIncome) 1 else 0,
+        initialPage = if (showIncome) 0 else 1,
         pageCount = { 2 }
     )
 
@@ -179,7 +179,7 @@ fun CategorySelectionDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     // Subtle pill toggle synced with pager state
-                    TabPill(
+                    aTabPill(
                         activeTab = pagerState.currentPage,
                         onTabChange = { index ->
                             scope.launch { pagerState.animateScrollToPage(index) }
@@ -216,8 +216,8 @@ fun CategorySelectionDialog(
                 userScrollEnabled = true,
                 beyondViewportPageCount = 1
             ) { page ->
-                val flatRows = if (page == 0) expenseFlatRows else incomeFlatRows
-                val listState = if (page == 0) expenseListState else incomeListState
+                val flatRows = if (page == 0) incomeFlatRows else expenseFlatRows
+                val listState = if (page == 0) incomeListState else expenseListState
 
                 if (flatRows.isEmpty()) {
                     EmptyState()
@@ -290,11 +290,11 @@ fun CategorySelectionDialog(
 // ── Tab Pill ──
 
 @Composable
-private fun TabPill(
+fun aTabPill(
     activeTab: Int,
-    onTabChange: (Int) -> Unit
+    onTabChange: (Int) -> Unit,
+    tabs: List<Pair<String, Color>> = listOf("Income" to Color(0xFF10B981), "Expense" to Color(0xFFE11D48))
 ) {
-    val tabs = listOf("Expense" to Color(0xFFE11D48), "Income" to Color(0xFF10B981))
 
     Row(
         modifier = Modifier

@@ -26,8 +26,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 @Composable
-public fun TabPill(
-    tabs: List<Pair<String, Color>>,
+fun TabPill(
+    tabs: List<Pair<String, Color>> = listOf("Income" to Color(0xFF10B981), "Expense" to Color(0xFFE11D48)),
     activeTab: Int,
     onTabChange: (Int) -> Unit
 ) {
@@ -35,7 +35,6 @@ public fun TabPill(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 6.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             .padding(4.dp),

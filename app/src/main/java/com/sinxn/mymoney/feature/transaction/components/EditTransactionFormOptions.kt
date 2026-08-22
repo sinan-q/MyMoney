@@ -60,11 +60,6 @@ fun EditTransactionFormOptions(
                 onClick = { activePicker(FormPicker.Category) }
             )
 
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-
             // Wallet Row
             val activeWallet = uiState.availableWallets.find { it.id == uiState.editWalletId }
             val walletIconData = remember(activeWallet?.icon, activeWallet?.name) {
@@ -81,11 +76,6 @@ fun EditTransactionFormOptions(
                 value = activeWallet?.name ?: "Select Wallet",
                 trailingIconData = walletIconData,
                 onClick = { activePicker(FormPicker.Wallet) }
-            )
-
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                modifier = Modifier.padding(horizontal = 16.dp)
             )
 
             // Date Row
@@ -109,11 +99,6 @@ fun EditTransactionFormOptions(
                 onClick = { activePicker(FormPicker.Date) }
             )
 
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-
             // People Row
             val selectedPeople = uiState.availablePeople.filter { it.id in uiState.editPeopleIds }
             val selectedPeopleNames = selectedPeople.joinToString { it.name }.ifEmpty { "None" }
@@ -124,11 +109,6 @@ fun EditTransactionFormOptions(
                 label = "People",
                 value = selectedPeopleNames,
                 onClick = { activePicker(FormPicker.People) }
-            )
-
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                modifier = Modifier.padding(horizontal = 16.dp)
             )
 
             // Place Row
@@ -149,11 +129,6 @@ fun EditTransactionFormOptions(
                 onClick = { activePicker(FormPicker.Place) }
             )
 
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-
             // Event Row
             val activeEvent = uiState.availableEvents.find { it.id == uiState.editEventId }
             val eventIconData = remember(activeEvent?.icon, activeEvent?.name) {
@@ -170,11 +145,6 @@ fun EditTransactionFormOptions(
                 value = activeEvent?.name ?: "None",
                 trailingIconData = eventIconData,
                 onClick = { activePicker(FormPicker.Event) }
-            )
-
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                modifier = Modifier.padding(horizontal = 16.dp)
             )
 
             // Note Field

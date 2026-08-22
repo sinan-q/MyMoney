@@ -185,8 +185,14 @@ fun EditTransferContent(
                 label = "Date",
                 value = formattedDate,
                 onClick = {
+                    numpadDismiss()
                     activePicker = FormPicker.Date
                 }
+            )
+
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                modifier = Modifier.padding(horizontal = 16.dp)
             )
 
             // People Row
@@ -199,8 +205,14 @@ fun EditTransferContent(
                 label = "People",
                 value = selectedPeopleNames,
                 onClick = {
+                    numpadDismiss()
                     activePicker = FormPicker.People
                 }
+            )
+
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                modifier = Modifier.padding(horizontal = 16.dp)
             )
 
             // Place Row
@@ -219,8 +231,14 @@ fun EditTransferContent(
                 value = activePlace?.name ?: "None",
                 trailingIconData = placeIconData,
                 onClick = {
+                    numpadDismiss()
                     activePicker = FormPicker.Place
                 }
+            )
+
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                modifier = Modifier.padding(horizontal = 16.dp)
             )
 
             // Event Row
@@ -239,9 +257,16 @@ fun EditTransferContent(
                 value = activeEvent?.name ?: "None",
                 trailingIconData = eventIconData,
                 onClick = {
+                    numpadDismiss()
                     activePicker = FormPicker.Event
                 }
             )
+
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+
             // Note Field
             DescriptionEditForm(
                 modifier = Modifier,

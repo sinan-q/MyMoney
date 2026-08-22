@@ -90,7 +90,7 @@ fun CategoryListScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    val targetType = if (pagerState.currentPage == 0) CategoryType.EXPENSE else CategoryType.INCOME
+                    val targetType = if (pagerState.currentPage == 0) CategoryType.INCOME else CategoryType.EXPENSE
                     onAddCategoryClick(targetType)
                 }
             ) {
@@ -104,7 +104,7 @@ fun CategoryListScreen(
                 .padding(innerPadding)
         ) {
             TabPill(
-                tabs = listOf("Expense" to Color(0xFFE11D48), "Income" to Color(0xFF10B981)),
+                tabs = listOf("Income" to Color(0xFF10B981), "Expense" to Color(0xFFE11D48)),
                 activeTab = pagerState.currentPage,
                 onTabChange = { index ->
                     coroutineScope.launch {
@@ -129,8 +129,8 @@ fun CategoryListScreen(
                         .weight(1f),
                     key = { page -> page }
                 ) { page ->
-                    val flatRows = if (page == 0) expenseFlatRows else incomeFlatRows
-                    val listState = if (page == 0) expenseListState else incomeListState
+                    val flatRows = if (page == 0) incomeFlatRows else expenseFlatRows
+                    val listState = if (page == 0) incomeListState else expenseListState
 
                     if (flatRows.isEmpty()) {
                         Box(

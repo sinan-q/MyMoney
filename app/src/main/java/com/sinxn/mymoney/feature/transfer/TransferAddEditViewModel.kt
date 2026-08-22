@@ -373,6 +373,33 @@ class TransferAddEditViewModel @Inject constructor(
         return MathExpressionEvaluator.getImmediateResult(editAmount, uiState.value.currencyDecimals)
     }
 
+    fun deleteTransfer(onComplete: () -> Unit) {
+        if (isNewTransfer) {
+            onComplete()
+            return
+        }
+        viewModelScope.launch {
+            val transfer = _formState.value.transferEntity
+                ?: (transferIdArg?.let { transactionRepository.getTransferById(it) })
+                ?: (transactionIdArg?.let { transactionRepository.getTransferByTransactionId(it) })
+
+            if (transfer != null) {
+                transactionRepository.softDeleteTransferAndSiblings(transfer)
+            } else if (transactionIdArg != null) {
+                val tx = transactionRepository.getTransactionById(transactionIdArg)
+                if (tx != null) {
+                    val sibling = transactionRepository.findSiblingTransferTransaction(tx.money, tx.date, tx.id)
+                    val now = System.currentTimeMillis()
+                    moneyDao.updateTransaction(tx.copy(isDeleted = true, lastEdit = now))
+                    if (sibling != null) {
+                        moneyDao.updateTransaction(sibling.copy(isDeleted = true, lastEdit = now))
+                    }
+                }
+            }
+            onComplete()
+        }
+    }
+
     fun saveTransfer(onSuccess: () -> Unit) {
         if (_isSaving.value) return
         _isSaving.value = true

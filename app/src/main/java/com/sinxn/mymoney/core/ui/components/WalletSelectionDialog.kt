@@ -135,6 +135,10 @@ fun WalletSelectionDialog(
                 ) {
                     if (archivedWallets.isNotEmpty()) {
                         TabPill(
+                            tabs = listOf(
+                                "Active" to MaterialTheme.colorScheme.primary,
+                                "Archived" to MaterialTheme.colorScheme.error
+                            ),
                             activeTab = selectedTab,
                             onTabChange = { selectedTab = it }
                         )
@@ -268,53 +272,6 @@ private data class WalletDialogItem(
     val iconData: IconData
 )
 
-// ── Tab Pill for Active/Archived ──
-
-@Composable
-private fun TabPill(
-    activeTab: Int,
-    onTabChange: (Int) -> Unit
-) {
-    val tabs = listOf("Active", "Archived")
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(36.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            .padding(3.dp),
-        horizontalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        tabs.forEachIndexed { index, title ->
-            val isSelected = activeTab == index
-            val bgColor by animateColorAsState(
-                targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                label = "TabBg"
-            )
-            val textColor by animateColorAsState(
-                targetValue = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                label = "TabText"
-            )
-
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .clip(CircleShape)
-                    .background(bgColor)
-                    .clickable { onTabChange(index) }
-                    .padding(horizontal = 10.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = textColor
-                )
-            }
-        }
-    }
-}
 
 // ── Minimalist Edge-to-Edge Wallet Row ──
 

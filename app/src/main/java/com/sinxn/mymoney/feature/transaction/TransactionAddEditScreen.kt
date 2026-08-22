@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,6 +40,8 @@ fun TransactionAddEditScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val settings by viewModel.formattingSettings.collectAsState()
+
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
 
     val transferUiState by transferViewModel.uiState.collectAsState()
     val transferSettings by transferViewModel.formattingSettings.collectAsState()
@@ -144,31 +147,37 @@ fun TransactionAddEditScreen(
             }
         },
         topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onNavigateBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back"
+            TopAppBar(
+                title = {
+                    Text(
+                        text = titleText,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                },
+                actions = {
+                    if (!uiState.isNewTransaction) {
+                        IconButton(onClick = { showDeleteConfirmation = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
                 }
+            )
+        },
 
-                Text(
-                    text = titleText,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                Spacer(modifier = Modifier.width(48.dp))
-            }
-        }
     ) { padding ->
         Box(
             modifier = Modifier
@@ -257,6 +266,30 @@ fun TransactionAddEditScreen(
             saveButtonText = activeFabText,
             saveButtonColor = activeFabColor,
             onDismiss = { activeNumpadState.dismiss() }
+        )
+    }
+
+    if (showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = { Text("Delete Transaction") },
+            text = { Text("Are you sure you want to delete this transaction?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirmation = false
+                        viewModel.deleteTransaction { onNavigateBack() }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmation = false }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 }

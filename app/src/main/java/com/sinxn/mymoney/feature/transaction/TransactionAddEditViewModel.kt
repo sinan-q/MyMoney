@@ -400,6 +400,20 @@ class TransactionAddEditViewModel @Inject constructor(
         return MathExpressionEvaluator.getImmediateResult(editAmount, uiState.value.currencyDecimals)
     }
 
+    fun deleteTransaction(onComplete: () -> Unit) {
+        val txId = transactionIdArg ?: run {
+            onComplete()
+            return
+        }
+        viewModelScope.launch {
+            val tx = transactionRepository.getTransactionById(txId)
+            if (tx != null) {
+                transactionRepository.deleteTransaction(tx, null)
+            }
+            onComplete()
+        }
+    }
+
     fun saveChanges(onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isSaving.value = true
