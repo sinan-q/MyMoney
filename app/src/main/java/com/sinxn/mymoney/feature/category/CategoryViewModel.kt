@@ -124,6 +124,12 @@ class CategoryViewModel @Inject constructor(
         }
     }
 
+    fun reorderCategories(orderedCategoryIds: List<String>) {
+        viewModelScope.launch {
+            categoryRepository.reorderCategories(orderedCategoryIds)
+        }
+    }
+
     fun deleteCategory(category: CategoryEntity) {
         viewModelScope.launch {
             categoryRepository.deleteCategory(category.id)

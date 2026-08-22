@@ -65,6 +65,13 @@ class CategoryRepository @Inject constructor(
         moneyDao.updateCategoryArchived(categoryId, isArchived, now)
     }
 
+    suspend fun reorderCategories(categoryIds: List<String>) {
+        val now = System.currentTimeMillis()
+        categoryIds.forEachIndexed { index, categoryId ->
+            moneyDao.updateCategoryIndex(categoryId, index + 1, now)
+        }
+    }
+
     suspend fun deleteCategory(categoryId: String) {
         val now = System.currentTimeMillis()
         moneyDao.unlinkSubcategoriesForParent(categoryId, now)

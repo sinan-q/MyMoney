@@ -348,6 +348,9 @@ interface MoneyDao {
     @Query("UPDATE categories SET parentId = NULL, lastEdit = :lastEdit WHERE parentId = :categoryId")
     suspend fun unlinkSubcategoriesForParent(categoryId: String, lastEdit: Long)
 
+    @Query("UPDATE categories SET `index` = :index, lastEdit = :lastEdit WHERE id = :categoryId")
+    suspend fun updateCategoryIndex(categoryId: String, index: Int, lastEdit: Long)
+
     @Query("SELECT * FROM categories WHERE isDeleted = 0 ORDER BY `index` ASC")
     fun getCategories(): Flow<List<CategoryEntity>>
 
