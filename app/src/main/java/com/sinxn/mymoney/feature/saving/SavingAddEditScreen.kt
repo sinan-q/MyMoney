@@ -38,8 +38,9 @@ import com.sinxn.mymoney.core.ui.components.FormCardContainer
 import com.sinxn.mymoney.core.ui.components.FormDatePickerDialog
 import com.sinxn.mymoney.core.ui.components.NumpadView
 import com.sinxn.mymoney.core.ui.components.rememberNumpadFormState
+import com.sinxn.mymoney.ui.theme.IncomeColor
 
-private val SavingAccentColor = Color(0xFF10B981)
+private val SavingAccentColor = IncomeColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -38,9 +38,10 @@ import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
+import com.sinxn.mymoney.ui.theme.IncomeColor
 
 private val InProgressColor = Color(0xFF3F51B5)
-private val CompletedColor = Color(0xFF10B981)
+private val CompletedColor = IncomeColor
 
 @Composable
 fun SavingListScreen(

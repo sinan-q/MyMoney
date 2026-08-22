@@ -28,6 +28,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.ui.components.*
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.RecurrenceSetting
+import com.sinxn.mymoney.ui.theme.IncomeColor
+import com.sinxn.mymoney.ui.theme.TransferColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,7 +47,7 @@ fun RecurrentTransferAddEditScreen(
     var activeWalletPickerForTarget by remember { mutableStateOf(false) }
     var showRecurrencePicker by remember { mutableStateOf(false) }
 
-    val accentColor = Color(0xFF0284C7)
+    val accentColor = TransferColor
 
     val hasOperatorInAmount = remember(uiState.moneyFromStr) {
         numpadState.hasOperator(uiState.moneyFromStr)
@@ -190,7 +192,7 @@ fun RecurrentTransferAddEditScreen(
                                         Icon(
                                             Icons.Default.AccountBalanceWallet,
                                             contentDescription = null,
-                                            tint = Color(0xFF10B981),
+                                            tint = IncomeColor,
                                             modifier = Modifier.size(22.dp)
                                         )
                                     }

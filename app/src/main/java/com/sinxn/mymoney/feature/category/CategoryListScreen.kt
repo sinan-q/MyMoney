@@ -32,6 +32,8 @@ import com.sinxn.mymoney.core.ui.components.IconData
 import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.CategoryType
+import com.sinxn.mymoney.ui.theme.ExpenseColor
+import com.sinxn.mymoney.ui.theme.IncomeColor
 import kotlinx.coroutines.launch
 import kotlin.collections.listOf
 
@@ -104,7 +106,7 @@ fun CategoryListScreen(
                 .padding(innerPadding)
         ) {
             TabPill(
-                tabs = listOf("Income" to Color(0xFF10B981), "Expense" to Color(0xFFE11D48)),
+                tabs = listOf("Income" to IncomeColor, "Expense" to ExpenseColor),
                 activeTab = pagerState.currentPage,
                 onTabChange = { index ->
                     coroutineScope.launch {

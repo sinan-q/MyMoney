@@ -25,6 +25,8 @@ import com.sinxn.mymoney.core.ui.components.FormCardContainer
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.core.util.RecurrenceSetting
+import com.sinxn.mymoney.ui.theme.IncomeColor
+import com.sinxn.mymoney.ui.theme.TransferColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,7 +108,7 @@ fun RecurrentTransferDetailsScreen(
                     }
                 } else {
                     val rtf = item.recurrentTransfer
-                    val transferColor = Color(0xFF0284C7)
+                    val transferColor = TransferColor
 
                     val startDate = remember(rtf.startDate) { DateUtils.parseDate(rtf.startDate) }
                     val setting = remember(rtf.startDate, rtf.rule) {
@@ -208,7 +210,7 @@ fun RecurrentTransferDetailsScreen(
                                     Icon(
                                         Icons.Default.AccountBalanceWallet,
                                         contentDescription = null,
-                                        tint = Color(0xFF10B981),
+                                        tint = IncomeColor,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 },

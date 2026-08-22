@@ -44,10 +44,9 @@ import com.sinxn.mymoney.core.util.MoneyFormatter
 import kotlinx.coroutines.launch
 import java.util.Date
 import java.util.Locale
-import kotlin.collections.listOf
+import com.sinxn.mymoney.ui.theme.ExpenseColor
+import com.sinxn.mymoney.ui.theme.IncomeColor
 
-private val DebtRoseColor = Color(0xFFE11D48)
-private val CreditEmeraldColor = Color(0xFF10B981)
 private val DebtCardShape = RoundedCornerShape(12.dp)
 private val QuickPaymentButtonShape = RoundedCornerShape(12.dp)
 
@@ -127,7 +126,7 @@ private fun DebtListContent(
     onDeleteDebt: (String) -> Unit
 ) {
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
-    val accentColor = if (pagerState.currentPage == 0) DebtRoseColor else CreditEmeraldColor
+    val accentColor = if (pagerState.currentPage == 0) ExpenseColor else IncomeColor
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -198,7 +197,7 @@ fun DebtListBodyContent(
             contentAlignment = Alignment.Center
         ) {
             TabPill(
-                tabs = listOf(Pair("Debts",  DebtRoseColor), Pair("Credits",  CreditEmeraldColor)),
+                tabs = listOf(Pair("Debts", ExpenseColor), Pair("Credits", IncomeColor)),
                 activeTab = pagerState.currentPage,
                 onTabChange = { index ->
                     coroutineScope.launch {
@@ -311,7 +310,7 @@ private fun DebtSummaryCard(
     isReduced: Boolean = false
 ) {
     val isDebt = selectedTab == 0
-    val accentColor = if (isDebt) DebtRoseColor else CreditEmeraldColor
+    val accentColor = if (isDebt) ExpenseColor else IncomeColor
 
     val animatedVerticalPadding by animateDpAsState(
         targetValue = if (isReduced) 2.dp else 6.dp,
@@ -519,7 +518,7 @@ private fun DebtCardItem(
     val remaining = debtWithDetails.remainingMoney
 
     val isDebt = debt.type == 0
-    val accentColor = if (isDebt) DebtRoseColor else CreditEmeraldColor
+    val accentColor = if (isDebt) ExpenseColor else IncomeColor
     val isFullyPaid = remaining == 0L && totalMoney > 0
 
     val isOverdue = remember(debt.expirationDate, isFullyPaid) {
@@ -757,7 +756,7 @@ private fun EmptyDebtState(
     selectedTab: Int,
 ) {
     val isDebt = selectedTab == 0
-    val accentColor = if (isDebt) DebtRoseColor else CreditEmeraldColor
+    val accentColor = if (isDebt) ExpenseColor else IncomeColor
 
     Box(
         modifier = Modifier.fillMaxSize(),

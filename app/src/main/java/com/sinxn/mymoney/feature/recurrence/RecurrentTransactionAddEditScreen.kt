@@ -28,6 +28,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.ui.components.*
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.Direction
+import com.sinxn.mymoney.ui.theme.ExpenseColor
+import com.sinxn.mymoney.ui.theme.IncomeColor
 import com.sinxn.mymoney.core.util.RecurrenceSetting
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,7 +48,7 @@ fun RecurrentTransactionAddEditScreen(
     var showRecurrencePicker by remember { mutableStateOf(false) }
 
     val accentColor = remember(uiState.direction) {
-        if (uiState.direction == Direction.INCOME) Color(0xFF10B981) else Color(0xFFE11D48)
+        if (uiState.direction == Direction.INCOME) IncomeColor else ExpenseColor
     }
 
     val hasOperatorInAmount = remember(uiState.moneyStr) {
@@ -127,8 +129,8 @@ fun RecurrentTransactionAddEditScreen(
                             ) {
                                 TabPill(
                                     tabs = listOf(
-                                        "Income" to Color(0xFF10B981),
-                                        "Expense" to Color(0xFFE11D48)
+                                        "Income" to IncomeColor,
+                                        "Expense" to ExpenseColor
                                     ),
                                     activeTab = if (uiState.direction == Direction.INCOME) 0 else 1,
                                     onTabChange = { index: Int ->

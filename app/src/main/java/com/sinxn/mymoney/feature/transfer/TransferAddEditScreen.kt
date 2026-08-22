@@ -26,6 +26,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.ui.components.NumpadView
 import com.sinxn.mymoney.core.ui.components.rememberNumpadFormState
 import com.sinxn.mymoney.feature.transfer.components.EditTransferContent
+import com.sinxn.mymoney.ui.theme.TransferColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,7 +39,7 @@ fun TransferAddEditScreen(
     var showDeleteConfirmation by remember { mutableStateOf(false) }
 
     val numpadState = rememberNumpadFormState(initialNumpadVisible = uiState.isNewTransfer)
-    val transferAccentColor = Color(0xFF0284C7)
+    val transferAccentColor = TransferColor
 
     val hasOperatorInAmount = remember(uiState.editAmount) {
         numpadState.hasOperator(uiState.editAmount)

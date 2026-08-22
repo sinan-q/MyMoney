@@ -39,10 +39,11 @@ import com.sinxn.mymoney.core.ui.components.CleanListRow
 import com.sinxn.mymoney.core.ui.components.CurrencySelectionDialog
 import com.sinxn.mymoney.core.ui.components.FormCardContainer
 import com.sinxn.mymoney.core.ui.components.parseIconData
+import com.sinxn.mymoney.ui.theme.IncomeColor
 import kotlinx.coroutines.flow.collectLatest
 import org.json.JSONObject
 
-private val WalletPrimaryColor = Color(0xFF10B981)
+private val WalletPrimaryColor = IncomeColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

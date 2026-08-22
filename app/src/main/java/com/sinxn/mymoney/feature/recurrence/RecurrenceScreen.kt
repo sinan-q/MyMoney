@@ -24,6 +24,7 @@ import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.FinanceListItem
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
+import com.sinxn.mymoney.ui.theme.TransferColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -172,13 +173,13 @@ fun RecurrentTransferCard(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF0284C7).copy(alpha = 0.12f)),
+                    .background(TransferColor.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Repeat,
                     contentDescription = null,
-                    tint = Color(0xFF0284C7),
+                    tint = TransferColor,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -186,7 +187,7 @@ fun RecurrentTransferCard(
         title = item.title,
         subtitle = item.subtitle,
         amountText = item.formattedAmount,
-        amountColor = Color(0xFF0284C7),
+        amountColor = TransferColor,
         subAmountText = item.nextOccurrenceText,
         onClick = onClick
     )

@@ -33,6 +33,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
+import com.sinxn.mymoney.ui.theme.ExpenseColor
+import com.sinxn.mymoney.ui.theme.IncomeColor
 import kotlinx.coroutines.launch
 
 /**
@@ -293,7 +295,7 @@ fun CategorySelectionDialog(
 fun aTabPill(
     activeTab: Int,
     onTabChange: (Int) -> Unit,
-    tabs: List<Pair<String, Color>> = listOf("Income" to Color(0xFF10B981), "Expense" to Color(0xFFE11D48))
+    tabs: List<Pair<String, Color>> = listOf("Income" to IncomeColor, "Expense" to ExpenseColor)
 ) {
 
     Row(

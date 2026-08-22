@@ -50,8 +50,8 @@ import com.sinxn.mymoney.core.ui.components.rememberNumpadFormState
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.feature.debt.component.DebtFormContent
 
-private val DebtRoseColor = Color(0xFFE11D48)
-private val CreditEmeraldColor = Color(0xFF10B981)
+import com.sinxn.mymoney.ui.theme.ExpenseColor
+import com.sinxn.mymoney.ui.theme.IncomeColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,7 +61,7 @@ fun DebtAddEditScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isDebt = uiState.editType == 0
-    val accentColor = if (isDebt) DebtRoseColor else CreditEmeraldColor
+    val accentColor = if (isDebt) ExpenseColor else IncomeColor
 
     val numpadState = rememberNumpadFormState(initialNumpadVisible = uiState.isNewDebt)
 
@@ -142,7 +142,7 @@ fun DebtAddEditScreen(
                     ) {
                         if (uiState.isNewDebt) {
                             TabPill(
-                                tabs = listOf("Debt" to DebtRoseColor, "Credit" to CreditEmeraldColor),
+                                tabs = listOf("Debt" to ExpenseColor, "Credit" to IncomeColor),
                                 activeTab = uiState.editType,
                                 onTabChange = { viewModel.updateType(it) }
                             )

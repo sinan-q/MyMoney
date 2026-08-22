@@ -38,6 +38,7 @@ import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.feature.settings.SettingsSwitchItem
 import com.sinxn.mymoney.feature.transfer.TransferAddEditUiState
 import com.sinxn.mymoney.feature.transfer.TransferAddEditViewModel
+import com.sinxn.mymoney.ui.theme.TransferColor
 import java.util.Date
 import kotlin.text.ifEmpty
 
@@ -59,7 +60,7 @@ fun EditTransferContent(
     val scrollState = rememberScrollState()
     var activePicker by remember { mutableStateOf<FormPicker?>(null) }
 
-    val accentColor = Color(0xFF0284C7)
+    val accentColor = TransferColor
     val bottomPadding = if (isNumpadVisible) 320.dp else 80.dp
 
     Column(

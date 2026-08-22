@@ -18,9 +18,9 @@ import androidx.compose.ui.unit.dp
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
-
-val DebtRoseColor = Color(0xFFE11D48)
-val CreditEmeraldColor = Color(0xFF10B981)
+import com.sinxn.mymoney.ui.theme.ExpenseColor
+import com.sinxn.mymoney.ui.theme.IncomeColor
+import com.sinxn.mymoney.ui.theme.TransferColor
 
 @Immutable
 data class TransactionUiModel(
@@ -59,9 +59,9 @@ fun TransactionWithCategory.toUiModel(
     val isIncome = transaction.direction == 1
     val isIncomeTransfer = isIncome
     val amountColor = when {
-        isTransferItem -> Color(0xFF0284C7)
-        isIncome -> Color(0xFF2E7D32)
-        else -> Color(0xFFC62828)
+        isTransferItem -> TransferColor
+        isIncome -> IncomeColor
+        else -> ExpenseColor
     }
 
     val amount = if (isIncome || isTransferItem) transaction.money else -transaction.money
@@ -98,7 +98,7 @@ fun TransactionItem(
     FinanceListItem(
         icon = {
             if (uiModel.isTransferItem) {
-                val transferAccentColor = if (uiModel.isIncomeTransfer) CreditEmeraldColor else DebtRoseColor
+                val transferAccentColor = if (uiModel.isIncomeTransfer) IncomeColor else ExpenseColor
                 Box(
                     modifier = Modifier
                         .size(44.dp)

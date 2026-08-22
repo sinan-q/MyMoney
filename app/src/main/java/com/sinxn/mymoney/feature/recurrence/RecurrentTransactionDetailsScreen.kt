@@ -26,6 +26,8 @@ import com.sinxn.mymoney.core.ui.components.FormCardContainer
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.core.util.RecurrenceSetting
+import com.sinxn.mymoney.ui.theme.ExpenseColor
+import com.sinxn.mymoney.ui.theme.IncomeColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -108,7 +110,7 @@ fun RecurrentTransactionDetailsScreen(
                 } else {
                     val rt = item.recurrentTransaction
                     val isIncome = rt.direction == 1
-                    val directionColor = if (isIncome) Color(0xFF10B981) else Color(0xFFE11D48)
+                    val directionColor = if (isIncome) IncomeColor else ExpenseColor
 
                     val startDate = remember(rt.startDate) { DateUtils.parseDate(rt.startDate) }
                     val setting = remember(rt.startDate, rt.rule) {

@@ -31,13 +31,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.feature.debt.component.DebtViewContent
-
-private val DebtRoseColor = Color(0xFFE11D48)
-private val CreditEmeraldColor = Color(0xFF10B981)
+import com.sinxn.mymoney.ui.theme.ExpenseColor
+import com.sinxn.mymoney.ui.theme.IncomeColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,7 +51,7 @@ fun DebtDetailsScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     val isDebt = (uiState.debtDetails?.debt?.type ?: 0) == 0
-    val accentColor = if (isDebt) DebtRoseColor else CreditEmeraldColor
+    val accentColor = if (isDebt) ExpenseColor else IncomeColor
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),

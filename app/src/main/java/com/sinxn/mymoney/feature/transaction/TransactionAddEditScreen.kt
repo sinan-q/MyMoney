@@ -29,6 +29,9 @@ import com.sinxn.mymoney.core.util.Direction
 import com.sinxn.mymoney.feature.transaction.components.EditTransactionContent
 import com.sinxn.mymoney.feature.transfer.TransferAddEditViewModel
 import com.sinxn.mymoney.feature.transfer.components.EditTransferContent
+import com.sinxn.mymoney.ui.theme.ExpenseColor
+import com.sinxn.mymoney.ui.theme.IncomeColor
+import com.sinxn.mymoney.ui.theme.TransferColor
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,9 +53,9 @@ fun TransactionAddEditScreen(
     val pagerState = rememberPagerState(pageCount = { 2 })
 
     val txAccentColor = remember(uiState.editDirection) {
-        if (uiState.editDirection == Direction.INCOME) Color(0xFF10B981) else Color(0xFFE11D48)
+        if (uiState.editDirection == Direction.INCOME) IncomeColor else ExpenseColor
     }
-    val transferAccentColor = Color(0xFF0284C7)
+    val transferAccentColor = TransferColor
 
     val titleText = if (uiState.isNewTransaction) {
         if (pagerState.currentPage == 1) "New Transfer" else "New Transaction"

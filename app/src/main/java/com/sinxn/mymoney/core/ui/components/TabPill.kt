@@ -6,11 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -24,14 +21,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sinxn.mymoney.ui.theme.ExpenseColor
+import com.sinxn.mymoney.ui.theme.IncomeColor
 
 @Composable
 fun TabPill(
-    tabs: List<Pair<String, Color>> = listOf("Income" to Color(0xFF10B981), "Expense" to Color(0xFFE11D48)),
+    tabs: List<Pair<String, Color>> = listOf("Income" to IncomeColor, "Expense" to ExpenseColor),
     activeTab: Int,
     onTabChange: (Int) -> Unit
 ) {
-
     Row(
         modifier = Modifier
             .fillMaxWidth()

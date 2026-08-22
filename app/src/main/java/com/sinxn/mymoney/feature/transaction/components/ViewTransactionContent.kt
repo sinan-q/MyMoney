@@ -24,8 +24,8 @@ import androidx.compose.ui.unit.sp
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CleanListRow
-import com.sinxn.mymoney.core.ui.components.CreditEmeraldColor
-import com.sinxn.mymoney.core.ui.components.DebtRoseColor
+import com.sinxn.mymoney.ui.theme.ExpenseColor
+import com.sinxn.mymoney.ui.theme.IncomeColor
 import com.sinxn.mymoney.core.ui.components.FormCardContainer
 import com.sinxn.mymoney.core.ui.components.TransactionFormRowItem
 import com.sinxn.mymoney.core.ui.components.parseIconData
@@ -34,6 +34,7 @@ import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.feature.transaction.TransactionDetailsUiState
 import com.sinxn.mymoney.feature.transaction.util.resolveCategoryHierarchy
 import com.sinxn.mymoney.feature.transfer.components.CentreSwapButton
+import com.sinxn.mymoney.ui.theme.TransferColor
 import java.util.Locale
 
 @Composable
@@ -57,9 +58,9 @@ fun ViewTransactionContent(
     val categoryIcon =  uiState.transaction.categoryIcon
         ?: uiState.availableCategories.find { it.id == transaction.categoryId }?.icon
 
-    val directionColor = if (isTransfer) Color(0xFF0284C7) else when (transaction.direction) {
-        1 -> Color(0xFF10B981)
-        else -> Color(0xFFE11D48)
+    val directionColor = if (isTransfer) TransferColor else when (transaction.direction) {
+        1 -> IncomeColor
+        else -> ExpenseColor
     }
     val activeWallet = uiState.wallet
     val walletIconData = remember(activeWallet?.icon, activeWallet?.name) {
@@ -118,7 +119,7 @@ fun ViewTransactionContent(
                 ) {
                     if (isTransfer) {
                         val isIncomeTransfer = transaction.direction == 1
-                        val transferAccentColor = if (isIncomeTransfer) CreditEmeraldColor else DebtRoseColor
+                        val transferAccentColor = if (isIncomeTransfer) IncomeColor else ExpenseColor
                         Box(
                             modifier = Modifier
                                 .size(28.dp)

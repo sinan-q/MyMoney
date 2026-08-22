@@ -19,6 +19,8 @@ import com.sinxn.mymoney.core.ui.components.FormPicker
 import com.sinxn.mymoney.core.util.Direction
 import com.sinxn.mymoney.feature.transaction.TransactionAddEditUiState
 import com.sinxn.mymoney.feature.transaction.TransactionAddEditViewModel
+import com.sinxn.mymoney.ui.theme.ExpenseColor
+import com.sinxn.mymoney.ui.theme.IncomeColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,7 +42,7 @@ fun EditTransactionContent(
 
     // Direction Accent Color
     val accentColor = remember(uiState.editDirection) {
-        if (uiState.editDirection == Direction.INCOME) Color(0xFF10B981) else Color(0xFFE11D48)
+        if (uiState.editDirection == Direction.INCOME) IncomeColor else ExpenseColor
     }
 
     Column(
