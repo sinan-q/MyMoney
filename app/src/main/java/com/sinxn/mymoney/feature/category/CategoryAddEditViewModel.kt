@@ -67,7 +67,7 @@ class CategoryAddEditViewModel @Inject constructor(
             val allCategories = categoryRepository.getCategories().first()
             val isEditMode = navCategoryId != null
             
-            if (isEditMode && navCategoryId != null) {
+            if (isEditMode) {
                 val existingCategory = categoryRepository.getCategoryById(navCategoryId)
                 if (existingCategory != null) {
                     val availableParents = filterParentCategories(
