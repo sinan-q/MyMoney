@@ -11,13 +11,14 @@ import com.sinxn.mymoney.core.util.CategoryType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -56,26 +57,66 @@ class CategoryViewModel @Inject constructor(
     private val _collapsedParentIds = MutableStateFlow<Set<String>>(emptySet())
     private var reorderJob: Job? = null
 
-    // Base tree flow: Only parses icons and groups categories when database categories change
-    private val baseCategoryTreeFlow: Flow<Pair<List<ParentCategoryItem>, List<ParentCategoryItem>>> =
-        categoryRepository.getCategories()
-            .map { categories ->
-                val income = buildBaseCategoryItems(categories.filter { it.type == CategoryType.INCOME })
-                val expense = buildBaseCategoryItems(categories.filter { it.type == CategoryType.EXPENSE })
-                income to expense
+    private val sharedCategoriesFlow = categoryRepository.getCategories()
+        .distinctUntilChanged { old, new ->
+            old.size == new.size && old.zip(new).all { (o, n) ->
+                o.id == n.id && o.name == n.name && o.icon == n.icon && o.parentId == n.parentId && o.type == n.type && o.isArchived == n.isArchived && o.index == n.index
             }
-            .flowOn(Dispatchers.Default)
+        }
+        .shareIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            replay = 1
+        )
 
-    // UI state flow: Cheaply applies expansion states without re-parsing icons or re-grouping lists
-    val uiState: StateFlow<CategoryUiState> = combine(
-        baseCategoryTreeFlow,
+    val isLoading: StateFlow<Boolean> = sharedCategoriesFlow
+        .map { false }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true
+        )
+
+    val incomeCategories: StateFlow<List<ParentCategoryItem>> = combine(
+        sharedCategoriesFlow.map { categories ->
+            buildBaseCategoryItems(categories.filter { it.type == CategoryType.INCOME })
+        },
         _collapsedParentIds
-    ) { (incomeTree, expenseTree), collapsedIds ->
+    ) { baseTree, collapsedIds ->
+        baseTree.map { it.copy(isExpanded = it.category.id !in collapsedIds) }
+    }
+        .flowOn(Dispatchers.Default)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val expenseCategories: StateFlow<List<ParentCategoryItem>> = combine(
+        sharedCategoriesFlow.map { categories ->
+            buildBaseCategoryItems(categories.filter { it.type == CategoryType.EXPENSE })
+        },
+        _collapsedParentIds
+    ) { baseTree, collapsedIds ->
+        baseTree.map { it.copy(isExpanded = it.category.id !in collapsedIds) }
+    }
+        .flowOn(Dispatchers.Default)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val uiState: StateFlow<CategoryUiState> = combine(
+        incomeCategories,
+        expenseCategories,
+        isLoading
+    ) { income, expense, loading ->
         CategoryUiState(
-            incomeCategories = incomeTree.map { it.copy(isExpanded = it.category.id !in collapsedIds) },
-            expenseCategories = expenseTree.map { it.copy(isExpanded = it.category.id !in collapsedIds) },
-            collapsedParentIds = collapsedIds,
-            isLoading = false,
+            incomeCategories = income,
+            expenseCategories = expense,
+            collapsedParentIds = _collapsedParentIds.value,
+            isLoading = loading
         )
     }
         .flowOn(Dispatchers.Default)
@@ -124,7 +165,7 @@ class CategoryViewModel @Inject constructor(
                 cleanName = parent.name,
                 iconData = parseIconData(parent.icon, parent.name),
                 subcategories = subs,
-                isExpanded = true // Default state, mapped by combine
+                isExpanded = true
             )
         }
     }

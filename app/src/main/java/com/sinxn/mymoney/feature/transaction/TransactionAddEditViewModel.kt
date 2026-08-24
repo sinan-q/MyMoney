@@ -247,8 +247,9 @@ class TransactionAddEditViewModel @Inject constructor(
 
         val activeWalletIds = setOfNotNull(form.walletId.takeIf { it.isNotEmpty() })
 
+        val categoryMap = lists.categories.associateBy { it.id }
         val selectedCatId = form.categoryId
-        val selectedCat = lists.categories.find { it.id == selectedCatId }
+        val selectedCat = selectedCatId?.let { categoryMap[it] }
         val selectedParentId = selectedCat?.parentId
         val baseActiveCatIds = setOfNotNull(selectedCatId, selectedParentId)
         val activeCatIds = baseActiveCatIds + lists.categories.filter { !it.isArchived || it.id in baseActiveCatIds }.mapNotNull { it.parentId }

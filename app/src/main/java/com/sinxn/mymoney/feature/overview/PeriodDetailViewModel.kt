@@ -86,13 +86,14 @@ class PeriodDetailViewModel @Inject constructor(
         }
 
         transactionsFlow.combine(moneyDao.getWallets()) { txList, wallets ->
+            val currentWallet = if (walletId == Constants.TOTAL_WALLET_ID) null else wallets.find { it.id == walletId }
             val currCode = if (walletId == Constants.TOTAL_WALLET_ID) {
                 formatting.globalCurrency.ifEmpty { "USD" }
             } else {
-                wallets.find { it.id == walletId }?.currency ?: formatting.globalCurrency.ifEmpty { "USD" }
+                currentWallet?.currency ?: formatting.globalCurrency.ifEmpty { "USD" }
             }
             val walletName = if (walletId == Constants.TOTAL_WALLET_ID) "Total" else {
-                wallets.find { it.id == walletId }?.name ?: "Wallet"
+                currentWallet?.name ?: "Wallet"
             }
             val decimals = try {
                 java.util.Currency.getInstance(currCode).defaultFractionDigits

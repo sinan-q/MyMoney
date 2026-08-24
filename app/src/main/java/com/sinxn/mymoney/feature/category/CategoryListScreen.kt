@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -40,7 +41,10 @@ fun CategoryListScreen(
     onAddCategoryClick: (Int) -> Unit = {},
     viewModel: CategoryViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val incomeCategories by viewModel.incomeCategories.collectAsState()
+    val expenseCategories by viewModel.expenseCategories.collectAsState()
+
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
     val coroutineScope = rememberCoroutineScope()
 
@@ -78,7 +82,7 @@ fun CategoryListScreen(
                 }
             )
 
-            if (uiState.isLoading) {
+            if (isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -88,32 +92,46 @@ fun CategoryListScreen(
             } else {
                 HorizontalPager(
                     state = pagerState,
-                    modifier = Modifier
-                        .fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().weight(1f),
                     beyondViewportPageCount = 1
                 ) { page ->
                     val isIncome = page == CategoryType.INCOME
-                    val parentItems = if (isIncome) {
-                        uiState.incomeCategories
-                    } else {
-                        uiState.expenseCategories
-                    }
+                    val parentItems = if (isIncome) incomeCategories else expenseCategories
                     val listState = if (isIncome) incomeListState else expenseListState
 
-                    if (parentItems.isEmpty()) {
-                        EmptyCategoryState(tabName = if (isIncome) "Income" else "Expense")
-                    } else {
-                        CategoryReorderableList(
-                            items = parentItems,
-                            lazyListState = listState,
-                            onCategoryClick = onCategoryClick,
-                            onExpandToggle = viewModel::toggleParentExpanded,
-                            onReorderParents = viewModel::reorderCategories,
-                            onReorderSubcategories = viewModel::reorderCategories
-                        )
-                    }
+                    CategoryTabPane(
+                        isIncome = isIncome,
+                        items = parentItems,
+                        lazyListState = listState,
+                        onCategoryClick = onCategoryClick,
+                        onExpandToggle = viewModel::toggleParentExpanded,
+                        onReorderCategories = viewModel::reorderCategories
+                    )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun CategoryTabPane(
+    isIncome: Boolean,
+    items: List<ParentCategoryItem>,
+    lazyListState: LazyListState,
+    onCategoryClick: (String) -> Unit,
+    onExpandToggle: (String) -> Unit,
+    onReorderCategories: (List<String>) -> Unit
+) {
+    if (items.isEmpty()) {
+        EmptyCategoryState(tabName = if (isIncome) "Income" else "Expense")
+    } else {
+        CategoryReorderableList(
+            items = items,
+            lazyListState = lazyListState,
+            onCategoryClick = onCategoryClick,
+            onExpandToggle = onExpandToggle,
+            onReorderParents = onReorderCategories,
+            onReorderSubcategories = onReorderCategories
+        )
     }
 }

@@ -21,6 +21,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -47,9 +48,17 @@ fun SubcategoriesSection(
     onSubcategoryClick: (String) -> Unit,
     onReorderSubcategories: (List<String>) -> Unit
 ) {
-    var subList by remember(subcategories) { mutableStateOf(subcategories) }
+    var subList by remember { mutableStateOf(subcategories) }
     val hapticFeedback = LocalHapticFeedback.current
     val currentOnReorderSubcategories by rememberUpdatedState(onReorderSubcategories)
+
+    LaunchedEffect(subcategories) {
+        val currentIds = subList.map { it.category.id }
+        val newIds = subcategories.map { it.category.id }
+        if (currentIds != newIds || subcategories != subList) {
+            subList = subcategories
+        }
+    }
 
     ReorderableColumn(
         list = subList,

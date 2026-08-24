@@ -360,26 +360,25 @@ interface MoneyDao {
     suspend fun updateCategoriesOrder(categoryIds: List<String>, lastEdit: Long) {
         if (categoryIds.isEmpty()) return
         val caseBuilder = StringBuilder("UPDATE categories SET `index` = CASE id ")
-        val whereInBuilder = StringBuilder(" WHERE id IN (")
-        val bindArgs = mutableListOf<Any>()
+        val bindArgs = ArrayList<Any>(categoryIds.size * 2 + 1 + categoryIds.size)
 
         categoryIds.forEachIndexed { index, id ->
             caseBuilder.append("WHEN ? THEN ? ")
             bindArgs.add(id)
             bindArgs.add(index + 1)
-
-            if (index > 0) whereInBuilder.append(", ")
-            whereInBuilder.append("?")
-            bindArgs.add(id)
         }
 
-        caseBuilder.append("END, lastEdit = ?")
+        caseBuilder.append("ELSE `index` END, lastEdit = ? WHERE id IN (")
         bindArgs.add(lastEdit)
 
-        whereInBuilder.append(")")
-        caseBuilder.append(whereInBuilder)
+        categoryIds.forEachIndexed { index, id ->
+            if (index > 0) caseBuilder.append(", ")
+            caseBuilder.append("?")
+            bindArgs.add(id)
+        }
+        caseBuilder.append(")")
 
-        val query = SimpleSQLiteQuery(caseBuilder.toString(), bindArgs.toTypedArray())
+        val query = SimpleSQLiteQuery(caseBuilder.toString(), bindArgs.toArray())
         executeRawQuery(query)
     }
 

@@ -33,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,9 +63,17 @@ fun CategoryReorderableList(
     onReorderParents: (List<String>) -> Unit,
     onReorderSubcategories: (List<String>) -> Unit
 ) {
-    var parentList by remember(items) { mutableStateOf(items) }
+    var parentList by remember { mutableStateOf(items) }
     val hapticFeedback = LocalHapticFeedback.current
     val currentOnReorderParents by rememberUpdatedState(onReorderParents)
+
+    LaunchedEffect(items) {
+        val currentIds = parentList.map { it.category.id }
+        val newIds = items.map { it.category.id }
+        if (currentIds != newIds || items != parentList) {
+            parentList = items
+        }
+    }
 
     val reorderableState = rememberReorderableLazyListState(
         lazyListState = lazyListState
