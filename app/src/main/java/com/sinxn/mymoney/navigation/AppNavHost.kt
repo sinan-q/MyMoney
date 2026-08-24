@@ -480,7 +480,6 @@ fun AppNavHost(
         }
         composable(Screen.Categories.routePattern) {
             CategoryListScreen(
-                onNavigateBack = { navController.navigateUp() },
                 onCategoryClick = { categoryId ->
                     navController.navigate(Screen.CategoryDetails.createRoute(categoryId))
                 },

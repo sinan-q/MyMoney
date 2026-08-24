@@ -9,10 +9,15 @@ import com.sinxn.mymoney.core.ui.components.IconData
 import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.CategoryType
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -35,10 +40,11 @@ data class SubcategoryItem(
     val parentCategoryId: String
 )
 
+@Immutable
 data class CategoryUiState(
     val expenseCategories: List<ParentCategoryItem> = emptyList(),
     val incomeCategories: List<ParentCategoryItem> = emptyList(),
-    val expandedParentIds: Set<String> = emptySet(),
+    val collapsedParentIds: Set<String> = emptySet(),
     val isLoading: Boolean = false,
 )
 
@@ -47,29 +53,40 @@ class CategoryViewModel @Inject constructor(
     private val categoryRepository: CategoryRepository
 ) : ViewModel() {
 
-    private val _expandedParentIds = MutableStateFlow<Set<String>>(emptySet())
+    private val _collapsedParentIds = MutableStateFlow<Set<String>>(emptySet())
+    private var reorderJob: Job? = null
 
+    // Base tree flow: Only parses icons and groups categories when database categories change
+    private val baseCategoryTreeFlow: Flow<Pair<List<ParentCategoryItem>, List<ParentCategoryItem>>> =
+        categoryRepository.getCategories()
+            .map { categories ->
+                val income = buildBaseCategoryItems(categories.filter { it.type == CategoryType.INCOME })
+                val expense = buildBaseCategoryItems(categories.filter { it.type == CategoryType.EXPENSE })
+                income to expense
+            }
+            .flowOn(Dispatchers.Default)
+
+    // UI state flow: Cheaply applies expansion states without re-parsing icons or re-grouping lists
     val uiState: StateFlow<CategoryUiState> = combine(
-        categoryRepository.getCategories(),
-        _expandedParentIds
-    ) { categories, expandedIds ->
-        val incomeCats = categories.filter { it.type == CategoryType.INCOME }
-        val expenseCats = categories.filter { it.type == CategoryType.EXPENSE }
-
+        baseCategoryTreeFlow,
+        _collapsedParentIds
+    ) { (incomeTree, expenseTree), collapsedIds ->
         CategoryUiState(
-            expenseCategories = buildParentCategoryItems(expenseCats, expandedIds),
-            incomeCategories = buildParentCategoryItems(incomeCats, expandedIds),
-            expandedParentIds = expandedIds,
+            incomeCategories = incomeTree.map { it.copy(isExpanded = it.category.id !in collapsedIds) },
+            expenseCategories = expenseTree.map { it.copy(isExpanded = it.category.id !in collapsedIds) },
+            collapsedParentIds = collapsedIds,
             isLoading = false,
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = CategoryUiState(isLoading = true)
-    )
+    }
+        .flowOn(Dispatchers.Default)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = CategoryUiState(isLoading = true)
+        )
 
     fun toggleParentExpanded(parentId: String) {
-        _expandedParentIds.update { current ->
+        _collapsedParentIds.update { current ->
             if (parentId in current) {
                 current - parentId
             } else {
@@ -79,14 +96,14 @@ class CategoryViewModel @Inject constructor(
     }
 
     fun reorderCategories(orderedCategoryIds: List<String>) {
-        viewModelScope.launch {
+        reorderJob?.cancel()
+        reorderJob = viewModelScope.launch {
             categoryRepository.reorderCategories(orderedCategoryIds)
         }
     }
 
-    private fun buildParentCategoryItems(
-        categories: List<CategoryEntity>,
-        expandedParentIds: Set<String>
+    private fun buildBaseCategoryItems(
+        categories: List<CategoryEntity>
     ): List<ParentCategoryItem> {
         if (categories.isEmpty()) return emptyList()
 
@@ -107,7 +124,7 @@ class CategoryViewModel @Inject constructor(
                 cleanName = parent.name,
                 iconData = parseIconData(parent.icon, parent.name),
                 subcategories = subs,
-                isExpanded = parent.id in expandedParentIds
+                isExpanded = true // Default state, mapped by combine
             )
         }
     }

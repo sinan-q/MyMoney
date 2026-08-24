@@ -33,6 +33,7 @@ fun TabPill(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(vertical = 4.dp, horizontal = 16.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             .padding(4.dp),
