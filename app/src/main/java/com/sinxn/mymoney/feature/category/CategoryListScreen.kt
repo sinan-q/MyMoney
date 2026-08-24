@@ -1,6 +1,5 @@
 package com.sinxn.mymoney.feature.category
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -8,7 +7,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -25,8 +23,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -47,9 +48,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -68,6 +69,7 @@ import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.util.CategoryType
 import com.sinxn.mymoney.ui.theme.ExpenseColor
 import com.sinxn.mymoney.ui.theme.IncomeColor
+import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableColumn
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -81,13 +83,20 @@ fun CategoryListScreen(
     viewModel: CategoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var selectedTab by remember { mutableIntStateOf(CategoryType.INCOME) }
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
+    val coroutineScope = rememberCoroutineScope()
+
+    val incomeListState = rememberLazyListState()
+    val expenseListState = rememberLazyListState()
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { onAddCategoryClick(selectedTab) },
+                onClick = {
+                    val activeType = if (pagerState.currentPage == 0) CategoryType.INCOME else CategoryType.EXPENSE
+                    onAddCategoryClick(activeType)
+                },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 shape = CircleShape
@@ -103,8 +112,12 @@ fun CategoryListScreen(
         ) {
             TabPill(
                 tabs = listOf("Income" to IncomeColor, "Expense" to ExpenseColor),
-                activeTab = selectedTab,
-                onTabChange = { selectedTab = it }
+                activeTab = pagerState.currentPage,
+                onTabChange = { index ->
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(index)
+                    }
+                }
             )
 
             if (uiState.isLoading) {
@@ -115,26 +128,29 @@ fun CategoryListScreen(
                     CircularProgressIndicator()
                 }
             } else {
-                AnimatedContent(
-                    targetState = selectedTab,
-                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                HorizontalPager(
+                    state = pagerState,
                     modifier = Modifier
-                        .fillMaxWidth(),
-                    label = "CategoryTabContent"
-                ) { tab ->
-                    val parentItems = if (tab == CategoryType.INCOME) {
+                        .fillMaxWidth()
+                        .weight(1f),
+                    beyondViewportPageCount = 1
+                ) { page ->
+                    val isIncome = page == 0
+                    val parentItems = if (isIncome) {
                         uiState.incomeCategories
                     } else {
                         uiState.expenseCategories
                     }
+                    val listState = if (isIncome) incomeListState else expenseListState
 
                     if (parentItems.isEmpty()) {
                         EmptyCategoryState(
-                            tabName = if (tab == CategoryType.INCOME) "Income" else "Expense"
+                            tabName = if (isIncome) "Income" else "Expense"
                         )
                     } else {
                         CategoryReorderableList(
                             items = parentItems,
+                            lazyListState = listState,
                             onCategoryClick = onCategoryClick,
                             onExpandToggle = viewModel::toggleParentExpanded,
                             onReorderParents = { orderedIds ->
@@ -154,13 +170,13 @@ fun CategoryListScreen(
 @Composable
 private fun CategoryReorderableList(
     items: List<ParentCategoryItem>,
+    lazyListState: LazyListState,
     onCategoryClick: (String) -> Unit,
     onExpandToggle: (String) -> Unit,
     onReorderParents: (List<String>) -> Unit,
     onReorderSubcategories: (List<String>) -> Unit
 ) {
     var parentList by remember(items) { mutableStateOf(items) }
-    val lazyListState = rememberLazyListState()
     val hapticFeedback = LocalHapticFeedback.current
     val currentOnReorderParents by rememberUpdatedState(onReorderParents)
 

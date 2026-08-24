@@ -222,7 +222,8 @@ fun TransactionAddEditScreen(
 
                     HorizontalPager(
                         state = pagerState,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        beyondViewportPageCount = 1
                     ) { page ->
                         if (page == 0) {
                             EditTransactionContent(
