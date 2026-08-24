@@ -80,11 +80,18 @@ fun CategoryIcon(
 @Immutable
 data class IconData(val color: Color, val text: String)
 
-private val iconDataCache = java.util.concurrent.ConcurrentHashMap<String, IconData>()
-private val colorCache = java.util.concurrent.ConcurrentHashMap<String, Color>()
+private val iconDataCache = java.util.concurrent.ConcurrentHashMap<Long, IconData>()
+private val colorCache = java.util.concurrent.ConcurrentHashMap<Int, Color>()
+
+@Suppress("NOTHING_TO_INLINE")
+private inline fun computeCacheKey(iconString: String?, categoryName: String): Long {
+    val h1 = iconString?.hashCode() ?: 0
+    val h2 = categoryName.hashCode()
+    return (h1.toLong() shl 32) or (h2.toLong() and 0xFFFFFFFFL)
+}
 
 fun parseIconData(iconString: String?, categoryName: String): IconData {
-    val cacheKey = "${iconString.orEmpty()}__$categoryName"
+    val cacheKey = computeCacheKey(iconString, categoryName)
     iconDataCache[cacheKey]?.let { return it }
 
     val defaultText = categoryName.firstOrNull()?.toString()?.uppercase() ?: "?"
@@ -132,11 +139,11 @@ fun parseIconData(iconString: String?, categoryName: String): IconData {
 }
 
 fun generateColor(name: String): Color {
-    colorCache[name]?.let { return it }
     val hash = name.hashCode()
+    colorCache[hash]?.let { return it }
     val hue = abs(hash % 360).toFloat()
     val color = Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, 0.6f, 0.8f)))
-    colorCache[name] = color
+    colorCache[hash] = color
     return color
 }
 
