@@ -1,6 +1,8 @@
 package com.sinxn.mymoney.core.data.local.dao
 
 import androidx.room.*
+import androidx.sqlite.db.SimpleSQLiteQuery
+import androidx.sqlite.db.SupportSQLiteQuery
 import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
 import com.sinxn.mymoney.core.data.local.entity.DebtEntity
 import com.sinxn.mymoney.core.data.local.entity.DebtPeopleEntity
@@ -348,14 +350,37 @@ interface MoneyDao {
     @Query("UPDATE categories SET parentId = NULL, lastEdit = :lastEdit WHERE parentId = :categoryId")
     suspend fun unlinkSubcategoriesForParent(categoryId: String, lastEdit: Long)
 
+    @RawQuery
+    suspend fun executeRawQuery(query: SupportSQLiteQuery): Int
+
     @Query("UPDATE categories SET `index` = :index, lastEdit = :lastEdit WHERE id = :categoryId")
     suspend fun updateCategoryIndex(categoryId: String, index: Int, lastEdit: Long)
 
     @androidx.room.Transaction
     suspend fun updateCategoriesOrder(categoryIds: List<String>, lastEdit: Long) {
-        categoryIds.forEachIndexed { index, categoryId ->
-            updateCategoryIndex(categoryId, index + 1, lastEdit)
+        if (categoryIds.isEmpty()) return
+        val caseBuilder = StringBuilder("UPDATE categories SET `index` = CASE id ")
+        val whereInBuilder = StringBuilder(" WHERE id IN (")
+        val bindArgs = mutableListOf<Any>()
+
+        categoryIds.forEachIndexed { index, id ->
+            caseBuilder.append("WHEN ? THEN ? ")
+            bindArgs.add(id)
+            bindArgs.add(index + 1)
+
+            if (index > 0) whereInBuilder.append(", ")
+            whereInBuilder.append("?")
+            bindArgs.add(id)
         }
+
+        caseBuilder.append("END, lastEdit = ?")
+        bindArgs.add(lastEdit)
+
+        whereInBuilder.append(")")
+        caseBuilder.append(whereInBuilder)
+
+        val query = SimpleSQLiteQuery(caseBuilder.toString(), bindArgs.toTypedArray())
+        executeRawQuery(query)
     }
 
     @Query("SELECT * FROM categories WHERE isDeleted = 0 ORDER BY `index` ASC")
