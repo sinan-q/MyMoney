@@ -67,9 +67,7 @@ class CategoryRepository @Inject constructor(
 
     suspend fun reorderCategories(categoryIds: List<String>) {
         val now = System.currentTimeMillis()
-        categoryIds.forEachIndexed { index, categoryId ->
-            moneyDao.updateCategoryIndex(categoryId, index + 1, now)
-        }
+        moneyDao.updateCategoriesOrder(categoryIds, now)
     }
 
     suspend fun deleteCategory(categoryId: String) {

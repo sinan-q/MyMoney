@@ -351,6 +351,13 @@ interface MoneyDao {
     @Query("UPDATE categories SET `index` = :index, lastEdit = :lastEdit WHERE id = :categoryId")
     suspend fun updateCategoryIndex(categoryId: String, index: Int, lastEdit: Long)
 
+    @androidx.room.Transaction
+    suspend fun updateCategoriesOrder(categoryIds: List<String>, lastEdit: Long) {
+        categoryIds.forEachIndexed { index, categoryId ->
+            updateCategoryIndex(categoryId, index + 1, lastEdit)
+        }
+    }
+
     @Query("SELECT * FROM categories WHERE isDeleted = 0 ORDER BY `index` ASC")
     fun getCategories(): Flow<List<CategoryEntity>>
 

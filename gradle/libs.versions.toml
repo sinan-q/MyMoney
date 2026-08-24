@@ -18,6 +18,7 @@ hiltNavigationCompose = "1.4.0"
 splashscreen = "1.2.0"
 vico = "3.3.0"
 workRuntimeKtx = "2.11.2"
+reorderable = "3.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -52,6 +53,7 @@ androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscree
 lib-recur = { module = "org.dmfs:lib-recur", version.ref = "libRecur" }
 vico-compose-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico" }
 vico-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico" }
+reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 
 
 [plugins]
