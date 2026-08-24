@@ -3,6 +3,7 @@ package com.sinxn.mymoney.feature.place
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -16,8 +17,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.FinanceListItem
 import com.sinxn.mymoney.core.util.MoneyFormatter
@@ -32,6 +35,8 @@ fun PlaceListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
+    var isSearchActive by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
 
     val filteredPlaces = remember(uiState.places, searchQuery) {
         if (searchQuery.isBlank()) {
@@ -48,9 +53,12 @@ fun PlaceListScreen(
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddPlaceClick) {
-                Icon(Icons.Default.Add, contentDescription = "Add Place")
-            }
+            AppExtendedFab(
+                text = "Add Place",
+                icon = Icons.Default.Add,
+                onClick = onAddPlaceClick,
+                expanded = !listState.isScrollInProgress
+            )
         }
     ) { innerPadding ->
         Column(
@@ -136,6 +144,7 @@ fun PlaceListScreen(
                     }
                 } else {
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 88.dp)
                     ) {

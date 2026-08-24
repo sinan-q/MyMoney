@@ -107,6 +107,12 @@ fun PersonDetailsScreen(
                 },
                 actions = {
                     if (uiState.person != null) {
+                        IconButton(onClick = { onEditPersonClick(uiState.personId) }) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit Person"
+                            )
+                        }
                         IconButton(onClick = viewModel::toggleArchive) {
                             Icon(
                                 imageVector = if (uiState.person!!.isArchived) Icons.Default.Unarchive else Icons.Default.Archive,
@@ -123,17 +129,6 @@ fun PersonDetailsScreen(
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            if (uiState.person != null) {
-                FloatingActionButton(
-                    onClick = { onEditPersonClick(uiState.personId) },
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit Person")
-                }
-            }
         }
     ) { paddingValues ->
         Box(

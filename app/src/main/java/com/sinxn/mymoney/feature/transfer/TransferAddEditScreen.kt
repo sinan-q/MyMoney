@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import com.sinxn.mymoney.core.ui.components.NumpadView
 import com.sinxn.mymoney.core.ui.components.rememberNumpadFormState
 import com.sinxn.mymoney.feature.transfer.components.EditTransferContent
@@ -68,13 +69,13 @@ fun TransferAddEditScreen(
                 enter = fadeIn() + scaleIn(),
                 exit = fadeOut() + scaleOut()
             ) {
-                ExtendedFloatingActionButton(
+                AppExtendedFab(
+                    text = fabText,
+                    icon = fabIcon,
                     onClick = {
                         numpadState.dismiss()
                         viewModel.saveTransfer { onNavigateBack() }
                     },
-                    icon = { Icon(fabIcon, contentDescription = fabText) },
-                    text = { Text(fabText, fontWeight = FontWeight.Bold) },
                     containerColor = transferAccentColor,
                     contentColor = Color.White
                 )

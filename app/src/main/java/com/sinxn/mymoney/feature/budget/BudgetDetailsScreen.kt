@@ -125,17 +125,6 @@ fun BudgetDetailsScreen(
                     containerColor = MaterialTheme.colorScheme.background
                 )
             )
-        },
-        floatingActionButton = {
-            if (details != null) {
-                FloatingActionButton(
-                    onClick = { onEditBudgetClick(details.budget.id) },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit Budget")
-                }
-            }
         }
     ) { paddingValues ->
         Box(

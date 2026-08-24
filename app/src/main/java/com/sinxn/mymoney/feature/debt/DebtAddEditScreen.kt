@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -20,6 +22,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -49,7 +54,6 @@ import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.ui.components.rememberNumpadFormState
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.feature.debt.component.DebtFormContent
-
 import com.sinxn.mymoney.ui.theme.ExpenseColor
 import com.sinxn.mymoney.ui.theme.IncomeColor
 
@@ -99,6 +103,24 @@ fun DebtAddEditScreen(
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        floatingActionButton = {
+            AnimatedVisibility(
+                visible = isSaveEnabled && !numpadState.isNumpadVisible,
+                enter = fadeIn() + scaleIn(),
+                exit = fadeOut() + scaleOut()
+            ) {
+                AppExtendedFab(
+                    text = actionBtnText,
+                    icon = if (uiState.isNewDebt) Icons.Default.Add else Icons.Default.Check,
+                    onClick = {
+                        numpadState.dismiss()
+                        viewModel.saveDebt { onNavigateBack() }
+                    },
+                    containerColor = accentColor,
+                    contentColor = Color.White
+                )
+            }
+        },
         topBar = {
             TopAppBar(
                 title = {
@@ -133,109 +155,54 @@ fun DebtAddEditScreen(
                     CircularProgressIndicator()
                 }
             } else {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .verticalScroll(rememberScrollState())
-                            .padding(bottom = 16.dp)
-                    ) {
-                        if (uiState.isNewDebt) {
-                            TabPill(
-                                tabs = listOf("Debt" to ExpenseColor, "Credit" to IncomeColor),
-                                activeTab = uiState.editType,
-                                onTabChange = { viewModel.updateType(it) }
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                        }
-
-                        EditAmountHeader(
-                            amountText = uiState.editAmount,
-                            currencySymbol = formCurrency,
-                            evaluatedResult = evaluatedAmountStr,
-                            hasOperatorInAmount = hasOperatorInAmount,
-                            accentColor = accentColor,
-                            isNumpadVisible = numpadState.isNumpadVisible,
-                            onHeaderClick = { numpadState.showNumpad() }
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(bottom = 88.dp)
+                ) {
+                    if (uiState.isNewDebt) {
+                        TabPill(
+                            tabs = listOf("Debt" to ExpenseColor, "Credit" to IncomeColor),
+                            activeTab = uiState.editType,
+                            onTabChange = { viewModel.updateType(it) }
                         )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        DebtFormContent(
-                            accentColor = accentColor,
-                            focusRequester = numpadState.focusRequester,
-                            uiState = uiState,
-                            viewModel = viewModel,
-                            onDismissKeyboardAndNumpad = numpadState::dismiss
-                        )
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
 
-                    // Docked Bottom Bar (Numpad or Save Button)
-                    Surface(
-                        tonalElevation = 6.dp,
-                        shadowElevation = 8.dp,
-                        color = MaterialTheme.colorScheme.surface,
-                        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-                    ) {
-                        Column {
-                            AnimatedVisibility(
-                                visible = numpadState.isNumpadVisible,
-                                enter = fadeIn() + expandVertically(),
-                                exit = fadeOut() + shrinkVertically()
-                            ) {
-                                NumpadView(
-                                    onKeyPress = viewModel::onNumpadKeyPress,
-                                    onEvaluate = viewModel::evaluateMathExpression,
-                                    onNext = { numpadState.onNext() },
-                                    hasOperatorInAmount = hasOperatorInAmount,
-                                    saveButtonText = actionBtnText,
-                                    saveButtonColor = accentColor,
-                                    onDismiss = { numpadState.dismiss() }
-                                )
-                            }
+                    EditAmountHeader(
+                        amountText = uiState.editAmount,
+                        currencySymbol = formCurrency,
+                        evaluatedResult = evaluatedAmountStr,
+                        hasOperatorInAmount = hasOperatorInAmount,
+                        accentColor = accentColor,
+                        isNumpadVisible = numpadState.isNumpadVisible,
+                        onHeaderClick = { numpadState.showNumpad() }
+                    )
 
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                        }
-                        if (!numpadState.isNumpadVisible) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 20.dp, vertical = 10.dp)
-                            ) {
-                                Button(
-                                    onClick = {
-                                        numpadState.dismiss()
-                                        viewModel.saveDebt { onNavigateBack() }
-                                    },
-                                    enabled = isSaveEnabled,
-                                    shape = RoundedCornerShape(20.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = accentColor,
-                                        contentColor = Color.White
-                                    ),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(54.dp)
-                                ) {
-                                    if (uiState.isSaving) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(22.dp),
-                                            color = Color.White,
-                                            strokeWidth = 2.dp
-                                        )
-                                    } else {
-                                        Text(
-                                            text = actionBtnText,
-                                            fontSize = 17.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    DebtFormContent(
+                        accentColor = accentColor,
+                        focusRequester = numpadState.focusRequester,
+                        uiState = uiState,
+                        viewModel = viewModel,
+                        onDismissKeyboardAndNumpad = numpadState::dismiss
+                    )
                 }
             }
         }
+    }
+
+    if (numpadState.isNumpadVisible) {
+        NumpadView(
+            onKeyPress = viewModel::onNumpadKeyPress,
+            onEvaluate = viewModel::evaluateMathExpression,
+            onNext = { numpadState.onNext() },
+            hasOperatorInAmount = hasOperatorInAmount,
+            saveButtonText = actionBtnText,
+            saveButtonColor = accentColor,
+            onDismiss = { numpadState.dismiss() }
+        )
     }
 }

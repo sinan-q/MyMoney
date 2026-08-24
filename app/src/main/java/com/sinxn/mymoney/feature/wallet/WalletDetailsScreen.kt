@@ -47,11 +47,16 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.model.TransactionListItem
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.ui.components.TransactionHeader
+import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import com.sinxn.mymoney.core.ui.components.TransactionItem
 import com.sinxn.mymoney.core.ui.components.WalletDropdownList
 import com.sinxn.mymoney.core.ui.components.WalletHeader
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
+
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.LaunchedEffect
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,13 +80,14 @@ fun WalletDetailsScreen(
         }
     }
 
-    // Map Settings to Formatter Config
-    val formatterConfig = MoneyFormatter.Config(
-        showCurrency = settings.showCurrency,
-        groupDigits = settings.groupDigits,
-        roundDecimals = settings.roundDecimals,
-        showPlusMinus = settings.showPlusMinus
-    )
+    val formatterConfig = remember(viewModel.formattingSettings) {
+        MoneyFormatter.Config(
+            showCurrency = settings.showCurrency,
+            groupDigits = settings.groupDigits,
+            roundDecimals = settings.roundDecimals,
+            showPlusMinus = false
+        )
+    }
 
     var isWalletListExpanded by remember { mutableStateOf(false) }
 
@@ -91,65 +97,70 @@ fun WalletDetailsScreen(
         }
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        if (wallet == null) {
-            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-        } else {
-            WalletHeader(
-                wallet = wallet!!,
-                formatterConfig = formatterConfig,
-                isExpanded = isWalletListExpanded,
-                onToggleExpand = { isWalletListExpanded = !isWalletListExpanded },
-                isReduced = isHeaderReduced && !isWalletListExpanded
-            )
-
-            if (isWalletListExpanded) {
-                WalletDropdownList(
-                    onWalletSelect = { w ->
-                        isWalletListExpanded = false
-                        if (w.wallet.id != wallet?.wallet?.id) {
-                            onNavigateToWallet(w.wallet.id)
-                        }
-                    },
-                    onAddWallet = {
-                        isWalletListExpanded = false
-                        onAddWallet()
-                    },
-                    onManageWallets = {
-                        isWalletListExpanded = false
-                        onManageWallets()
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    contentPadding = PaddingValues(bottom = 80.dp)
+    Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        floatingActionButton = {
+            if (!isWalletListExpanded && wallet != null) {
+                AppExtendedFab(
+                    text = "Add Transaction",
+                    icon = Icons.Default.Add,
+                    onClick = onAddTransaction,
+                    expanded = !listState.isScrollInProgress
                 )
+            }
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            if (wallet == null) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
             } else {
-                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    TransactionList(
-                        items = transactions,
-                        pendingTransactions = pendingTransactions,
-                        decimals = wallet!!.decimals,
-                        currencyCode = wallet!!.wallet.currency,
-                        formatterConfig = formatterConfig,
-                        dateFormat = settings.dateFormat,
-                        listState = listState,
-                        onTransactionClick = onTransactionClick,
-                        onConfirmPending = { viewModel.confirmTransaction(it) },
-                        onDismissPending = { viewModel.dismissTransaction(it) }
-                    )
+                WalletHeader(
+                    wallet = wallet!!,
+                    formatterConfig = formatterConfig,
+                    isExpanded = isWalletListExpanded,
+                    onToggleExpand = { isWalletListExpanded = !isWalletListExpanded },
+                    isReduced = isHeaderReduced && !isWalletListExpanded
+                )
 
-                    FloatingActionButton(
-                        onClick = onAddTransaction,
+                if (isWalletListExpanded) {
+                    WalletDropdownList(
+                        onWalletSelect = { w ->
+                            isWalletListExpanded = false
+                            if (w.wallet.id != wallet?.wallet?.id) {
+                                onNavigateToWallet(w.wallet.id)
+                            }
+                        },
+                        onAddWallet = {
+                            isWalletListExpanded = false
+                            onAddWallet()
+                        },
+                        onManageWallets = {
+                            isWalletListExpanded = false
+                            onManageWallets()
+                        },
                         modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(16.dp),
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Transaction")
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentPadding = PaddingValues(bottom = 80.dp)
+                    )
+                } else {
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                        TransactionList(
+                            items = transactions,
+                            pendingTransactions = pendingTransactions,
+                            decimals = wallet!!.decimals,
+                            currencyCode = wallet!!.wallet.currency,
+                            formatterConfig = formatterConfig,
+                            dateFormat = settings.dateFormat,
+                            listState = listState,
+                            onTransactionClick = onTransactionClick,
+                            onConfirmPending = { viewModel.confirmTransaction(it) },
+                            onDismissPending = { viewModel.dismissTransaction(it) }
+                        )
                     }
                 }
             }

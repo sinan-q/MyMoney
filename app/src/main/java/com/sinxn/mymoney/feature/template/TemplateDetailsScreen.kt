@@ -91,6 +91,12 @@ fun TemplateDetailsScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { onEditTemplateClick(uiState.templateId, uiState.isTransfer) }) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit Template"
+                        )
+                    }
                     IconButton(onClick = { showDeleteDialog = true }) {
                         Icon(
                             imageVector = Icons.Default.Delete,
@@ -100,15 +106,6 @@ fun TemplateDetailsScreen(
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { onEditTemplateClick(uiState.templateId, uiState.isTransfer) },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            ) {
-                Icon(Icons.Default.Edit, contentDescription = "Edit Template")
-            }
         }
     ) { paddingValues ->
         Box(

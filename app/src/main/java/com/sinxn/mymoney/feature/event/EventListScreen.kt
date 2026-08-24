@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,6 +24,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.entity.EventEntity
+import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.FinanceListItem
 import com.sinxn.mymoney.core.ui.components.IconData
@@ -40,6 +42,7 @@ fun EventListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
+    val listState = rememberLazyListState()
 
     val filteredEvents = remember(uiState.events, searchQuery) {
         if (searchQuery.isBlank()) {
@@ -56,9 +59,12 @@ fun EventListScreen(
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddEventClick) {
-                Icon(Icons.Default.Add, contentDescription = "Add Event")
-            }
+            AppExtendedFab(
+                text = "Add Event",
+                icon = Icons.Default.Add,
+                onClick = onAddEventClick,
+                expanded = !listState.isScrollInProgress
+            )
         }
     ) { innerPadding ->
         Column(
@@ -144,6 +150,7 @@ fun EventListScreen(
                     }
                 } else {
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 88.dp)
                     ) {

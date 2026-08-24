@@ -16,17 +16,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.AlertDialog
+import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -215,27 +216,22 @@ fun TemplateAddEditScreen(
                             )
                         }
                     }
-                    IconButton(
-                        onClick = viewModel::saveTemplate,
-                        enabled = isSaveEnabled && !uiState.isSaving
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Save Template",
-                            tint = if (isSaveEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                        )
-                    }
                 }
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = viewModel::saveTemplate,
+            val text = if (uiState.isEditMode) "Save Changes" else "Save Template"
+            val icon = if (uiState.isEditMode) Icons.Default.Check else Icons.Default.Add
+            AppExtendedFab(
+                text = text,
+                icon = icon,
+                onClick = {
+                    if (isSaveEnabled && !uiState.isSaving) {
+                        viewModel.saveTemplate()
+                    }
+                },
                 containerColor = if (isSaveEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = if (isSaveEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                shape = RoundedCornerShape(18.dp),
-                icon = { Icon(Icons.Default.Check, contentDescription = "Save") },
-                text = { Text(if (uiState.isEditMode) "Save Changes" else "Save Template", fontWeight = FontWeight.Bold) }
+                contentColor = if (isSaveEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
             )
         }
     ) { paddingValues ->

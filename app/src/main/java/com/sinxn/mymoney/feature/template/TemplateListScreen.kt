@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,11 +23,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.model.TransactionModelWithDetails
 import com.sinxn.mymoney.core.data.local.model.TransferModelWithDetails
+import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.FinanceListItem
 import com.sinxn.mymoney.core.ui.components.IconData
 import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.MoneyFormatter
+import com.sinxn.mymoney.ui.theme.TransferColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,6 +43,10 @@ fun TemplateListScreen(
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Transactions, 1: Transfers
     var searchQuery by remember { mutableStateOf("") }
     val context = LocalContext.current
+
+    val txListState = rememberLazyListState()
+    val transferListState = rememberLazyListState()
+    val currentListState = if (selectedTab == 0) txListState else transferListState
 
     val filteredTxTemplates = remember(uiState.transactionTemplates, searchQuery) {
         if (searchQuery.isBlank()) {
@@ -69,14 +76,21 @@ fun TemplateListScreen(
         }
     }
 
+    val isTx = selectedTab == 0
+    val fabText = if (isTx) "New Template" else "New Transfer Template"
+    val fabColor = if (isTx) MaterialTheme.colorScheme.primary else TransferColor
+
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { onAddTemplateClick(selectedTab == 1) }
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Template")
-            }
+            AppExtendedFab(
+                text = fabText,
+                icon = Icons.Default.Add,
+                onClick = { onAddTemplateClick(selectedTab == 1) },
+                expanded = !currentListState.isScrollInProgress,
+                containerColor = fabColor,
+                contentColor = Color.White
+            )
         }
     ) { innerPadding ->
         Column(
@@ -175,6 +189,7 @@ fun TemplateListScreen(
                         )
                     } else {
                         LazyColumn(
+                            state = txListState,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(bottom = 88.dp)
                         ) {
@@ -202,6 +217,7 @@ fun TemplateListScreen(
                         )
                     } else {
                         LazyColumn(
+                            state = transferListState,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(bottom = 88.dp)
                         ) {

@@ -13,6 +13,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Notes
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Check
@@ -34,6 +35,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CleanListRow
 import com.sinxn.mymoney.core.ui.components.CurrencySelectionDialog
@@ -135,8 +137,24 @@ fun WalletAddEditScreen(
         )
     }
 
+    val isSaveEnabled = !uiState.isSaving && uiState.name.isNotBlank()
+    val fabText = if (uiState.isEditMode) "Save Changes" else "Create Wallet"
+
     Scaffold(
         contentWindowInsets = WindowInsets(0,0,0,0),
+        floatingActionButton = {
+            AppExtendedFab(
+                text = fabText,
+                icon = if (uiState.isEditMode) Icons.Default.Check else Icons.Default.Add,
+                onClick = {
+                    if (isSaveEnabled) {
+                        viewModel.saveWallet()
+                    }
+                },
+                containerColor = if (isSaveEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = if (isSaveEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+            )
+        },
         topBar = {
             TopAppBar(
                 title = {
@@ -153,15 +171,14 @@ fun WalletAddEditScreen(
                     }
                 },
                 actions = {
-                    IconButton(
-                        onClick = viewModel::saveWallet,
-                        enabled = !uiState.isSaving && uiState.name.isNotBlank()
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Save Wallet",
-                            tint = if (uiState.name.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                        )
+                    if (uiState.isEditMode) {
+                        IconButton(onClick = { showDeleteConfirmDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete Wallet",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             )
@@ -181,6 +198,7 @@ fun WalletAddEditScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
+                contentPadding = PaddingValues(bottom = 88.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Header Card: Avatar & Name

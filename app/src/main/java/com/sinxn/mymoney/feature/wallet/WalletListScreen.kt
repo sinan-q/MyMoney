@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -33,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
@@ -64,15 +66,16 @@ fun WalletListScreen(
         )
     }
 
+    val listState = rememberLazyListState()
+
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = if (uiState.isSortMode) "Reorder Wallets" else "Wallets",
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        text = if (uiState.isSortMode) "Sort Wallets" else "Wallets",
+                        fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
@@ -85,7 +88,7 @@ fun WalletListScreen(
                         IconButton(onClick = viewModel::toggleSortMode) {
                             Icon(
                                 Icons.Default.Check,
-                                contentDescription = "Done Sorting",
+                                contentDescription = "Save Sort Order",
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
@@ -99,13 +102,12 @@ fun WalletListScreen(
         },
         floatingActionButton = {
             if (!uiState.isSortMode) {
-                FloatingActionButton(
+                AppExtendedFab(
+                    text = "Add Wallet",
+                    icon = Icons.Default.Add,
                     onClick = onAddWalletClick,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Wallet")
-                }
+                    expanded = !listState.isScrollInProgress
+                )
             }
         }
     ) { innerPadding ->
@@ -268,6 +270,7 @@ fun WalletListScreen(
                     EmptyWalletState(isSearching = uiState.searchQuery.isNotEmpty(), isArchivedTab = selectedTab == 1)
                 } else {
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f),

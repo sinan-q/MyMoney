@@ -148,6 +148,12 @@ fun PlaceDetailsScreen(
                 },
                 actions = {
                     if (uiState.place != null) {
+                        IconButton(onClick = { onEditPlaceClick(uiState.placeId) }) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit Place"
+                            )
+                        }
                         IconButton(onClick = viewModel::toggleArchive) {
                             Icon(
                                 imageVector = if (uiState.place!!.isArchived) Icons.Default.Unarchive else Icons.Default.Archive,
@@ -164,17 +170,6 @@ fun PlaceDetailsScreen(
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            if (uiState.place != null) {
-                FloatingActionButton(
-                    onClick = { onEditPlaceClick(uiState.placeId) },
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit Place")
-                }
-            }
         }
     ) { paddingValues ->
         Box(

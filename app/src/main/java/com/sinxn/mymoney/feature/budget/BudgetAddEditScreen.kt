@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -15,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
@@ -36,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.repository.BudgetPeriod
+import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CategorySelectionDialog
 import com.sinxn.mymoney.core.ui.components.CleanListRow
@@ -46,10 +50,11 @@ import com.sinxn.mymoney.core.ui.components.NumpadView
 import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.ui.components.rememberNumpadFormState
 import com.sinxn.mymoney.core.util.BudgetType
-
-private val ExpenseColor = Color(0xFFE53935)
-private val IncomeColor = Color(0xFF43A047)
-private val CategoryColor = Color(0xFF1E88E5)
+import com.sinxn.mymoney.core.util.DateUtils
+import com.sinxn.mymoney.core.util.MoneyFormatter
+import com.sinxn.mymoney.ui.theme.CategoryColor
+import com.sinxn.mymoney.ui.theme.ExpenseColor
+import com.sinxn.mymoney.ui.theme.IncomeColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,10 +87,13 @@ fun BudgetAddEditScreen(
         evaluatedAmountStr.toDoubleOrNull()
     }
 
+    val isCategoryValid = if (uiState.editType == BudgetType.CATEGORY) {
+        !uiState.editCategoryId.isNullOrBlank()
+    } else true
+
     val isSaveEnabled = (amountValue != null && amountValue > 0.0) &&
-            (uiState.editType != BudgetType.CATEGORY || !uiState.editCategoryId.isNullOrBlank()) &&
-            uiState.selectedWalletIds.isNotEmpty() &&
-            uiState.walletWarning == null &&
+            uiState.editStartDate.isNotBlank() &&
+            isCategoryValid &&
             !uiState.isSaving
 
     val actionBtnText = if (uiState.isNewBudget) "Create Budget" else "Save Changes"
@@ -153,6 +161,24 @@ fun BudgetAddEditScreen(
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        floatingActionButton = {
+            AnimatedVisibility(
+                visible = isSaveEnabled && !numpadState.isNumpadVisible,
+                enter = fadeIn() + scaleIn(),
+                exit = fadeOut() + scaleOut()
+            ) {
+                AppExtendedFab(
+                    text = actionBtnText,
+                    icon = if (uiState.isNewBudget) Icons.Default.Add else Icons.Default.Check,
+                    onClick = {
+                        numpadState.dismiss()
+                        viewModel.saveBudget { onNavigateBack() }
+                    },
+                    containerColor = accentColor,
+                    contentColor = Color.White
+                )
+            }
+        },
         topBar = {
             TopAppBar(
                 title = {
@@ -195,23 +221,22 @@ fun BudgetAddEditScreen(
                     CircularProgressIndicator()
                 }
             } else {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .verticalScroll(rememberScrollState())
-                            .padding(bottom = 16.dp)
-                    ) {
-                        // 1. Type Selector Tabs
-                        TabPill(
-                            tabs = listOf(
-                                "Expenses" to ExpenseColor,
-                                "Incomes" to IncomeColor,
-                                "Category" to CategoryColor
-                            ),
-                            activeTab = uiState.editType,
-                            onTabChange = { viewModel.updateType(it) }
-                        )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(bottom = 88.dp)
+                ) {
+                    // 1. Type Selector Tabs
+                    TabPill(
+                        tabs = listOf(
+                            "Expenses" to ExpenseColor,
+                            "Incomes" to IncomeColor,
+                            "Category" to CategoryColor
+                        ),
+                        activeTab = uiState.editType,
+                        onTabChange = { viewModel.updateType(it) }
+                    )
 
                         Spacer(modifier = Modifier.height(4.dp))
 
@@ -545,71 +570,19 @@ fun BudgetAddEditScreen(
                             }
                         }
                     }
-
-                    // Docked Bottom Bar (Numpad or Save Button)
-                    Surface(
-                        tonalElevation = 6.dp,
-                        shadowElevation = 8.dp,
-                        color = MaterialTheme.colorScheme.surface,
-                        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-                    ) {
-                        Column {
-                            AnimatedVisibility(
-                                visible = numpadState.isNumpadVisible,
-                                enter = fadeIn() + expandVertically(),
-                                exit = fadeOut() + shrinkVertically()
-                            ) {
-                                NumpadView(
-                                    onKeyPress = viewModel::onNumpadKeyPress,
-                                    onEvaluate = viewModel::evaluateMathExpression,
-                                    onNext = { numpadState.onNext() },
-                                    hasOperatorInAmount = hasOperatorInAmount,
-                                    saveButtonText = actionBtnText,
-                                    saveButtonColor = accentColor,
-                                    onDismiss = { numpadState.dismiss() }
-                                )
-                            }
-                        }
-                        if (!numpadState.isNumpadVisible) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 20.dp, vertical = 10.dp)
-                            ) {
-                                Button(
-                                    onClick = {
-                                        numpadState.dismiss()
-                                        viewModel.saveBudget { onNavigateBack() }
-                                    },
-                                    enabled = isSaveEnabled,
-                                    shape = RoundedCornerShape(20.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = accentColor,
-                                        contentColor = Color.White
-                                    ),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(54.dp)
-                                ) {
-                                    if (uiState.isSaving) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(22.dp),
-                                            color = Color.White,
-                                            strokeWidth = 2.dp
-                                        )
-                                    } else {
-                                        Text(
-                                            text = actionBtnText,
-                                            fontSize = 17.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
                 }
             }
         }
+
+    if (numpadState.isNumpadVisible) {
+        NumpadView(
+            onKeyPress = viewModel::onNumpadKeyPress,
+            onEvaluate = viewModel::evaluateMathExpression,
+            onNext = { numpadState.onNext() },
+            hasOperatorInAmount = hasOperatorInAmount,
+            saveButtonText = actionBtnText,
+            saveButtonColor = accentColor,
+            onDismiss = { numpadState.dismiss() }
+        )
     }
 }

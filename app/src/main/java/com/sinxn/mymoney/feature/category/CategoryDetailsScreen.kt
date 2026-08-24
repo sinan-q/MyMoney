@@ -133,6 +133,12 @@ fun CategoryDetailsScreen(
                     val cat = uiState.category
                     val isSystem = cat?.type == CategoryType.SYSTEM || cat?.tag?.startsWith("system::") == true
                     if (cat != null && !isSystem) {
+                        IconButton(onClick = { onEditCategoryClick(uiState.categoryId) }) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit Category"
+                            )
+                        }
                         IconButton(onClick = viewModel::toggleArchive) {
                             Icon(
                                 imageVector = if (cat.isArchived) Icons.Default.Unarchive else Icons.Default.Archive,
@@ -149,17 +155,6 @@ fun CategoryDetailsScreen(
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            if (uiState.category != null) {
-                FloatingActionButton(
-                    onClick = { onEditCategoryClick(uiState.categoryId) },
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit Category")
-                }
-            }
         },
         contentWindowInsets = WindowInsets(0,0,0,0)
     ) { paddingValues ->

@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -13,6 +15,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
@@ -31,6 +34,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CleanListRow
 import com.sinxn.mymoney.core.ui.components.EditAmountHeader
@@ -114,6 +118,24 @@ fun SavingAddEditScreen(
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        floatingActionButton = {
+            AnimatedVisibility(
+                visible = isSaveEnabled && !numpadState.isNumpadVisible,
+                enter = fadeIn() + scaleIn(),
+                exit = fadeOut() + scaleOut()
+            ) {
+                AppExtendedFab(
+                    text = actionBtnText,
+                    icon = if (uiState.isNewSaving) Icons.Default.Add else Icons.Default.Check,
+                    onClick = {
+                        numpadState.dismiss()
+                        viewModel.saveSaving { onNavigateBack() }
+                    },
+                    containerColor = SavingAccentColor,
+                    contentColor = Color.White
+                )
+            }
+        },
         topBar = {
             TopAppBar(
                 title = {
@@ -156,13 +178,12 @@ fun SavingAddEditScreen(
                     CircularProgressIndicator()
                 }
             } else {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .verticalScroll(rememberScrollState())
-                            .padding(bottom = 16.dp)
-                    ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(bottom = 88.dp)
+                ) {
                         // 1. Target Goal Amount Header (Hero Amount Input)
                         EditAmountHeader(
                             amountText = uiState.editAmount,
@@ -425,71 +446,19 @@ fun SavingAddEditScreen(
                             }
                         }
                     }
-
-                    // Docked Bottom Bar (Numpad or Save Button)
-                    Surface(
-                        tonalElevation = 6.dp,
-                        shadowElevation = 8.dp,
-                        color = MaterialTheme.colorScheme.surface,
-                        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-                    ) {
-                        Column {
-                            AnimatedVisibility(
-                                visible = numpadState.isNumpadVisible,
-                                enter = fadeIn() + expandVertically(),
-                                exit = fadeOut() + shrinkVertically()
-                            ) {
-                                NumpadView(
-                                    onKeyPress = viewModel::onNumpadKeyPress,
-                                    onEvaluate = viewModel::evaluateMathExpression,
-                                    onNext = { numpadState.onNext() },
-                                    hasOperatorInAmount = hasOperatorInAmount,
-                                    saveButtonText = actionBtnText,
-                                    saveButtonColor = SavingAccentColor,
-                                    onDismiss = { numpadState.dismiss() }
-                                )
-                            }
-                        }
-                        if (!numpadState.isNumpadVisible) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 20.dp, vertical = 10.dp)
-                            ) {
-                                Button(
-                                    onClick = {
-                                        numpadState.dismiss()
-                                        viewModel.saveSaving { onNavigateBack() }
-                                    },
-                                    enabled = isSaveEnabled,
-                                    shape = RoundedCornerShape(20.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = SavingAccentColor,
-                                        contentColor = Color.White
-                                    ),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(54.dp)
-                                ) {
-                                    if (uiState.isSaving) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(22.dp),
-                                            color = Color.White,
-                                            strokeWidth = 2.dp
-                                        )
-                                    } else {
-                                        Text(
-                                            text = actionBtnText,
-                                            fontSize = 17.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
                 }
             }
         }
+
+    if (numpadState.isNumpadVisible) {
+        NumpadView(
+            onKeyPress = viewModel::onNumpadKeyPress,
+            onEvaluate = viewModel::evaluateMathExpression,
+            onNext = { numpadState.onNext() },
+            hasOperatorInAmount = hasOperatorInAmount,
+            saveButtonText = actionBtnText,
+            saveButtonColor = SavingAccentColor,
+            onDismiss = { numpadState.dismiss() }
+        )
     }
 }

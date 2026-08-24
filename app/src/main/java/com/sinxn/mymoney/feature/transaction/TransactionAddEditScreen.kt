@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import com.sinxn.mymoney.core.ui.components.NumpadView
 import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.ui.components.rememberNumpadFormState
@@ -123,7 +124,9 @@ fun TransactionAddEditScreen(
                 enter = fadeIn() + scaleIn(),
                 exit = fadeOut() + scaleOut()
             ) {
-                ExtendedFloatingActionButton(
+                AppExtendedFab(
+                    text = activeFabText,
+                    icon = activeFabIcon,
                     onClick = {
                         activeNumpadState.dismiss()
                         if (isCurrentPageTx) {
@@ -131,18 +134,6 @@ fun TransactionAddEditScreen(
                         } else {
                             transferViewModel.saveTransfer { onNavigateBack() }
                         }
-                    },
-                    icon = {
-                        Icon(
-                            imageVector = activeFabIcon,
-                            contentDescription = activeFabText
-                        )
-                    },
-                    text = {
-                        Text(
-                            text = activeFabText,
-                            fontWeight = FontWeight.Bold
-                        )
                     },
                     containerColor = activeFabColor,
                     contentColor = Color.White

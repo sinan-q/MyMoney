@@ -67,25 +67,24 @@ fun RecurrentTransactionDetailsScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                IconButton(onClick = { showDeleteConfirmation = true }) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.error
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (!uiState.isLoading && uiState.item != null) {
+                        IconButton(onClick = { onEditClick(viewModel.recurrenceId) }) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit Recurrence"
+                            )
+                        }
+                    }
+
+                    IconButton(onClick = { showDeleteConfirmation = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
-            }
-        },
-        floatingActionButton = {
-            if (!uiState.isLoading && uiState.item != null) {
-                ExtendedFloatingActionButton(
-                    onClick = { onEditClick(viewModel.recurrenceId) },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    shape = RoundedCornerShape(18.dp),
-                    icon = { Icon(Icons.Default.Edit, contentDescription = "Edit") },
-                    text = { Text("Edit Recurrence", fontWeight = FontWeight.Bold) }
-                )
             }
         }
     ) { padding ->

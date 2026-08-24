@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.model.DebtWithDetails
+import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
@@ -128,27 +130,30 @@ private fun DebtListContent(
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
     val accentColor = if (pagerState.currentPage == 0) ExpenseColor else IncomeColor
 
+    val debtListState = rememberLazyListState()
+    val creditListState = rememberLazyListState()
+    val currentListState = if (pagerState.currentPage == 0) debtListState else creditListState
+
+    val fabText = if (pagerState.currentPage == 0) "Add Debt" else "Add Credit"
+
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
-            ExtendedFloatingActionButton(
+            AppExtendedFab(
+                text = fabText,
+                icon = Icons.Default.Add,
                 onClick = { onAddDebt(pagerState.currentPage) },
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = {
-                    Text(
-                        text = if (pagerState.currentPage == 0) "Add Debt" else "Add Credit",
-                        fontWeight = FontWeight.Bold
-                    )
-                },
+                expanded = !currentListState.isScrollInProgress,
                 containerColor = accentColor,
-                contentColor = Color.White,
-                shape = RoundedCornerShape(18.dp)
+                contentColor = Color.White
             )
         }
     ) { paddingValues ->
         DebtListBodyContent(
             uiState = uiState,
             pagerState = pagerState,
+            debtListState = debtListState,
+            creditListState = creditListState,
             modifier = Modifier.padding(paddingValues),
             showSummaryCard = true,
             onQuickPayment = onQuickPayment,
@@ -165,6 +170,8 @@ fun DebtListBodyContent(
     uiState: DebtListUiState,
     modifier: Modifier = Modifier,
     pagerState: PagerState = rememberPagerState(initialPage = 0, pageCount = { 2 }),
+    debtListState: LazyListState = rememberLazyListState(),
+    creditListState: LazyListState = rememberLazyListState(),
     showSummaryCard: Boolean = true,
     onTabSelected: (Int) -> Unit = {},
     onDebtClick: (String) -> Unit,
@@ -174,8 +181,6 @@ fun DebtListBodyContent(
     onDeleteDebt: (String) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val debtListState = rememberLazyListState()
-    val creditListState = rememberLazyListState()
 
     val formatterConfig = remember(uiState.formattingSettings) {
         MoneyFormatter.Config(

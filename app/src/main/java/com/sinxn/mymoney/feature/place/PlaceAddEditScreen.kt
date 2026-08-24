@@ -18,6 +18,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
@@ -38,6 +39,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.parseIconData
 import kotlinx.coroutines.flow.collectLatest
@@ -160,27 +162,23 @@ fun PlaceAddEditScreen(
                             )
                         }
                     }
-                    IconButton(
-                        onClick = viewModel::savePlace,
-                        enabled = uiState.name.isNotBlank()
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Save Place",
-                            tint = if (uiState.name.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                        )
-                    }
                 }
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = viewModel::savePlace,
-                containerColor = if (uiState.name.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = if (uiState.name.isNotBlank()) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                shape = RoundedCornerShape(18.dp),
-                icon = { Icon(Icons.Default.Check, contentDescription = "Save") },
-                text = { Text(if (uiState.isEditMode) "Save Changes" else "Create Place", fontWeight = FontWeight.Bold) }
+            val isSaveEnabled = uiState.name.isNotBlank()
+            val text = if (uiState.isEditMode) "Save Changes" else "Create Place"
+            val icon = if (uiState.isEditMode) Icons.Default.Check else Icons.Default.Add
+            AppExtendedFab(
+                text = text,
+                icon = icon,
+                onClick = {
+                    if (isSaveEnabled) {
+                        viewModel.savePlace()
+                    }
+                },
+                containerColor = if (isSaveEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = if (isSaveEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
             )
         }
     ) { paddingValues ->

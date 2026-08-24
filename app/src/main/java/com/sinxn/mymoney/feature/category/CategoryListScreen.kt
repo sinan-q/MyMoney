@@ -10,21 +10,23 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.util.CategoryType
@@ -54,17 +56,22 @@ fun CategoryListScreen(
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
-            FloatingActionButton(
+            val isIncome = pagerState.currentPage == 0
+            val currentListState = if (isIncome) incomeListState else expenseListState
+            val activeColor = if (isIncome) IncomeColor else ExpenseColor
+            val fabText = if (isIncome) "Add Income" else "Add Expense"
+
+            AppExtendedFab(
+                text = fabText,
+                icon = Icons.Default.Add,
                 onClick = {
-                    val activeType = if (pagerState.currentPage == 0) CategoryType.INCOME else CategoryType.EXPENSE
+                    val activeType = if (isIncome) CategoryType.INCOME else CategoryType.EXPENSE
                     onAddCategoryClick(activeType)
                 },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                shape = CircleShape
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Category")
-            }
+                expanded = !currentListState.isScrollInProgress,
+                containerColor = activeColor,
+                contentColor = Color.White
+            )
         }
     ) { innerPadding ->
         Column(

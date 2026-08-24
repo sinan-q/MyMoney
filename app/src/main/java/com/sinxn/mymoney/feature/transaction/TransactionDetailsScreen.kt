@@ -18,7 +18,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -67,26 +66,24 @@ fun TransactionDetailsScreen(
                     )
                 }
 
-                IconButton(onClick = { showDeleteConfirmation = true }) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.error
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (!uiState.isLoading && uiState.transaction != null) {
+                        IconButton(onClick = { onEditClick(viewModel.transactionId, uiState.isTransfer) }) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = if (uiState.isTransfer) "Edit Transfer" else "Edit Transaction"
+                            )
+                        }
+                    }
+
+                    IconButton(onClick = { showDeleteConfirmation = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
-            }
-        },
-        floatingActionButton = {
-            if (!uiState.isLoading && uiState.transaction != null) {
-                val fabText = if (uiState.isTransfer) "Edit Transfer" else "Edit Transaction"
-                ExtendedFloatingActionButton(
-                    onClick = { onEditClick(viewModel.transactionId, uiState.isTransfer) },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    shape = RoundedCornerShape(18.dp),
-                    icon = { Icon(Icons.Default.Edit, contentDescription = "Edit") },
-                    text = { Text(fabText, fontWeight = FontWeight.Bold) }
-                )
             }
         }
     ) { padding ->

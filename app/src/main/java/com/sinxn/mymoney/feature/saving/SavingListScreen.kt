@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.model.SavingWithDetails
+import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.IconData
 import com.sinxn.mymoney.core.ui.components.parseIconData
@@ -105,16 +107,19 @@ fun SavingListScreen(
         }
     }
 
+    val listState = rememberLazyListState()
+
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
-            FloatingActionButton(
+            AppExtendedFab(
+                text = "New Goal",
+                icon = Icons.Default.Add,
                 onClick = onAddSaving,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Saving Goal")
-            }
+                expanded = !listState.isScrollInProgress,
+                containerColor = InProgressColor,
+                contentColor = Color.White
+            )
         }
     ) { paddingValues ->
         Column(
@@ -197,6 +202,7 @@ fun SavingListScreen(
                     )
                 } else {
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)

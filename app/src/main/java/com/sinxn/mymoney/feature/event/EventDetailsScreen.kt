@@ -109,6 +109,12 @@ fun EventDetailsScreen(
                 },
                 actions = {
                     if (uiState.event != null) {
+                        IconButton(onClick = { onEditEventClick(uiState.eventId) }) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit Event"
+                            )
+                        }
                         IconButton(onClick = viewModel::toggleArchive) {
                             Icon(
                                 imageVector = if (uiState.event!!.isArchived) Icons.Default.Unarchive else Icons.Default.Archive,
@@ -125,17 +131,6 @@ fun EventDetailsScreen(
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            if (uiState.event != null) {
-                FloatingActionButton(
-                    onClick = { onEditEventClick(uiState.eventId) },
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit Event")
-                }
-            }
         }
     ) { paddingValues ->
         Box(

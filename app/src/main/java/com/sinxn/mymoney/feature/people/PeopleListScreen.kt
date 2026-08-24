@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -19,6 +20,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.entity.PersonEntity
+import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.IconData
 import com.sinxn.mymoney.core.ui.components.parseIconData
@@ -33,14 +35,14 @@ fun PeopleListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
+    val listState = rememberLazyListState()
 
     val filteredPeople = remember(uiState.people, searchQuery) {
         if (searchQuery.isBlank()) {
             uiState.people
         } else {
             uiState.people.filter { person ->
-                person.name.contains(searchQuery, ignoreCase = true) ||
-                (!person.tag.isNullOrBlank() && person.tag.contains(searchQuery, ignoreCase = true))
+                person.name.contains(searchQuery, ignoreCase = true)
             }
         }
     }
@@ -57,9 +59,12 @@ fun PeopleListScreen(
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddPersonClick) {
-                Icon(Icons.Default.Add, contentDescription = "Add Person")
-            }
+            AppExtendedFab(
+                text = "Add Person",
+                icon = Icons.Default.Add,
+                onClick = onAddPersonClick,
+                expanded = !listState.isScrollInProgress
+            )
         }
     ) { innerPadding ->
         Column(
@@ -126,6 +131,7 @@ fun PeopleListScreen(
                 EmptyPeopleState(isSearching = searchQuery.isNotEmpty())
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 88.dp)
                 ) {

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -15,11 +16,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.R
 import com.sinxn.mymoney.core.data.local.model.RecurrentTransactionWithDetails
 import com.sinxn.mymoney.core.data.local.model.RecurrentTransferWithDetails
+import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.FinanceListItem
 import com.sinxn.mymoney.core.util.DateUtils
@@ -39,16 +42,27 @@ fun RecurrenceScreen(
     var selectedTab by remember { mutableIntStateOf(0) }
     val uiState by viewModel.uiState.collectAsState()
 
+    val txListState = rememberLazyListState()
+    val transferListState = rememberLazyListState()
+    val currentListState = if (selectedTab == 0) txListState else transferListState
+
+    val isTx = selectedTab == 0
+    val fabText = if (isTx) "New Recurrence" else "New Transfer"
+    val fabColor = if (isTx) MaterialTheme.colorScheme.primary else TransferColor
+
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
-            FloatingActionButton(
+            AppExtendedFab(
+                text = fabText,
+                icon = Icons.Default.Add,
                 onClick = {
                     if (selectedTab == 0) onAddRecurrentTransaction() else onAddRecurrentTransfer()
-                }
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Recurrent Item")
-            }
+                },
+                expanded = !currentListState.isScrollInProgress,
+                containerColor = fabColor,
+                contentColor = Color.White
+            )
         }
     ) { padding ->
         Column(
@@ -83,6 +97,7 @@ fun RecurrenceScreen(
                     }
                 } else {
                     LazyColumn(
+                        state = txListState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 88.dp)
                     ) {
@@ -112,6 +127,7 @@ fun RecurrenceScreen(
                     }
                 } else {
                     LazyColumn(
+                        state = transferListState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 88.dp)
                     ) {

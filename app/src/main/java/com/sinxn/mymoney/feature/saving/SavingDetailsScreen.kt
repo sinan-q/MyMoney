@@ -109,14 +109,14 @@ fun SavingDetailsScreen(
                 },
                 actions = {
                     if (saving != null) {
+                        IconButton(onClick = { onEditSavingClick(saving.id) }) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit")
+                        }
                         IconButton(onClick = viewModel::toggleComplete) {
                             Icon(
                                 imageVector = if (saving.isComplete) Icons.Default.Unarchive else Icons.Default.Archive,
                                 contentDescription = if (saving.isComplete) "Mark In Progress" else "Mark Complete"
                             )
-                        }
-                        IconButton(onClick = { onEditSavingClick(saving.id) }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit")
                         }
                         IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(
@@ -131,17 +131,6 @@ fun SavingDetailsScreen(
                     containerColor = MaterialTheme.colorScheme.background
                 )
             )
-        },
-        floatingActionButton = {
-            if (saving != null) {
-                FloatingActionButton(
-                    onClick = { onEditSavingClick(saving.id) },
-                    containerColor = accentColor,
-                    contentColor = Color.White
-                ) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit Goal")
-                }
-            }
         }
     ) { paddingValues ->
         Box(

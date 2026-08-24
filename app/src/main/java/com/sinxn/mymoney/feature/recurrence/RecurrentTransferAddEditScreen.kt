@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -73,6 +75,24 @@ fun RecurrentTransferAddEditScreen(
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        floatingActionButton = {
+            AnimatedVisibility(
+                visible = isSaveEnabled && !numpadState.isNumpadVisible,
+                enter = fadeIn() + scaleIn(),
+                exit = fadeOut() + scaleOut()
+            ) {
+                AppExtendedFab(
+                    text = actionBtnText,
+                    icon = if (uiState.isNew) Icons.Default.Add else Icons.Default.Check,
+                    onClick = {
+                        numpadState.dismiss()
+                        viewModel.save(onSuccess = onNavigateBack)
+                    },
+                    containerColor = accentColor,
+                    contentColor = Color.White
+                )
+            }
+        },
         topBar = {
             Row(
                 modifier = Modifier
@@ -109,13 +129,12 @@ fun RecurrentTransferAddEditScreen(
             if (uiState.isLoading) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .verticalScroll(scrollState)
-                            .padding(bottom = 16.dp)
-                    ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(scrollState)
+                        .padding(bottom = 88.dp)
+                ) {
                         // 1. Amount Header Display
                         EditAmountHeader(
                             amountText = uiState.moneyFromStr,
@@ -418,67 +437,22 @@ fun RecurrentTransferAddEditScreen(
                                     colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = accentColor)
                                 )
                             }
-                        }
-                    }
-
-                    // Docked Bottom Bar (Numpad or Save Button)
-                    Surface(
-                        tonalElevation = 6.dp,
-                        shadowElevation = 8.dp,
-                        color = MaterialTheme.colorScheme.surface,
-                        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-                    ) {
-                        Column {
-                            AnimatedVisibility(
-                                visible = numpadState.isNumpadVisible,
-                                enter = fadeIn() + expandVertically(),
-                                exit = fadeOut() + shrinkVertically()
-                            ) {
-                                NumpadView(
-                                    onKeyPress = viewModel::onNumpadKeyPress,
-                                    onEvaluate = viewModel::evaluateMathExpression,
-                                    onNext = { numpadState.onNext() },
-                                    hasOperatorInAmount = hasOperatorInAmount,
-                                    saveButtonText = actionBtnText,
-                                    saveButtonColor = accentColor,
-                                    onDismiss = { numpadState.dismiss() }
-                                )
-                            }
-
-                            if (!numpadState.isNumpadVisible) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 20.dp, vertical = 10.dp)
-                                ) {
-                                    Button(
-                                        onClick = {
-                                            numpadState.dismiss()
-                                            viewModel.save(onSuccess = onNavigateBack)
-                                        },
-                                        enabled = isSaveEnabled,
-                                        shape = RoundedCornerShape(20.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = accentColor,
-                                            contentColor = Color.White
-                                        ),
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(54.dp)
-                                    ) {
-                                        Text(
-                                            text = actionBtnText,
-                                            fontSize = 17.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
             }
         }
+    }
+
+    if (numpadState.isNumpadVisible) {
+        NumpadView(
+            onKeyPress = viewModel::onNumpadKeyPress,
+            onEvaluate = viewModel::evaluateMathExpression,
+            onNext = { numpadState.onNext() },
+            hasOperatorInAmount = hasOperatorInAmount,
+            saveButtonText = actionBtnText,
+            saveButtonColor = accentColor,
+            onDismiss = { numpadState.dismiss() }
+        )
     }
 
     // Modal Pickers & Dialogs

@@ -27,10 +27,10 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
+import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -181,16 +181,20 @@ fun CategoryAddEditScreen(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
+            val isSaveEnabled = uiState.name.isNotBlank()
+            val text = if (uiState.isEditMode) "Save Changes" else "Create Category"
+            val icon = if (uiState.isEditMode) Icons.Default.Check else Icons.Default.Add
+            AppExtendedFab(
+                text = text,
+                icon = icon,
                 onClick = {
-                    focusManager.clearFocus()
-                    viewModel.saveCategory()
+                    if (isSaveEnabled) {
+                        focusManager.clearFocus()
+                        viewModel.saveCategory()
+                    }
                 },
-                containerColor = if (uiState.name.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = if (uiState.name.isNotBlank()) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                shape = RoundedCornerShape(18.dp),
-                icon = { if (uiState.isEditMode) Icon(Icons.Default.Check, contentDescription = "Save") else Icon(Icons.Default.Add, contentDescription = "Save") },
-                text = { Text(if (uiState.isEditMode) "Save Changes" else "Create Category", fontWeight = FontWeight.Bold) }
+                containerColor = if (isSaveEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = if (isSaveEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
             )
         }
     ) { paddingValues ->
