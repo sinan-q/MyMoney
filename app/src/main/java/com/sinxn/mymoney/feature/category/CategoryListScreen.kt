@@ -45,7 +45,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -55,7 +54,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -63,37 +61,16 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import androidx.hilt.navigation.compose.hiltViewModel
-import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
-import com.sinxn.mymoney.core.ui.components.IconData
 import com.sinxn.mymoney.core.ui.components.TabPill
-import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.CategoryType
 import com.sinxn.mymoney.ui.theme.ExpenseColor
 import com.sinxn.mymoney.ui.theme.IncomeColor
 import sh.calvin.reorderable.ReorderableColumn
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
-
-@Immutable
-data class ParentCategoryItem(
-    val category: CategoryEntity,
-    val cleanName: String,
-    val iconData: IconData,
-    val subcategories: List<SubcategoryItem>,
-    val isExpanded: Boolean
-)
-
-@Immutable
-data class SubcategoryItem(
-    val category: CategoryEntity,
-    val cleanName: String,
-    val iconData: IconData,
-    val parentCategoryId: String
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -104,32 +81,13 @@ fun CategoryListScreen(
     viewModel: CategoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: Income, 1: Expense
-    var expandedParentIds by remember { mutableStateOf(setOf<String>()) }
-
-    val toggleParentExpanded: (String) -> Unit = { parentId ->
-        expandedParentIds = if (parentId in expandedParentIds) {
-            expandedParentIds - parentId
-        } else {
-            expandedParentIds + parentId
-        }
-    }
-
-    val incomeParentItems = remember(uiState.incomeCategories, expandedParentIds) {
-        buildParentCategoryItems(uiState.incomeCategories, expandedParentIds)
-    }
-    val expenseParentItems = remember(uiState.expenseCategories, expandedParentIds) {
-        buildParentCategoryItems(uiState.expenseCategories, expandedParentIds)
-    }
+    var selectedTab by remember { mutableIntStateOf(CategoryType.INCOME) }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             FloatingActionButton(
-                onClick = {
-                    val targetType = if (selectedTab == 0) CategoryType.INCOME else CategoryType.EXPENSE
-                    onAddCategoryClick(targetType)
-                },
+                onClick = { onAddCategoryClick(selectedTab) },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 shape = CircleShape
@@ -159,25 +117,26 @@ fun CategoryListScreen(
             } else {
                 AnimatedContent(
                     targetState = selectedTab,
-                    transitionSpec = {
-                        fadeIn() togetherWith fadeOut()
-                    },
+                    transitionSpec = { fadeIn() togetherWith fadeOut() },
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
+                        .fillMaxWidth(),
                     label = "CategoryTabContent"
                 ) { tab ->
-                    val parentItems = if (tab == 0) incomeParentItems else expenseParentItems
+                    val parentItems = if (tab == CategoryType.INCOME) {
+                        uiState.incomeCategories
+                    } else {
+                        uiState.expenseCategories
+                    }
 
                     if (parentItems.isEmpty()) {
                         EmptyCategoryState(
-                            tabName = if (tab == 0) "Income" else "Expense"
+                            tabName = if (tab == CategoryType.INCOME) "Income" else "Expense"
                         )
                     } else {
                         CategoryReorderableList(
                             items = parentItems,
                             onCategoryClick = onCategoryClick,
-                            onExpandToggle = toggleParentExpanded,
+                            onExpandToggle = viewModel::toggleParentExpanded,
                             onReorderParents = { orderedIds ->
                                 viewModel.reorderCategories(orderedIds)
                             },
@@ -507,85 +466,4 @@ private fun EmptyCategoryState(tabName: String) {
             )
         }
     }
-}
-
-private fun buildParentCategoryItems(
-    categories: List<CategoryEntity>,
-    expandedParentIds: Set<String>
-): List<ParentCategoryItem> {
-    if (categories.isEmpty()) return emptyList()
-
-    val parents = mutableListOf<CategoryEntity>()
-    val subMap = mutableMapOf<String, MutableList<CategoryEntity>>()
-    val orphaned = mutableListOf<CategoryEntity>()
-
-    for (cat in categories) {
-        val cleanName = cat.name.trim()
-        val isSubByName = cleanName.startsWith("↳") || cleanName.startsWith("  ↳ ")
-
-        if (cat.parentId == null && !isSubByName) {
-            parents.add(cat)
-        } else if (cat.parentId != null) {
-            subMap.getOrPut(cat.parentId) { mutableListOf() }.add(cat)
-        } else {
-            orphaned.add(cat)
-        }
-    }
-
-    // Resolve legacy items without parentId
-    var currentParent: CategoryEntity? = null
-    for (cat in categories) {
-        val cleanName = cat.name.trim()
-        val isSubByName = cleanName.startsWith("↳") || cleanName.startsWith("  ↳ ")
-        if (!isSubByName && cat.parentId == null) {
-            currentParent = cat
-        } else if (isSubByName && cat.parentId == null && currentParent != null) {
-            subMap.getOrPut(currentParent.id) { mutableListOf() }.add(cat)
-            orphaned.remove(cat)
-        }
-    }
-
-    val result = mutableListOf<ParentCategoryItem>()
-
-    for (parent in parents) {
-        val rawSubs = subMap[parent.id] ?: emptyList()
-        val subs = rawSubs.map { sub ->
-            val subCleanName = sub.name.replace("  ↳ ", "").replace("↳", "").trim()
-            val subIconData = parseIconData(sub.icon, subCleanName)
-            SubcategoryItem(
-                category = sub,
-                cleanName = subCleanName,
-                iconData = subIconData,
-                parentCategoryId = parent.id
-            )
-        }
-        val isExpanded = parent.id in expandedParentIds
-        val cleanName = parent.name.replace("  ↳ ", "").replace("↳", "").trim()
-        val iconData = parseIconData(parent.icon, cleanName)
-        result.add(
-            ParentCategoryItem(
-                category = parent,
-                cleanName = cleanName,
-                iconData = iconData,
-                subcategories = subs,
-                isExpanded = isExpanded
-            )
-        )
-    }
-
-    for (orphan in orphaned) {
-        val cleanName = orphan.name.replace("  ↳ ", "").replace("↳", "").trim()
-        val iconData = parseIconData(orphan.icon, cleanName)
-        result.add(
-            ParentCategoryItem(
-                category = orphan,
-                cleanName = cleanName,
-                iconData = iconData,
-                subcategories = emptyList(),
-                isExpanded = false
-            )
-        )
-    }
-
-    return result
 }

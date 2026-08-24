@@ -599,29 +599,8 @@ private fun getInitialExpandedParentIds(
     selectedCategoryId: String?
 ): Set<String> {
     if (selectedCategoryId.isNullOrBlank()) return emptySet()
-
     val selectedCat = categories.find { it.id == selectedCategoryId } ?: return emptySet()
-
-    if (selectedCat.parentId != null) {
-        return setOf(selectedCat.parentId)
-    }
-
-    val cleanName = selectedCat.name.trim()
-    val isSubByName = cleanName.startsWith("↳") || cleanName.startsWith("  ↳ ")
-    if (isSubByName) {
-        var currentParentId: String? = null
-        for (cat in categories) {
-            val name = cat.name.trim()
-            val isSub = name.startsWith("↳") || name.startsWith("  ↳ ")
-            if (!isSub && cat.parentId == null) {
-                currentParentId = cat.id
-            } else if (cat.id == selectedCategoryId) {
-                if (currentParentId != null) return setOf(currentParentId)
-            }
-        }
-    }
-
-    return emptySet()
+    return if (selectedCat.parentId != null) setOf(selectedCat.parentId) else emptySet()
 }
 
 // ── Flat Row Builder ──
@@ -635,57 +614,22 @@ private fun buildFlatRows(
 ): List<CategoryRow> {
     if (categories.isEmpty()) return emptyList()
 
-    val parents = mutableListOf<CategoryEntity>()
-    val subMap = mutableMapOf<String, MutableList<CategoryEntity>>()
-    val orphaned = mutableListOf<CategoryEntity>()
-
-    for (cat in categories) {
-        val cleanName = cat.name.trim()
-        val isSubByName = cleanName.startsWith("↳") || cleanName.startsWith("  ↳ ")
-
-        if (cat.parentId == null && !isSubByName) {
-            parents.add(cat)
-        } else if (cat.parentId != null) {
-            subMap.getOrPut(cat.parentId) { mutableListOf() }.add(cat)
-        } else {
-            orphaned.add(cat)
-        }
-    }
-
-    // Handle name-based subcategory assignment
-    var currentParent: CategoryEntity? = null
-    for (cat in categories) {
-        val cleanName = cat.name.trim()
-        val isSubByName = cleanName.startsWith("↳") || cleanName.startsWith("  ↳ ")
-        if (!isSubByName && cat.parentId == null) {
-            currentParent = cat
-        } else if (isSubByName && cat.parentId == null && currentParent != null) {
-            subMap.getOrPut(currentParent.id) { mutableListOf() }.add(cat)
-            orphaned.remove(cat)
-        }
-    }
+    val parents = categories.filter { it.parentId == null }
+    val subMap = categories.filter { it.parentId != null }.groupBy { it.parentId!! }
 
     val result = mutableListOf<CategoryRow>()
 
     for (parent in parents) {
         val subs = subMap[parent.id] ?: emptyList()
         val isExpanded = parent.id in expandedParentIds
-        val cleanName = parent.name.replace("  ↳ ", "").replace("↳", "").trim()
-        val iconData = parseIconData(parent.icon, cleanName)
-        result.add(CategoryRow.Parent(parent, cleanName, iconData, subs.size, isExpanded))
+        val iconData = parseIconData(parent.icon, parent.name)
+        result.add(CategoryRow.Parent(parent, parent.name, iconData, subs.size, isExpanded))
         if (isExpanded) {
             for (sub in subs) {
-                val subCleanName = sub.name.replace("  ↳ ", "").replace("↳", "").trim()
-                val subIconData = parseIconData(sub.icon, subCleanName)
-                result.add(CategoryRow.Sub(sub, subCleanName, subIconData))
+                val subIconData = parseIconData(sub.icon, sub.name)
+                result.add(CategoryRow.Sub(sub, sub.name, subIconData))
             }
         }
-    }
-
-    for (orphan in orphaned) {
-        val cleanName = orphan.name.replace("  ↳ ", "").replace("↳", "").trim()
-        val iconData = parseIconData(orphan.icon, cleanName)
-        result.add(CategoryRow.Parent(orphan, cleanName, iconData, 0, false))
     }
 
     return result

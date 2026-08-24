@@ -189,7 +189,7 @@ fun RecurrentTransactionAddEditScreen(
                                     }
                                 },
                                 label = "Category",
-                                value = activeCategory?.name?.replace("  ↳ ", "") ?: "Select Category",
+                                value = activeCategory?.name ?: "Select Category",
                                 onClick = {
                                     numpadState.dismiss()
                                     activePicker = FormPicker.Category

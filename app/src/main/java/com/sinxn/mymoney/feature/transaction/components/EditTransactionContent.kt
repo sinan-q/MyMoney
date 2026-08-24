@@ -105,7 +105,7 @@ fun EditTransactionContent(
                     active = true,
                     accentColor = accentColor,
                     label = "Category",
-                    value = activeCategory?.name?.replace("  ↳ ", "") ?: "Select Category",
+                    value = activeCategory?.name ?: "Select Category",
                     trailingIconData = iconData,
                     onClick = { activePicker = FormPicker.Category }
                 )

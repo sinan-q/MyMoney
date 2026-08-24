@@ -56,11 +56,10 @@ fun CategoryQuickGrid(
 ) {
     val quickItems = remember(categories, maxQuickItems) {
         categories.take(maxQuickItems).map { category ->
-            val cleanName = category.name.replace("  ↳ ", "").replace("↳", "").trim()
             QuickCategoryItem(
                 category = category,
-                cleanName = cleanName,
-                iconData = parseIconData(category.icon, cleanName)
+                cleanName = category.name,
+                iconData = parseIconData(category.icon, category.name)
             )
         }
     }

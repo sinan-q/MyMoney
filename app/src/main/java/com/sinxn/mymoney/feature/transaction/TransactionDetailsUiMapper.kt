@@ -8,7 +8,7 @@ import kotlin.math.abs
 object TransactionDetailsUiMapper {
 
     /**
-     * Flattens category hierarchy for UI dropdown selection, adding visual indentation for child categories.
+     * Orders categories so child categories immediately follow their parent, preserving natural names.
      */
     fun flattenCategories(categories: List<CategoryEntity>): List<CategoryEntity> {
         val parents = categories.filter { it.parentId == null }.sortedBy { it.index }
@@ -17,9 +17,7 @@ object TransactionDetailsUiMapper {
         parents.forEach { parent ->
             result.add(parent)
             val children = categories.filter { it.parentId == parent.id }.sortedBy { it.index }
-            children.forEach { child ->
-                result.add(child.copy(name = "  ↳ ${child.name}"))
-            }
+            result.addAll(children)
         }
         return result
     }
