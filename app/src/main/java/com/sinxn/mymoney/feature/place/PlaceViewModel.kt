@@ -1,21 +1,27 @@
 package com.sinxn.mymoney.feature.place
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.entity.PlaceEntity
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.PlaceRepository
+import com.sinxn.mymoney.core.ui.components.IconData
+import com.sinxn.mymoney.core.ui.components.SortOption
+import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-import androidx.compose.runtime.Immutable
-import com.sinxn.mymoney.core.ui.components.IconData
-import com.sinxn.mymoney.core.ui.components.parseIconData
+enum class PlaceSortOption(override val title: String) : SortOption {
+    LAST_EDIT("Recently Edited"),
+    ALPHABETICAL("Alphabetical (A-Z)")
+}
 
 @Immutable
 data class PlaceItemUi(
@@ -31,6 +37,7 @@ data class PlaceItemUi(
 
 data class PlaceUiState(
     val places: List<PlaceItemUi> = emptyList(),
+    val sortOption: PlaceSortOption = PlaceSortOption.LAST_EDIT,
     val isLoading: Boolean = false,
     val formatterConfig: MoneyFormatter.Config = MoneyFormatter.Config(),
     val dateFormat: Int = 0
@@ -45,8 +52,15 @@ class PlaceViewModel @Inject constructor(
     val uiState: StateFlow<PlaceUiState> = combine(
         placeRepository.getPlaces(),
         placeRepository.getAllPlaceTransactions(),
+        settingsRepository.placesSortOption,
         settingsRepository.formattingSettings
-    ) { places, allTransactions, formattingSettings ->
+    ) { places, allTransactions, sortOptionName, formattingSettings ->
+        val sortOption = try {
+            PlaceSortOption.valueOf(sortOptionName)
+        } catch (e: Exception) {
+            PlaceSortOption.LAST_EDIT
+        }
+
         val txGrouped = allTransactions.groupBy { it.transaction.placeId }
 
         val placeItems = places.map { place ->
@@ -81,6 +95,13 @@ class PlaceViewModel @Inject constructor(
             )
         }
 
+        val sortedPlaces = when (sortOption) {
+            PlaceSortOption.LAST_EDIT -> placeItems.sortedByDescending { it.place.lastEdit }
+            PlaceSortOption.ALPHABETICAL -> placeItems.sortedWith(
+                compareBy(String.CASE_INSENSITIVE_ORDER) { it.place.name }
+            )
+        }
+
         val formatterConfig = MoneyFormatter.Config(
             showCurrency = formattingSettings.showCurrency,
             groupDigits = formattingSettings.groupDigits,
@@ -89,7 +110,8 @@ class PlaceViewModel @Inject constructor(
         )
 
         PlaceUiState(
-            places = placeItems,
+            places = sortedPlaces,
+            sortOption = sortOption,
             isLoading = false,
             formatterConfig = formatterConfig,
             dateFormat = formattingSettings.dateFormat
@@ -99,5 +121,11 @@ class PlaceViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = PlaceUiState(isLoading = true)
     )
+
+    fun setSortOption(sortOption: PlaceSortOption) {
+        viewModelScope.launch {
+            settingsRepository.setPlacesSortOption(sortOption.name)
+        }
+    }
 }
 

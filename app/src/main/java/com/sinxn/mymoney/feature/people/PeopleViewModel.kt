@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.entity.PersonEntity
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.PersonRepository
+import com.sinxn.mymoney.core.ui.components.SortOption
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -14,7 +15,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-enum class PersonSortOption(val title: String) {
+enum class PersonSortOption(override val title: String) : SortOption {
     LAST_USED("Recently Used"),
     LAST_EDIT("Recently Edited"),
     ALPHABETICAL("Alphabetical (A-Z)")

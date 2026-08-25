@@ -55,11 +55,23 @@ class SettingsRepository @Inject constructor(
         val GLOBAL_CURRENCY = stringPreferencesKey("global_currency")
         val DAILY_REMINDER_HOUR = intPreferencesKey("daily_reminder_hour")
         val PEOPLE_SORT_OPTION = stringPreferencesKey("people_sort_option")
+        val PLACES_SORT_OPTION = stringPreferencesKey("places_sort_option")
+        val EVENTS_SORT_OPTION = stringPreferencesKey("events_sort_option")
     }
 
     val peopleSortOption: Flow<String> = dataStore.data
         .map { preferences ->
             preferences[PEOPLE_SORT_OPTION] ?: "LAST_USED"
+        }
+
+    val placesSortOption: Flow<String> = dataStore.data
+        .map { preferences ->
+            preferences[PLACES_SORT_OPTION] ?: "LAST_EDIT"
+        }
+
+    val eventsSortOption: Flow<String> = dataStore.data
+        .map { preferences ->
+            preferences[EVENTS_SORT_OPTION] ?: "LAST_EDIT"
         }
 
     val currentWalletId: Flow<String> = dataStore.data
@@ -173,6 +185,18 @@ class SettingsRepository @Inject constructor(
     suspend fun setPeopleSortOption(sortOption: String) {
         dataStore.edit { preferences ->
             preferences[PEOPLE_SORT_OPTION] = sortOption
+        }
+    }
+
+    suspend fun setPlacesSortOption(sortOption: String) {
+        dataStore.edit { preferences ->
+            preferences[PLACES_SORT_OPTION] = sortOption
+        }
+    }
+
+    suspend fun setEventsSortOption(sortOption: String) {
+        dataStore.edit { preferences ->
+            preferences[EVENTS_SORT_OPTION] = sortOption
         }
     }
 }

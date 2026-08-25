@@ -1,13 +1,17 @@
 package com.sinxn.mymoney.feature.place
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
@@ -22,7 +26,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
+import com.sinxn.mymoney.core.ui.components.FilterComponent
 import com.sinxn.mymoney.core.ui.components.FinanceListItem
+import com.sinxn.mymoney.core.ui.components.SearchBar
 import com.sinxn.mymoney.core.util.MoneyFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,53 +74,24 @@ fun PlaceListScreen(
         ) {
             // Search field (shown when > 5 places or actively searching)
             if (uiState.places.size > 5 || searchQuery.isNotEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        placeholder = {
-                            Text(
-                                "Search places...",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        },
-                        trailingIcon = if (searchQuery.isNotEmpty()) {
-                            {
-                                IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(
-                                        Icons.Default.Close,
-                                        contentDescription = "Clear",
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                        } else null,
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
-                        )
-                    )
-                }
+                SearchBar(
+                    searchQuery = searchQuery,
+                    setSearchQuery = { searchQuery = it }
+                )
+            }
+
+            // Sort / Count header bar (between Search Bar and List)
+            if (uiState.places.isNotEmpty()) {
+                FilterComponent(
+                    countText = if (searchQuery.isNotBlank()) {
+                        "${filteredPlaces.size} found"
+                    } else {
+                        "${uiState.places.size} ${if (uiState.places.size == 1) "place" else "places"}"
+                    },
+                    activeSortOption = uiState.sortOption,
+                    options = PlaceSortOption.entries,
+                    setSortOption = viewModel::setSortOption
+                )
             }
 
             Box(

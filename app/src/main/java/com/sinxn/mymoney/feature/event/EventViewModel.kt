@@ -5,13 +5,20 @@ import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.entity.EventEntity
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.EventRepository
+import com.sinxn.mymoney.core.ui.components.SortOption
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+enum class EventSortOption(override val title: String) : SortOption {
+    LAST_EDIT("Recently Edited"),
+    ALPHABETICAL("Alphabetical (A-Z)")
+}
 
 data class EventItemUi(
     val event: EventEntity,
@@ -25,6 +32,7 @@ data class EventItemUi(
 
 data class EventUiState(
     val events: List<EventItemUi> = emptyList(),
+    val sortOption: EventSortOption = EventSortOption.LAST_EDIT,
     val isLoading: Boolean = false,
     val formatterConfig: MoneyFormatter.Config = MoneyFormatter.Config(),
     val dateFormat: Int = 0
@@ -39,8 +47,15 @@ class EventViewModel @Inject constructor(
     val uiState: StateFlow<EventUiState> = combine(
         eventRepository.getEvents(),
         eventRepository.getAllEventTransactions(),
+        settingsRepository.eventsSortOption,
         settingsRepository.formattingSettings
-    ) { events, allTransactions, formattingSettings ->
+    ) { events, allTransactions, sortOptionName, formattingSettings ->
+        val sortOption = try {
+            EventSortOption.valueOf(sortOptionName)
+        } catch (e: Exception) {
+            EventSortOption.LAST_EDIT
+        }
+
         val txGrouped = allTransactions.groupBy { it.transaction.eventId }
 
         val eventItems = events.map { event ->
@@ -74,6 +89,13 @@ class EventViewModel @Inject constructor(
             )
         }
 
+        val sortedEvents = when (sortOption) {
+            EventSortOption.LAST_EDIT -> eventItems.sortedByDescending { it.event.lastEdit }
+            EventSortOption.ALPHABETICAL -> eventItems.sortedWith(
+                compareBy(String.CASE_INSENSITIVE_ORDER) { it.event.name }
+            )
+        }
+
         val formatterConfig = MoneyFormatter.Config(
             showCurrency = formattingSettings.showCurrency,
             groupDigits = formattingSettings.groupDigits,
@@ -82,7 +104,8 @@ class EventViewModel @Inject constructor(
         )
 
         EventUiState(
-            events = eventItems,
+            events = sortedEvents,
+            sortOption = sortOption,
             isLoading = false,
             formatterConfig = formatterConfig,
             dateFormat = formattingSettings.dateFormat
@@ -92,5 +115,11 @@ class EventViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = EventUiState(isLoading = true)
     )
+
+    fun setSortOption(sortOption: EventSortOption) {
+        viewModelScope.launch {
+            settingsRepository.setEventsSortOption(sortOption.name)
+        }
+    }
 }
 
