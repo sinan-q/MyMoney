@@ -798,6 +798,9 @@ interface MoneyDao {
     @Query("UPDATE people SET isArchived = :isArchived, lastEdit = :lastEdit WHERE id = :personId")
     suspend fun updatePersonArchived(personId: String, isArchived: Boolean, lastEdit: Long)
 
+    @Query("UPDATE people SET lastUsed = :lastUsed WHERE id IN (:personIds) AND isDeleted = 0")
+    suspend fun updatePeopleLastUsed(personIds: List<String>, lastUsed: Long)
+
     @Query("UPDATE people SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :personId")
     suspend fun softDeletePerson(personId: String, lastEdit: Long)
 

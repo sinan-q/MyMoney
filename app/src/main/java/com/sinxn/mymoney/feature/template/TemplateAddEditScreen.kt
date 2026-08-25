@@ -220,16 +220,10 @@ fun TemplateAddEditScreen(
             )
         },
         floatingActionButton = {
-            val text = if (uiState.isEditMode) "Save Changes" else "Save Template"
-            val icon = if (uiState.isEditMode) Icons.Default.Check else Icons.Default.Add
             AppExtendedFab(
-                text = text,
-                icon = icon,
-                onClick = {
-                    if (isSaveEnabled && !uiState.isSaving) {
-                        viewModel.saveTemplate()
-                    }
-                },
+                text = if (uiState.isEditMode) "Save Changes" else "Save Template",
+                icon = if (uiState.isEditMode) Icons.Default.Check else Icons.Default.Add,
+                onClick = { if (isSaveEnabled && !uiState.isSaving) { viewModel.saveTemplate() } },
                 containerColor = if (isSaveEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                 contentColor = if (isSaveEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
             )

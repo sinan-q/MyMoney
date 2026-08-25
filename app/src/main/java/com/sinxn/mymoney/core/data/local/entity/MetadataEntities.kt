@@ -26,6 +26,7 @@ data class PersonEntity(
     val isArchived: Boolean = false,
     val isDeleted: Boolean,
     val lastEdit: Long,
+    val lastUsed: Long = lastEdit,
     val tag: String?
 )
 

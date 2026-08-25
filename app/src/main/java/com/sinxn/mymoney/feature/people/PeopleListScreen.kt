@@ -7,8 +7,11 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -77,7 +80,7 @@ fun PeopleListScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp)
+                        .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 4.dp)
                 ) {
                     OutlinedTextField(
                         value = searchQuery,
@@ -120,6 +123,96 @@ fun PeopleListScreen(
                             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
                         )
                     )
+                }
+            }
+
+            // Sort / Count header bar (between Search Bar and List)
+            if (uiState.people.isNotEmpty()) {
+                var sortMenuExpanded by remember { mutableStateOf(false) }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (searchQuery.isNotBlank()) {
+                            "${peopleUiModels.size} found"
+                        } else {
+                            "${uiState.people.size} ${if (uiState.people.size == 1) "person" else "people"}"
+                        },
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Box {
+                        Surface(
+                            onClick = { sortMenuExpanded = true },
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Sort,
+                                    contentDescription = "Sort",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = uiState.sortOption.title,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+
+                        DropdownMenu(
+                            expanded = sortMenuExpanded,
+                            onDismissRequest = { sortMenuExpanded = false }
+                        ) {
+                            PersonSortOption.entries.forEach { option ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = option.title,
+                                            fontWeight = if (uiState.sortOption == option) FontWeight.SemiBold else FontWeight.Normal,
+                                            color = if (uiState.sortOption == option) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        if (uiState.sortOption == option) {
+                                            Icon(
+                                                Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        } else {
+                                            Spacer(modifier = Modifier.size(18.dp))
+                                        }
+                                    },
+                                    onClick = {
+                                        viewModel.setSortOption(option)
+                                        sortMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
             }
 

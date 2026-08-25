@@ -3,6 +3,7 @@ package com.sinxn.mymoney.feature.people
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.entity.PersonEntity
+import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.PersonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +14,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+enum class PersonSortOption(val title: String) {
+    LAST_USED("Recently Used"),
+    LAST_EDIT("Recently Edited"),
+    ALPHABETICAL("Alphabetical (A-Z)")
+}
+
 data class PersonFormState(
     val isOpen: Boolean = false,
     val editingPerson: PersonEntity? = null,
@@ -22,6 +29,7 @@ data class PersonFormState(
 
 data class PeopleUiState(
     val people: List<PersonEntity> = emptyList(),
+    val sortOption: PersonSortOption = PersonSortOption.LAST_USED,
     val isLoading: Boolean = false,
     val isEditDialogOpen: Boolean = false,
     val editingPerson: PersonEntity? = null,
@@ -31,17 +39,37 @@ data class PeopleUiState(
 
 @HiltViewModel
 class PeopleViewModel @Inject constructor(
-    private val personRepository: PersonRepository
+    private val personRepository: PersonRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _formState = MutableStateFlow(PersonFormState())
 
     val uiState: StateFlow<PeopleUiState> = combine(
         personRepository.getPeople(),
+        settingsRepository.peopleSortOption,
         _formState
-    ) { people, form ->
+    ) { people, sortOptionName, form ->
+        val sortOption = try {
+            PersonSortOption.valueOf(sortOptionName)
+        } catch (e: Exception) {
+            PersonSortOption.LAST_USED
+        }
+
+        val sortedPeople = when (sortOption) {
+            PersonSortOption.LAST_USED -> people.sortedWith(
+                compareByDescending<PersonEntity> { it.lastUsed }
+                    .thenByDescending { it.lastEdit }
+            )
+            PersonSortOption.LAST_EDIT -> people.sortedByDescending { it.lastEdit }
+            PersonSortOption.ALPHABETICAL -> people.sortedWith(
+                compareBy(String.CASE_INSENSITIVE_ORDER) { it.name }
+            )
+        }
+
         PeopleUiState(
-            people = people,
+            people = sortedPeople,
+            sortOption = sortOption,
             isLoading = false,
             isEditDialogOpen = form.isOpen,
             editingPerson = form.editingPerson,
@@ -53,6 +81,12 @@ class PeopleViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = PeopleUiState()
     )
+
+    fun setSortOption(sortOption: PersonSortOption) {
+        viewModelScope.launch {
+            settingsRepository.setPeopleSortOption(sortOption.name)
+        }
+    }
 
     fun openCreatePersonDialog() {
         _formState.value = PersonFormState(isOpen = true)

@@ -85,7 +85,7 @@ fun WalletDetailsScreen(
             showCurrency = settings.showCurrency,
             groupDigits = settings.groupDigits,
             roundDecimals = settings.roundDecimals,
-            showPlusMinus = false
+            showPlusMinus = settings.showPlusMinus
         )
     }
 

@@ -60,6 +60,7 @@ class TransactionRepository @Inject constructor(
         }
         if (newPeople.isNotEmpty()) {
             moneyDao.insertTransactionPeople(newPeople)
+            moneyDao.updatePeopleLastUsed(peopleIds.toList(), now)
         }
     }
 

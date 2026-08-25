@@ -303,6 +303,7 @@ class BackupImporter @Inject constructor(
         root.people?.let { people ->
             val entities = people.map { json ->
                 validPersonIds.add(json.id)
+                val editTime = json.lastEdit ?: 0L
                 PersonEntity(
                     id = json.id,
                     name = json.name ?: "",
@@ -310,7 +311,8 @@ class BackupImporter @Inject constructor(
                     note = json.note,
                     isArchived = json.archived ?: false,
                     isDeleted = json.deleted ?: false,
-                    lastEdit = json.lastEdit ?: 0L,
+                    lastEdit = editTime,
+                    lastUsed = editTime,
                     tag = json.tag
                 )
             }

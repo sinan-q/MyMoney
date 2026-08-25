@@ -54,7 +54,13 @@ class SettingsRepository @Inject constructor(
         val HIDE_STATUS_AND_IMPACT = booleanPreferencesKey("hide_status_and_impact")
         val GLOBAL_CURRENCY = stringPreferencesKey("global_currency")
         val DAILY_REMINDER_HOUR = intPreferencesKey("daily_reminder_hour")
+        val PEOPLE_SORT_OPTION = stringPreferencesKey("people_sort_option")
     }
+
+    val peopleSortOption: Flow<String> = dataStore.data
+        .map { preferences ->
+            preferences[PEOPLE_SORT_OPTION] ?: "LAST_USED"
+        }
 
     val currentWalletId: Flow<String> = dataStore.data
         .map { preferences ->
@@ -161,6 +167,12 @@ class SettingsRepository @Inject constructor(
     suspend fun setDailyReminderHour(hour: Int) {
         dataStore.edit { preferences ->
             preferences[DAILY_REMINDER_HOUR] = hour
+        }
+    }
+
+    suspend fun setPeopleSortOption(sortOption: String) {
+        dataStore.edit { preferences ->
+            preferences[PEOPLE_SORT_OPTION] = sortOption
         }
     }
 }

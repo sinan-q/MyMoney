@@ -34,6 +34,8 @@ class PersonRepository @Inject constructor(
     ): String {
         val now = System.currentTimeMillis()
         val personId = id ?: UUID.randomUUID().toString()
+        val existing = id?.let { moneyDao.getPersonById(it) }
+        val lastUsed = existing?.lastUsed ?: now
 
         val person = PersonEntity(
             id = personId,
@@ -43,6 +45,7 @@ class PersonRepository @Inject constructor(
             isArchived = isArchived,
             isDeleted = false,
             lastEdit = now,
+            lastUsed = lastUsed,
             tag = tag
         )
 

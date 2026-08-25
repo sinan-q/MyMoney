@@ -161,6 +161,7 @@ class DebtRepository @Inject constructor(
                 )
             }
             moneyDao.insertDebtPeople(peopleLinks)
+            moneyDao.updatePeopleLastUsed(peopleIds.toList(), now)
         }
 
         if (insertMasterTransaction) {
@@ -256,6 +257,7 @@ class DebtRepository @Inject constructor(
                 )
             }
             moneyDao.insertDebtPeople(peopleLinks)
+            moneyDao.updatePeopleLastUsed(peopleIds.toList(), now)
         }
 
         // Sync master transaction if present
