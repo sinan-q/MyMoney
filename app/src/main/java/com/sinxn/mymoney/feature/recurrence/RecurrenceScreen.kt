@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -15,21 +17,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.sinxn.mymoney.R
-import com.sinxn.mymoney.core.data.local.model.RecurrentTransactionWithDetails
-import com.sinxn.mymoney.core.data.local.model.RecurrentTransferWithDetails
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
+import com.sinxn.mymoney.core.ui.components.EmptyListItem
 import com.sinxn.mymoney.core.ui.components.FinanceListItem
-import com.sinxn.mymoney.core.util.DateUtils
-import com.sinxn.mymoney.core.util.MoneyFormatter
+import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.ui.theme.ExpenseColor
 import com.sinxn.mymoney.ui.theme.IncomeColor
 import com.sinxn.mymoney.ui.theme.TransferColor
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,14 +40,15 @@ fun RecurrenceScreen(
     onRecurrentTransferClick: (String) -> Unit,
     viewModel: RecurrenceViewModel = hiltViewModel()
 ) {
-    var selectedTab by remember { mutableIntStateOf(0) }
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
+    val coroutineScope = rememberCoroutineScope()
 
     val txListState = rememberLazyListState()
     val transferListState = rememberLazyListState()
-    val currentListState = if (selectedTab == 0) txListState else transferListState
+    val currentListState = if (pagerState.currentPage == 0) txListState else transferListState
 
-    val isTx = selectedTab == 0
+    val isTx = pagerState.currentPage == 0
     val fabText = if (isTx) "New Recurrence" else "New Transfer"
     val fabColor = if (isTx) MaterialTheme.colorScheme.primary else TransferColor
 
@@ -59,7 +59,7 @@ fun RecurrenceScreen(
                 text = fabText,
                 icon = Icons.Default.Add,
                 onClick = {
-                    if (selectedTab == 0) onAddRecurrentTransaction() else onAddRecurrentTransfer()
+                    if (pagerState.currentPage == 0) onAddRecurrentTransaction() else onAddRecurrentTransfer()
                 },
                 expanded = !currentListState.isScrollInProgress,
                 containerColor = fabColor,
@@ -72,76 +72,73 @@ fun RecurrenceScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            TabRow(selectedTabIndex = selectedTab) {
-                Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    text = { Text("Transactions") }
-                )
-                Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    text = { Text("Transfers") }
-                )
-            }
-
-            if (selectedTab == 0) {
-                if (uiState.recurrentTransactions.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = stringResource(R.string.message_no_recurrence_found),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                } else {
-                    LazyColumn(
-                        state = txListState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 88.dp)
-                    ) {
-                        items(
-                            items = uiState.recurrentTransactions,
-                            key = { it.id },
-                            contentType = { "recurrent_tx" }
-                        ) { item ->
-                            RecurrentTransactionCard(
-                                item = item,
-                                onClick = { onRecurrentTransactionClick(item.id) }
-                            )
-                        }
+            TabPill(
+                tabs = listOf(
+                    "Transactions" to MaterialTheme.colorScheme.primary,
+                    "Transfers" to TransferColor
+                ),
+                activeTab = pagerState.currentPage,
+                onTabChange = { index ->
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(index)
                     }
                 }
-            } else {
-                if (uiState.recurrentTransfers.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = stringResource(R.string.message_no_recurrence_found),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                key = { page -> page }
+            ) { page ->
+                val isTxPage = page == 0
+                if (isTxPage) {
+                    if (uiState.recurrentTransactions.isEmpty()) {
+                        EmptyListItem(
+                            text = "recurrent transaction",
+                            isSearching = false
                         )
+                    } else {
+                        LazyColumn(
+                            state = txListState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 88.dp)
+                        ) {
+                            items(
+                                items = uiState.recurrentTransactions,
+                                key = { it.id },
+                                contentType = { "recurrent_tx" }
+                            ) { item ->
+                                RecurrentTransactionCard(
+                                    item = item,
+                                    onClick = { onRecurrentTransactionClick(item.id) }
+                                )
+                            }
+                        }
                     }
                 } else {
-                    LazyColumn(
-                        state = transferListState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 88.dp)
-                    ) {
-                        items(
-                            items = uiState.recurrentTransfers,
-                            key = { it.id },
-                            contentType = { "recurrent_transfer" }
-                        ) { item ->
-                            RecurrentTransferCard(
-                                item = item,
-                                onClick = { onRecurrentTransferClick(item.id) }
-                            )
+                    if (uiState.recurrentTransfers.isEmpty()) {
+                        EmptyListItem(
+                            text = "recurrent transfer",
+                            isSearching = false
+                        )
+                    } else {
+                        LazyColumn(
+                            state = transferListState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 88.dp)
+                        ) {
+                            items(
+                                items = uiState.recurrentTransfers,
+                                key = { it.id },
+                                contentType = { "recurrent_transfer" }
+                            ) { item ->
+                                RecurrentTransferCard(
+                                    item = item,
+                                    onClick = { onRecurrentTransferClick(item.id) }
+                                )
+                            }
                         }
                     }
                 }

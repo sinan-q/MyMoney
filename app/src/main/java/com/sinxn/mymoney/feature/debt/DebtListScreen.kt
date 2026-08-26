@@ -31,13 +31,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sinxn.mymoney.core.data.local.model.DebtWithDetails
 import com.sinxn.mymoney.core.ui.components.AppExtendedFab
@@ -46,7 +45,6 @@ import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import kotlinx.coroutines.launch
 import java.util.Date
-import java.util.Locale
 import com.sinxn.mymoney.ui.theme.ExpenseColor
 import com.sinxn.mymoney.ui.theme.IncomeColor
 
@@ -56,7 +54,6 @@ private val QuickPaymentButtonShape = RoundedCornerShape(12.dp)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DebtListScreen(
-    onNavigateUp: () -> Unit,
     onQuickPayment: (String) -> Unit,
     onDebtClick: (String) -> Unit,
     onAddDebt: (type: Int) -> Unit,
@@ -64,70 +61,6 @@ fun DebtListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    var debtToDelete by remember { mutableStateOf<String?>(null) }
-
-    if (debtToDelete != null) {
-        AlertDialog(
-            onDismissRequest = { debtToDelete = null },
-            title = { Text("Delete Debt") },
-            text = { Text("Do you want to delete all associated transactions or keep them in history?") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val id = debtToDelete
-                        debtToDelete = null
-                        if (id != null) {
-                            viewModel.deleteDebt(id, deleteTransactions = true)
-                        }
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Delete All")
-                }
-            },
-            dismissButton = {
-                Row {
-                    TextButton(onClick = {
-                        val id = debtToDelete
-                        debtToDelete = null
-                        if (id != null) {
-                            viewModel.deleteDebt(id, deleteTransactions = false)
-                        }
-                    }) {
-                        Text("Keep Transactions")
-                    }
-                    TextButton(onClick = { debtToDelete = null }) {
-                        Text("Cancel")
-                    }
-                }
-            }
-        )
-    }
-
-    DebtListContent(
-        uiState = uiState,
-        onNavigateUp = onNavigateUp,
-        onQuickPayment = onQuickPayment,
-        onToggleIncludeArchived = { viewModel.setIncludeArchived(!uiState.includeArchived) },
-        onDebtClick = onDebtClick,
-        onAddDebt = onAddDebt,
-        onToggleArchived = viewModel::toggleArchived,
-        onDeleteDebt = { id -> debtToDelete = id }
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DebtListContent(
-    uiState: DebtListUiState,
-    onQuickPayment: (String) -> Unit,
-    onNavigateUp: () -> Unit,
-    onToggleIncludeArchived: () -> Unit,
-    onDebtClick: (String) -> Unit,
-    onAddDebt: (type: Int) -> Unit,
-    onToggleArchived: (String, Boolean) -> Unit,
-    onDeleteDebt: (String) -> Unit
-) {
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
     val accentColor = if (pagerState.currentPage == 0) ExpenseColor else IncomeColor
 
@@ -158,10 +91,7 @@ private fun DebtListContent(
             modifier = Modifier.padding(paddingValues),
             showSummaryCard = true,
             onQuickPayment = onQuickPayment,
-            onDebtClick = onDebtClick,
-            onAddDebt = onAddDebt,
-            onToggleArchived = onToggleArchived,
-            onDeleteDebt = onDeleteDebt
+            onDebtClick = onDebtClick
         )
     }
 }
@@ -176,10 +106,7 @@ fun DebtListBodyContent(
     showSummaryCard: Boolean = true,
     onTabSelected: (Int) -> Unit = {},
     onDebtClick: (String) -> Unit,
-    onQuickPayment: (String) -> Unit,
-    onAddDebt: (type: Int) -> Unit = {},
-    onToggleArchived: (String, Boolean) -> Unit,
-    onDeleteDebt: (String) -> Unit
+    onQuickPayment: (String) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
 

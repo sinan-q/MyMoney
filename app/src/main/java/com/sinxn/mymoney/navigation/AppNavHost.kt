@@ -153,7 +153,6 @@ fun AppNavHost(
         }
         composable(Screen.Debts.routePattern) { _ ->
             DebtListScreen(
-                onNavigateUp = { navController.navigateUp() },
                 onDebtClick = { debtId ->
                     navController.navigate(Screen.DebtDetails.createRoute(debtId))
                 },
