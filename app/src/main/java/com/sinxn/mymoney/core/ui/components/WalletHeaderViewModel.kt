@@ -37,68 +37,137 @@ class WalletHeaderViewModel @Inject constructor(
             initialValue = Constants.TOTAL_WALLET_ID
         )
 
+    val activeWallets: StateFlow<List<WalletWithBalance>> = allWallets
+        .map { list -> list.filter { !it.wallet.isArchived } }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val archivedWallets: StateFlow<List<WalletWithBalance>> = allWallets
+        .map { list -> list.filter { it.wallet.isArchived } }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val totalWallet: StateFlow<WalletWithBalance?> = combine(
+        allWallets,
+        settingsRepository.formattingSettings
+    ) { wallets, settings ->
+        createTotalWallet(wallets, settings)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = createDefaultTotalWallet()
+    )
+
     val currentWallet: StateFlow<WalletWithBalance?> = combine(
         allWallets,
         currentWalletId,
         settingsRepository.formattingSettings
     ) { wallets, id, settings ->
         if (id == Constants.TOTAL_WALLET_ID) {
-            val walletsInTotal = wallets.filter {
-                it.wallet.countInTotal && (!settings.excludeArchivedFromTotal || !it.wallet.isArchived)
-            }
-            val totalBalance = walletsInTotal.sumOf { it.currentBalance }
-            val globalCurrency = settings.globalCurrency
-            val currency = try {
-                java.util.Currency.getInstance(globalCurrency)
-            } catch (e: Exception) {
-                null
-            }
-
-            val distinctCurrencies = walletsInTotal.map { it.wallet.currency }.distinct()
-            val isTotalValid = distinctCurrencies.size <= 1 && (distinctCurrencies.isEmpty() || distinctCurrencies.first() == globalCurrency)
-
-            val breakdown = if (!isTotalValid && walletsInTotal.isNotEmpty()) {
-                walletsInTotal
-                    .groupBy { it.wallet.currency }
-                    .map { (currency, group) ->
-                        val sum = group.sumOf { it.currentBalance }
-                        val groupDecimals = group.firstOrNull()?.decimals ?: 2
-                        MoneyFormatter.format(
-                            amount = sum,
-                            currencyCode = currency,
-                            decimals = groupDecimals
-                        )
-                    }.joinToString(", ")
-            } else null
-
-            WalletWithBalance(
-                wallet = com.sinxn.mymoney.core.data.local.entity.WalletEntity(
-                    id = Constants.TOTAL_WALLET_ID,
-                    name = "Total",
-                    icon = "sigma",
-                    currency = globalCurrency,
-                    startMoney = 0,
-                    isArchived = false,
-                    note = null,
-                    countInTotal = false,
-                    index = -1,
-                    isDeleted = false,
-                    lastEdit = 0,
-                    tag = null
-                ),
-                currentBalance = totalBalance,
-                decimals = currency?.defaultFractionDigits ?: 2,
-                currencySymbol = currency?.symbol ?: globalCurrency,
-                isTotalValid = isTotalValid,
-                balanceBreakdown = breakdown
-            )
+            createTotalWallet(wallets, settings)
         } else {
             wallets.find { it.wallet.id == id } ?: wallets.firstOrNull()
         }
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = WalletWithBalance(
+        initialValue = createDefaultTotalWallet()
+    )
+
+    val formatterConfig: StateFlow<MoneyFormatter.Config> = settingsRepository.formattingSettings
+        .map { settings ->
+            MoneyFormatter.Config(
+                showCurrency = settings.showCurrency,
+                groupDigits = settings.groupDigits,
+                roundDecimals = settings.roundDecimals,
+                showPlusMinus = settings.showPlusMinus
+            )
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = MoneyFormatter.Config()
+        )
+
+    private fun createTotalWallet(
+        wallets: List<WalletWithBalance>,
+        settings: com.sinxn.mymoney.core.data.preferences.FormattingSettings
+    ): WalletWithBalance {
+        val walletsInTotal = wallets.filter {
+            it.wallet.countInTotal && (!settings.excludeArchivedFromTotal || !it.wallet.isArchived)
+        }
+        val totalBalance = walletsInTotal.sumOf { it.currentBalance }
+        val distinctCurrencies = walletsInTotal
+            .map { it.wallet.currency.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+        val isTotalValid = distinctCurrencies.size <= 1
+        val effectiveCurrency = if (distinctCurrencies.size == 1) {
+            distinctCurrencies.first()
+        } else {
+            settings.globalCurrency.ifEmpty { "USD" }
+        }
+        val currency = try {
+            java.util.Currency.getInstance(effectiveCurrency)
+        } catch (e: Exception) {
+            null
+        }
+        val decimals = if (distinctCurrencies.size == 1) {
+            walletsInTotal.firstOrNull()?.decimals ?: (currency?.defaultFractionDigits ?: 2)
+        } else {
+            currency?.defaultFractionDigits ?: 2
+        }
+        val currencySymbol = if (distinctCurrencies.size == 1) {
+            walletsInTotal.firstOrNull()?.currencySymbol ?: (currency?.symbol ?: effectiveCurrency)
+        } else {
+            currency?.symbol ?: effectiveCurrency
+        }
+
+        val breakdown = if (!isTotalValid && walletsInTotal.isNotEmpty()) {
+            walletsInTotal
+                .groupBy { it.wallet.currency }
+                .map { (currency, group) ->
+                    val sum = group.sumOf { it.currentBalance }
+                    val groupDecimals = group.firstOrNull()?.decimals ?: 2
+                    MoneyFormatter.format(
+                        amount = sum,
+                        currencyCode = currency,
+                        decimals = groupDecimals
+                    )
+                }.joinToString(", ")
+        } else null
+
+        return WalletWithBalance(
+            wallet = com.sinxn.mymoney.core.data.local.entity.WalletEntity(
+                id = Constants.TOTAL_WALLET_ID,
+                name = "Total",
+                icon = "sigma",
+                currency = effectiveCurrency,
+                startMoney = 0,
+                isArchived = false,
+                note = null,
+                countInTotal = false,
+                index = -1,
+                isDeleted = false,
+                lastEdit = 0,
+                tag = null
+            ),
+            currentBalance = totalBalance,
+            decimals = decimals,
+            currencySymbol = currencySymbol,
+            isTotalValid = isTotalValid,
+            balanceBreakdown = breakdown
+        )
+    }
+
+    private fun createDefaultTotalWallet(): WalletWithBalance {
+        return WalletWithBalance(
             wallet = com.sinxn.mymoney.core.data.local.entity.WalletEntity(
                 id = Constants.TOTAL_WALLET_ID,
                 name = "Total",
@@ -119,20 +188,5 @@ class WalletHeaderViewModel @Inject constructor(
             isTotalValid = true,
             balanceBreakdown = null
         )
-    )
-
-    val formatterConfig: StateFlow<MoneyFormatter.Config> = settingsRepository.formattingSettings
-        .map { settings ->
-            MoneyFormatter.Config(
-                showCurrency = settings.showCurrency,
-                groupDigits = settings.groupDigits,
-                roundDecimals = settings.roundDecimals,
-                showPlusMinus = settings.showPlusMinus
-            )
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = MoneyFormatter.Config()
-        )
+    }
 }

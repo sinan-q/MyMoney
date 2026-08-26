@@ -19,9 +19,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.Settings
@@ -33,7 +35,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,6 +45,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -106,7 +111,6 @@ fun WalletHeader(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = animatedInnerPadding),
             horizontalAlignment = Alignment.Start,
-
         ) {
             Row(
                 modifier = Modifier
@@ -114,12 +118,12 @@ fun WalletHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column() {
+                Column {
                     Text(
                         text = effectiveWallet.wallet.name,
                         style = MaterialTheme.typography.titleMedium,
-                        color = Color.White,
                         fontWeight = FontWeight.Bold,
+                        color = Color.White,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -152,7 +156,6 @@ fun WalletHeader(
                         )
                     }
 
-
                     // Dropdown Pill
                     Surface(
                         onClick = onToggleExpand,
@@ -177,7 +180,6 @@ fun WalletHeader(
 
             if (!isReduced) {
                 Spacer(modifier = Modifier.height(16.dp))
-                // Large Bold Balance with normal weight decimal digits
                 Text(
                     text = if (effectiveWallet.isTotalValid) formattedBalanceAnnotated else AnnotatedString("Multi-Currency"),
                     style = if (effectiveWallet.isTotalValid) {
@@ -194,29 +196,31 @@ fun WalletHeader(
                             color = Color.White.copy(alpha = 0.9f)
                         )
                     },
-                    color = Color.White,
-                    letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified
+                    color = Color.White
                 )
+            }
 
-                if (!effectiveWallet.isTotalValid) {
-                    if (!effectiveWallet.balanceBreakdown.isNullOrEmpty()) {
-                        Text(
-                            text = effectiveWallet.balanceBreakdown,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
-                    }
+            if (!isReduced) {
+                if (effectiveWallet.balanceBreakdown != null) {
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Conversion not supported yet",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.7f),
-                        modifier = Modifier.padding(top = 4.dp)
+                        text = effectiveWallet.balanceBreakdown!!,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White.copy(alpha = 0.9f)
                     )
                 }
 
-                if (!effectiveWallet.wallet.note.isNullOrEmpty()) {
+                if (!effectiveWallet.isTotalValid) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Currencies: ${effectiveWallet.wallet.currency}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                }
+
+                if (!effectiveWallet.wallet.note.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = effectiveWallet.wallet.note,
@@ -239,21 +243,66 @@ fun WalletDropdownList(
     contentPadding: PaddingValues = PaddingValues(bottom = 24.dp),
     viewModel: WalletHeaderViewModel = hiltViewModel()
 ) {
-    val wallets by viewModel.allWallets.collectAsState()
+    val activeWallets by viewModel.activeWallets.collectAsState()
+    val archivedWallets by viewModel.archivedWallets.collectAsState()
+    val totalWallet by viewModel.totalWallet.collectAsState()
     val selectedWalletId by viewModel.currentWalletId.collectAsState()
+    val formatterConfig by viewModel.formatterConfig.collectAsState()
+
+    var isArchivedExpanded by remember(archivedWallets, selectedWalletId) {
+        mutableStateOf(archivedWallets.any { it.wallet.id == selectedWalletId })
+    }
 
     LazyColumn(
         modifier = modifier,
         contentPadding = contentPadding
     ) {
-        items(wallets, key = { "wallet_${it.wallet.id}" }) { wallet ->
+        // 1. Active Wallets
+        items(activeWallets, key = { "active_wallet_${it.wallet.id}" }) { wallet ->
             WalletProfileRow(
                 wallet = wallet,
                 isSelected = selectedWalletId == wallet.wallet.id,
+                formatterConfig = formatterConfig,
                 onClick = { onWalletSelect(wallet) }
             )
         }
-        item {
+
+        // 2. Total Wallet (at the end after active wallets)
+        totalWallet?.let { total ->
+            item(key = "wallet_${total.wallet.id}") {
+                WalletProfileRow(
+                    wallet = total,
+                    isSelected = selectedWalletId == total.wallet.id,
+                    formatterConfig = formatterConfig,
+                    onClick = { onWalletSelect(total) }
+                )
+            }
+        }
+
+        // 3. Archived Wallets Dropdown (under another dropdown at the end after the total wallet)
+        if (archivedWallets.isNotEmpty()) {
+            item(key = "archived_wallets_header") {
+                ArchivedDropdownHeaderRow(
+                    count = archivedWallets.size,
+                    isExpanded = isArchivedExpanded,
+                    onClick = { isArchivedExpanded = !isArchivedExpanded }
+                )
+            }
+
+            if (isArchivedExpanded) {
+                items(archivedWallets, key = { "archived_wallet_${it.wallet.id}" }) { wallet ->
+                    WalletProfileRow(
+                        wallet = wallet,
+                        isSelected = selectedWalletId == wallet.wallet.id,
+                        formatterConfig = formatterConfig,
+                        onClick = { onWalletSelect(wallet) }
+                    )
+                }
+            }
+        }
+
+        // 4. Action Items
+        item(key = "wallet_dropdown_actions") {
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
             ActionProfileRow(
                 title = "New wallet",
@@ -271,9 +320,61 @@ fun WalletDropdownList(
 }
 
 @Composable
+fun ArchivedDropdownHeaderRow(
+    count: Int,
+    isExpanded: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        color = Color.Transparent,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Archive,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Text(
+                text = "Archived ($count)",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
+
+            Icon(
+                imageVector = if (isExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                contentDescription = if (isExpanded) "Collapse archived" else "Expand archived",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
 fun WalletProfileRow(
     wallet: WalletWithBalance,
     isSelected: Boolean,
+    formatterConfig: MoneyFormatter.Config? = null,
     onClick: () -> Unit
 ) {
     Surface(
@@ -303,11 +404,16 @@ fun WalletProfileRow(
                 modifier = Modifier.weight(1f)
             )
 
-            val formattedBalance = MoneyFormatter.format(
-                amount = wallet.currentBalance,
-                currencyCode = wallet.wallet.currency,
-                decimals = wallet.decimals
-            )
+            val formattedBalance = if (!wallet.isTotalValid && wallet.wallet.id == com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID) {
+                wallet.balanceBreakdown ?: "Multi-Currency"
+            } else {
+                MoneyFormatter.format(
+                    amount = wallet.currentBalance,
+                    currencyCode = wallet.wallet.currency,
+                    decimals = wallet.decimals,
+                    config = formatterConfig ?: MoneyFormatter.Config()
+                )
+            }
 
             Text(
                 text = formattedBalance,

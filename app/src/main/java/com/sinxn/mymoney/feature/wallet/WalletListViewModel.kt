@@ -79,11 +79,6 @@ class WalletListViewModel @Inject constructor(
         }
 
         val globalCurr = settings.globalCurrency.ifEmpty { "USD" }
-        val currInstance = try {
-            java.util.Currency.getInstance(globalCurr)
-        } catch (_: Exception) {
-            null
-        }
 
         // Active wallets contributing to total
         val walletsInTotal = allWallets.filter {
@@ -91,8 +86,31 @@ class WalletListViewModel @Inject constructor(
         }
         val totalBalance = walletsInTotal.sumOf { it.currentBalance }
 
-        val distinctCurrencies = walletsInTotal.map { it.wallet.currency }.distinct()
-        val isTotalValid = distinctCurrencies.size <= 1 && (distinctCurrencies.isEmpty() || distinctCurrencies.first() == globalCurr)
+        val distinctCurrencies = walletsInTotal
+            .map { it.wallet.currency.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+        val isTotalValid = distinctCurrencies.size <= 1
+        val effectiveCurrency = if (distinctCurrencies.size == 1) {
+            distinctCurrencies.first()
+        } else {
+            globalCurr
+        }
+        val effectiveCurrInstance = try {
+            java.util.Currency.getInstance(effectiveCurrency)
+        } catch (_: Exception) {
+            null
+        }
+        val effectiveCurrencySymbol = if (distinctCurrencies.size == 1) {
+            walletsInTotal.firstOrNull()?.currencySymbol ?: (effectiveCurrInstance?.symbol ?: effectiveCurrency)
+        } else {
+            effectiveCurrInstance?.symbol ?: effectiveCurrency
+        }
+        val effectiveCurrencyDecimals = if (distinctCurrencies.size == 1) {
+            walletsInTotal.firstOrNull()?.decimals ?: (effectiveCurrInstance?.defaultFractionDigits ?: 2)
+        } else {
+            effectiveCurrInstance?.defaultFractionDigits ?: 2
+        }
 
         val breakdown = if (!isTotalValid && walletsInTotal.isNotEmpty()) {
             walletsInTotal
@@ -177,9 +195,9 @@ class WalletListViewModel @Inject constructor(
             totalBalance = totalBalance,
             totalBreakdown = breakdown,
             isTotalValid = isTotalValid,
-            globalCurrency = globalCurr,
-            globalCurrencySymbol = currInstance?.symbol ?: globalCurr,
-            globalCurrencyDecimals = currInstance?.defaultFractionDigits ?: 2,
+            globalCurrency = effectiveCurrency,
+            globalCurrencySymbol = effectiveCurrencySymbol,
+            globalCurrencyDecimals = effectiveCurrencyDecimals,
             sortOption = sortOption,
             searchQuery = searchQuery,
             isLoading = false,

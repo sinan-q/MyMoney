@@ -82,15 +82,31 @@ class WalletDetailsViewModel @Inject constructor(
                 it.wallet.countInTotal && (!settings.excludeArchivedFromTotal || !it.wallet.isArchived)
             }
             val totalBalance = walletsInTotal.sumOf { it.currentBalance }
-            val globalCurrency = settings.globalCurrency
+            val distinctCurrencies = walletsInTotal
+                .map { it.wallet.currency.trim() }
+                .filter { it.isNotEmpty() }
+                .distinct()
+            val isTotalValid = distinctCurrencies.size <= 1
+            val effectiveCurrency = if (distinctCurrencies.size == 1) {
+                distinctCurrencies.first()
+            } else {
+                settings.globalCurrency.ifEmpty { "USD" }
+            }
             val currency = try {
-                java.util.Currency.getInstance(globalCurrency)
+                java.util.Currency.getInstance(effectiveCurrency)
             } catch (e: Exception) {
                 null
             }
-
-            val distinctCurrencies = walletsInTotal.map { it.wallet.currency }.distinct()
-            val isTotalValid = distinctCurrencies.size <= 1 && (distinctCurrencies.isEmpty() || distinctCurrencies.first() == globalCurrency)
+            val decimals = if (distinctCurrencies.size == 1) {
+                walletsInTotal.firstOrNull()?.decimals ?: (currency?.defaultFractionDigits ?: 2)
+            } else {
+                currency?.defaultFractionDigits ?: 2
+            }
+            val currencySymbol = if (distinctCurrencies.size == 1) {
+                walletsInTotal.firstOrNull()?.currencySymbol ?: (currency?.symbol ?: effectiveCurrency)
+            } else {
+                currency?.symbol ?: effectiveCurrency
+            }
 
             val breakdown = if (!isTotalValid && walletsInTotal.isNotEmpty()) {
                 walletsInTotal
@@ -111,7 +127,7 @@ class WalletDetailsViewModel @Inject constructor(
                     id = Constants.TOTAL_WALLET_ID,
                     name = "Total",
                     icon = "sigma",
-                    currency = globalCurrency,
+                    currency = effectiveCurrency,
                     startMoney = 0,
                     isArchived = false,
                     note = null,
@@ -122,8 +138,8 @@ class WalletDetailsViewModel @Inject constructor(
                     tag = null
                 ),
                 currentBalance = totalBalance,
-                decimals = currency?.defaultFractionDigits ?: 2,
-                currencySymbol = currency?.symbol ?: globalCurrency,
+                decimals = decimals,
+                currencySymbol = currencySymbol,
                 isTotalValid = isTotalValid,
                 balanceBreakdown = breakdown
             )

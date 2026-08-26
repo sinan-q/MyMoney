@@ -164,7 +164,7 @@ fun WalletListScreen(
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier
-                        .fillMaxWidth(),
+                        .fillMaxWidth() ,
                     beyondViewportPageCount = 1
                 ) { page ->
                     val isArchived = page == 1
