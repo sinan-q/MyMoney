@@ -8,6 +8,7 @@ import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.WalletRepository
 import com.sinxn.mymoney.core.ui.components.IconData
+import com.sinxn.mymoney.core.ui.components.SortOption
 import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
@@ -15,14 +16,17 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.Collections
 import java.util.Date
 import javax.inject.Inject
+
+enum class WalletSortOption(override val title: String) : SortOption {
+    CUSTOM("Custom"),
+    LAST_EDIT("Recently Edited"),
+    ALPHABETICAL("Alphabetical (A-Z)")
+}
 
 @Immutable
 data class WalletUiModel(
@@ -42,15 +46,13 @@ data class WalletUiModel(
 data class WalletListUiState(
     val activeWallets: List<WalletUiModel> = emptyList(),
     val archivedWallets: List<WalletUiModel> = emptyList(),
-    val sortedWalletsForReorder: List<WalletUiModel> = emptyList(),
-    val rawWalletsForReorder: List<WalletWithBalance> = emptyList(),
     val totalBalance: Long = 0L,
     val totalBreakdown: String? = null,
     val isTotalValid: Boolean = true,
     val globalCurrency: String = "USD",
     val globalCurrencySymbol: String = "$",
     val globalCurrencyDecimals: Int = 2,
-    val isSortMode: Boolean = false,
+    val sortOption: WalletSortOption = WalletSortOption.CUSTOM,
     val searchQuery: String = "",
     val isLoading: Boolean = true,
     val formattingSettings: FormattingSettings = FormattingSettings()
@@ -62,17 +64,20 @@ class WalletListViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
-    private val _isSortMode = MutableStateFlow(false)
     private val _searchQuery = MutableStateFlow("")
-    private val _reorderList = MutableStateFlow<List<WalletWithBalance>>(emptyList())
 
     val uiState: StateFlow<WalletListUiState> = combine(
         walletRepository.getWalletsWithBalance(DateUtils.getSQLDateTimeString(Date())),
         settingsRepository.formattingSettings,
-        _isSortMode,
-        _searchQuery,
-        _reorderList
-    ) { allWallets, settings, isSortMode, searchQuery, reorderList ->
+        settingsRepository.walletsSortOption,
+        _searchQuery
+    ) { allWallets, settings, sortOptionName, searchQuery ->
+        val sortOption = try {
+            WalletSortOption.valueOf(sortOptionName)
+        } catch (e: Exception) {
+            WalletSortOption.CUSTOM
+        }
+
         val globalCurr = settings.globalCurrency.ifEmpty { "USD" }
         val currInstance = try {
             java.util.Currency.getInstance(globalCurr)
@@ -146,10 +151,18 @@ class WalletListViewModel @Inject constructor(
             )
         }
 
+        val sortedWallets = when (sortOption) {
+            WalletSortOption.CUSTOM -> allWallets.sortedBy { it.wallet.index }
+            WalletSortOption.LAST_EDIT -> allWallets.sortedByDescending { it.wallet.lastEdit }
+            WalletSortOption.ALPHABETICAL -> allWallets.sortedWith(
+                compareBy(String.CASE_INSENSITIVE_ORDER) { it.wallet.name }
+            )
+        }
+
         val filteredWallets = if (searchQuery.isBlank()) {
-            allWallets
+            sortedWallets
         } else {
-            allWallets.filter { item ->
+            sortedWallets.filter { item ->
                 item.wallet.name.contains(searchQuery, ignoreCase = true) ||
                 item.wallet.currency.contains(searchQuery, ignoreCase = true) ||
                 (!item.wallet.note.isNullOrBlank() && item.wallet.note.contains(searchQuery, ignoreCase = true))
@@ -158,24 +171,16 @@ class WalletListViewModel @Inject constructor(
 
         val (active, archived) = filteredWallets.partition { !it.wallet.isArchived }
 
-        val effectiveReorderList = if (reorderList.isNotEmpty() && reorderList.size == allWallets.size) {
-            reorderList
-        } else {
-            allWallets
-        }
-
         WalletListUiState(
             activeWallets = active.map { it.toUi() },
             archivedWallets = archived.map { it.toUi() },
-            sortedWalletsForReorder = effectiveReorderList.map { it.toUi() },
-            rawWalletsForReorder = effectiveReorderList,
             totalBalance = totalBalance,
             totalBreakdown = breakdown,
             isTotalValid = isTotalValid,
             globalCurrency = globalCurr,
             globalCurrencySymbol = currInstance?.symbol ?: globalCurr,
             globalCurrencyDecimals = currInstance?.defaultFractionDigits ?: 2,
-            isSortMode = isSortMode,
+            sortOption = sortOption,
             searchQuery = searchQuery,
             isLoading = false,
             formattingSettings = settings
@@ -190,47 +195,15 @@ class WalletListViewModel @Inject constructor(
         _searchQuery.value = query
     }
 
-    fun toggleSortMode() {
-        val current = _isSortMode.value
-        if (!current) {
-            // entering sort mode -> initialize reorder list with current all wallets
-            val currentWallets = uiState.value.rawWalletsForReorder
-            _reorderList.value = currentWallets.sortedBy { it.wallet.index }
-        } else {
-            // exiting sort mode -> save changes
-            saveReorderedWallets()
-        }
-        _isSortMode.value = !current
-    }
-
-    fun moveWallet(fromPosition: Int, toPosition: Int) {
-        val currentList = _reorderList.value.toMutableList()
-        if (fromPosition in currentList.indices && toPosition in currentList.indices) {
-            Collections.swap(currentList, fromPosition, toPosition)
-            _reorderList.value = currentList
+    fun setSortOption(sortOption: WalletSortOption) {
+        viewModelScope.launch {
+            settingsRepository.setWalletsSortOption(sortOption.name)
         }
     }
 
-    fun moveWalletUp(index: Int) {
-        if (index > 0) {
-            moveWallet(index, index - 1)
-        }
-    }
-
-    fun moveWalletDown(index: Int) {
-        val currentList = _reorderList.value
-        if (index < currentList.size - 1) {
-            moveWallet(index, index + 1)
-        }
-    }
-
-    fun saveReorderedWallets() {
-        val list = _reorderList.value
-        if (list.isNotEmpty()) {
-            viewModelScope.launch {
-                val walletIds = list.map { it.wallet.id }
-                walletRepository.reorderWallets(walletIds)
-            }
+    fun reorderWallets(orderedWalletIds: List<String>) {
+        viewModelScope.launch {
+            walletRepository.reorderWallets(orderedWalletIds)
         }
     }
 
