@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
@@ -26,7 +27,7 @@ fun FinanceListItem(
     title: String,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
-    amountText: String? = null,
+    amountText: String,
     amountColor: Color = MaterialTheme.colorScheme.onSurface,
     subAmountText: String? = null,
     onClick: () -> Unit = {}
@@ -64,13 +65,14 @@ fun FinanceListItem(
 
 @Composable
 fun FinanceListItem(
+    modifier: Modifier = Modifier,
     icon: @Composable () -> Unit,
     title: String,
-    modifier: Modifier = Modifier,
     subtitle: String? = null,
     trailingContent: (@Composable () -> Unit)? = null,
     isSelected: Boolean = false,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    horizontalPadding: Dp = 18.dp,
 ) {
     val bgColor by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
@@ -85,7 +87,7 @@ fun FinanceListItem(
             .then(modifier)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = horizontalPadding, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             icon()

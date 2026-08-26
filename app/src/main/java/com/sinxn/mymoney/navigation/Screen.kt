@@ -191,7 +191,7 @@ sealed class Screen(
         }
     }
 
-    object Wallets : Screen("wallets", "wallets", "Wallets", isTopLevel = false)
+    object Wallets : Screen("wallets", "wallets", "Wallets", isTopLevel = true)
 
     object WalletInfo : Screen("wallet_info/{walletId}", "wallets", "Wallet Details", isTopLevel = false) {
         fun createRoute(walletId: String): String = "wallet_info/$walletId"
@@ -260,7 +260,7 @@ sealed class Screen(
                 cleanRoute.startsWith("recurrences") || cleanRoute.startsWith("recurrent_") ->
                     ScreenMetadata(Recurrences.sidebarItemId, Recurrences.title, isTopLevel = cleanRoute == "recurrences")
 
-                cleanRoute == "wallets" -> ScreenMetadata(Wallets.sidebarItemId, Wallets.title, isTopLevel = false)
+                cleanRoute == "wallets" -> ScreenMetadata(Wallets.sidebarItemId, Wallets.title, isTopLevel = true)
                 cleanRoute.startsWith("wallet_info") -> ScreenMetadata(Wallets.sidebarItemId, WalletInfo.title, isTopLevel = false)
                 cleanRoute.startsWith("wallet_edit") -> ScreenMetadata(Wallets.sidebarItemId, WalletAddEdit.title, isTopLevel = false)
                 cleanRoute == "categories" -> ScreenMetadata(Categories.sidebarItemId, Categories.title, isTopLevel = true)

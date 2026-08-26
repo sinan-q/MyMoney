@@ -523,7 +523,6 @@ fun AppNavHost(
         }
         composable(Screen.Wallets.routePattern) {
             WalletListScreen(
-                onNavigateBack = { navController.navigateUp() },
                 onWalletClick = { walletId ->
                     navController.navigate(Screen.WalletInfo.createRoute(walletId))
                 },

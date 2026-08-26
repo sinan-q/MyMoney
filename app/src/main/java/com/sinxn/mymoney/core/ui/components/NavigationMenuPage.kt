@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.SyncAlt
+import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -73,6 +74,7 @@ data class NavigationMenuItem(
 val navigationMenuItems = listOf(
     // Group 1: Main modules (Matching legacy MainActivity drawer order)
     NavigationMenuItem(Screen.Transactions.sidebarItemId, "Transactions", Icons.Default.ShoppingCart, 1),
+    NavigationMenuItem(Screen.Wallets.sidebarItemId, "Wallets", Icons.Default.Wallet, 1),
     NavigationMenuItem(Screen.Categories.sidebarItemId, "Categories", Icons.Default.GridView, 1),
     NavigationMenuItem(Screen.Overview.sidebarItemId, "Overview", Icons.Default.Equalizer, 1),
     NavigationMenuItem(Screen.Debts.sidebarItemId, "Debts", Icons.Default.AccountBalanceWallet, 1),

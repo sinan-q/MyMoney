@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
+import com.sinxn.mymoney.core.ui.components.FinanceListItem
 import com.sinxn.mymoney.core.ui.components.ReorderDragHandle
 import com.sinxn.mymoney.feature.category.SubcategoryItem
 import sh.calvin.reorderable.ReorderableColumn
@@ -72,12 +73,7 @@ fun SubcategoriesSection(
         },
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 18.dp, end = 12.dp, bottom = 8.dp, top = 6.dp)
-            .background(
-                color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.4f),
-                shape = RoundedCornerShape(12.dp)
-            )
-            .padding(vertical = 4.dp)
+            .padding(start = 18.dp, end = 12.dp, bottom = 3.dp, top = 3.dp)
     ) { index, subItem, isDragging ->
         key(subItem.category.id) {
             val scale by animateFloatAsState(
@@ -108,51 +104,32 @@ fun SubcategoriesSection(
                         )
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        if (index > 0 && !isDragging) {
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f),
-                                modifier = Modifier.padding(horizontal = 12.dp)
-                            )
-                        }
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onSubcategoryClick(subItem.category.id) }
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (isReorderEnabled) {
-                                ReorderDragHandle(
-                                    modifier = Modifier
-                                        .draggableHandle(
-                                            onDragStarted = {
-                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            }
-                                        )
-                                        .padding(end = 8.dp),
-                                    iconSize = 18.dp,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                    contentDescription = "Reorder subcategory"
+                        FinanceListItem(
+                            icon = {
+                                if (isReorderEnabled) {
+                                    ReorderDragHandle(
+                                        modifier = Modifier
+                                            .draggableHandle(
+                                                onDragStarted = {
+                                                    hapticFeedback.performHapticFeedback(
+                                                        HapticFeedbackType.LongPress
+                                                    )
+                                                }
+                                            )
+                                            .padding(end = 8.dp),
+                                        iconSize = 18.dp,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                        contentDescription = "Reorder subcategory"
+                                    )
+                                }
+                                CategoryIcon(
+                                    iconData = subItem.iconData,
+                                    size = 38.dp
                                 )
-                            }
-
-                            CategoryIcon(
-                                iconData = subItem.iconData,
-                                size = 38.dp
-                            )
-
-                            Spacer(modifier = Modifier.width(10.dp))
-
-                            Text(
-                                text = subItem.cleanName,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
+                            },
+                            title = subItem.cleanName,
+                            onClick = { onSubcategoryClick(subItem.category.id) }
+                        )
                     }
                 }
             }

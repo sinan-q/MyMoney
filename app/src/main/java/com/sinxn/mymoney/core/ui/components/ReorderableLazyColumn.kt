@@ -42,7 +42,6 @@ fun <T> ReorderableLazyColumn(
     lazyListState: LazyListState = rememberLazyListState(),
     isReorderEnabled: Boolean = true,
     contentPadding: PaddingValues = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
-    verticalArrangement: Arrangement.Vertical = Arrangement.spacedBy(8.dp),
     itemShape: Shape = RoundedCornerShape(12.dp),
     dragContainerColor: Color = MaterialTheme.colorScheme.primaryContainer,
     contentType: ((T) -> Any?)? = null,
@@ -76,7 +75,6 @@ fun <T> ReorderableLazyColumn(
         state = lazyListState,
         modifier = modifier,
         contentPadding = contentPadding,
-        verticalArrangement = verticalArrangement
     ) {
         items(
             items = localList,
