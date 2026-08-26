@@ -1,11 +1,14 @@
 package com.sinxn.mymoney.core.ui.components
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -66,12 +69,20 @@ fun FinanceListItem(
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     trailingContent: (@Composable () -> Unit)? = null,
+    isSelected: Boolean = false,
     onClick: () -> Unit = {}
 ) {
+    val bgColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+        else Color.Transparent,
+        label = "NoneBg"
+    )
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
+            .background(bgColor)
             .clickable(onClick = onClick)
+            .then(modifier)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),

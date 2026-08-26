@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun CleanListRow(
     icon: (@Composable () -> Unit)? = null,
-    label: String,
+    label: String? = null,
     active: Boolean = true,
     value: String? = null,
     onClick: (() -> Unit)? = null,
@@ -51,12 +51,14 @@ fun CleanListRow(
                 Spacer(modifier = Modifier.width(16.dp))
             }
             Column() {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
-                )
+                if (!label.isNullOrEmpty() ) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+                    )
+                }
                 if (!value.isNullOrEmpty() ) {
                     Text(
                         text = value,

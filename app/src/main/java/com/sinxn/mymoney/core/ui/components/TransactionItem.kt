@@ -1,20 +1,12 @@
 package com.sinxn.mymoney.core.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
@@ -97,21 +89,9 @@ fun TransactionItem(
     FinanceListItem(
         icon = {
             if (uiModel.isTransferItem) {
-                val transferAccentColor = if (uiModel.isIncomeTransfer) IncomeColor else ExpenseColor
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(transferAccentColor.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (uiModel.isIncomeTransfer) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
-                        contentDescription = null,
-                        tint = transferAccentColor,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
+                CategoryIconExtended(
+                    color = if (uiModel.isIncomeTransfer) IncomeColor else ExpenseColor,
+                    icon = if (uiModel.isIncomeTransfer) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward)
             } else {
                 CategoryIcon(iconData = uiModel.iconData)
             }
