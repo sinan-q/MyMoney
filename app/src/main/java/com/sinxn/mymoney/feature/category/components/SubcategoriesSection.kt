@@ -45,6 +45,7 @@ import sh.calvin.reorderable.ReorderableColumn
 @Composable
 fun SubcategoriesSection(
     subcategories: List<SubcategoryItem>,
+    isReorderEnabled: Boolean = true,
     onSubcategoryClick: (String) -> Unit,
     onReorderSubcategories: (List<String>) -> Unit
 ) {
@@ -103,6 +104,7 @@ fun SubcategoriesSection(
                             scaleY = scale
                         }
                         .longPressDraggableHandle(
+                            enabled = isReorderEnabled,
                             onDragStarted = {
                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                             }
@@ -123,22 +125,24 @@ fun SubcategoriesSection(
                                 .padding(horizontal = 12.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Drag handle for subcategory
-                            Box(
-                                modifier = Modifier
-                                    .draggableHandle(
-                                        onDragStarted = {
-                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        }
+                            if (isReorderEnabled) {
+                                // Drag handle for subcategory
+                                Box(
+                                    modifier = Modifier
+                                        .draggableHandle(
+                                            onDragStarted = {
+                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            }
+                                        )
+                                        .padding(end = 8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.DragIndicator,
+                                        contentDescription = "Reorder subcategory",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                        modifier = Modifier.size(18.dp)
                                     )
-                                    .padding(end = 8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.DragIndicator,
-                                    contentDescription = "Reorder subcategory",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                    modifier = Modifier.size(18.dp)
-                                )
+                                }
                             }
 
                             CategoryIcon(

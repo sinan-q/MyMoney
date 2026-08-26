@@ -58,6 +58,7 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 fun CategoryReorderableList(
     items: List<ParentCategoryItem>,
     lazyListState: LazyListState,
+    isReorderEnabled: Boolean = true,
     onCategoryClick: (String) -> Unit,
     onExpandToggle: (String) -> Unit,
     onReorderParents: (List<String>) -> Unit,
@@ -123,6 +124,7 @@ fun CategoryReorderableList(
                             scaleY = scale
                         }
                         .longPressDraggableHandle(
+                            enabled = isReorderEnabled,
                             onDragStarted = {
                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                             },
@@ -143,26 +145,28 @@ fun CategoryReorderableList(
                                 .padding(horizontal = 6.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Drag Handle Icon (also supports immediate drag on handle)
-                            Box(
-                                modifier = Modifier
-                                    .draggableHandle(
-                                        onDragStarted = {
-                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        },
-                                        onDragStopped = {
-                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
-                                            currentOnReorderParents(parentList.map { it.category.id })
-                                        }
+                            if (isReorderEnabled) {
+                                // Drag Handle Icon (also supports immediate drag on handle)
+                                Box(
+                                    modifier = Modifier
+                                        .draggableHandle(
+                                            onDragStarted = {
+                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            },
+                                            onDragStopped = {
+                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
+                                                currentOnReorderParents(parentList.map { it.category.id })
+                                            }
+                                        )
+                                        .padding(end = 10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.DragIndicator,
+                                        contentDescription = "Reorder",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        modifier = Modifier.size(20.dp)
                                     )
-                                    .padding(end = 10.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.DragIndicator,
-                                    contentDescription = "Reorder",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                    modifier = Modifier.size(20.dp)
-                                )
+                                }
                             }
 
                             CategoryIcon(iconData = parentItem.iconData)
@@ -211,6 +215,7 @@ fun CategoryReorderableList(
                         ) {
                             SubcategoriesSection(
                                 subcategories = parentItem.subcategories,
+                                isReorderEnabled = isReorderEnabled,
                                 onSubcategoryClick = onCategoryClick,
                                 onReorderSubcategories = onReorderSubcategories
                             )

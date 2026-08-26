@@ -57,7 +57,13 @@ class SettingsRepository @Inject constructor(
         val PEOPLE_SORT_OPTION = stringPreferencesKey("people_sort_option")
         val PLACES_SORT_OPTION = stringPreferencesKey("places_sort_option")
         val EVENTS_SORT_OPTION = stringPreferencesKey("events_sort_option")
+        val CATEGORIES_SORT_OPTION = stringPreferencesKey("categories_sort_option")
     }
+
+    val categoriesSortOption: Flow<String> = dataStore.data
+        .map { preferences ->
+            preferences[CATEGORIES_SORT_OPTION] ?: "CUSTOM"
+        }
 
     val peopleSortOption: Flow<String> = dataStore.data
         .map { preferences ->
@@ -179,6 +185,12 @@ class SettingsRepository @Inject constructor(
     suspend fun setDailyReminderHour(hour: Int) {
         dataStore.edit { preferences ->
             preferences[DAILY_REMINDER_HOUR] = hour
+        }
+    }
+
+    suspend fun setCategoriesSortOption(sortOption: String) {
+        dataStore.edit { preferences ->
+            preferences[CATEGORIES_SORT_OPTION] = sortOption
         }
     }
 

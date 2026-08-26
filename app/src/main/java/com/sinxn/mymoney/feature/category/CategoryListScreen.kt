@@ -13,6 +13,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import com.sinxn.mymoney.core.ui.components.AppExtendedFab
+import com.sinxn.mymoney.core.ui.components.FilterComponent
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -43,9 +44,7 @@ fun CategoryListScreen(
     onAddCategoryClick: (Int) -> Unit = {},
     viewModel: CategoryViewModel = hiltViewModel()
 ) {
-    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
-    val incomeCategories by viewModel.incomeCategories.collectAsStateWithLifecycle()
-    val expenseCategories by viewModel.expenseCategories.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
     val coroutineScope = rememberCoroutineScope()
@@ -89,7 +88,20 @@ fun CategoryListScreen(
                 }
             )
 
-            if (isLoading) {
+            val isIncomeTab = pagerState.currentPage == 0
+            val currentCategories = if (isIncomeTab) uiState.incomeCategories else uiState.expenseCategories
+            val totalCategoriesCount = currentCategories.size
+
+            if (totalCategoriesCount > 0 || uiState.incomeCategories.isNotEmpty() || uiState.expenseCategories.isNotEmpty()) {
+                FilterComponent(
+                    countText = "$totalCategoriesCount ${if (totalCategoriesCount == 1) "category" else "categories"}",
+                    activeSortOption = uiState.sortOption,
+                    options = CategorySortOption.entries,
+                    setSortOption = viewModel::setSortOption
+                )
+            }
+
+            if (uiState.isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -103,13 +115,14 @@ fun CategoryListScreen(
                     beyondViewportPageCount = 1
                 ) { page ->
                     val isIncome = page == CategoryType.INCOME
-                    val parentItems = if (isIncome) incomeCategories else expenseCategories
+                    val parentItems = if (isIncome) uiState.incomeCategories else uiState.expenseCategories
                     val listState = if (isIncome) incomeListState else expenseListState
 
                     CategoryTabPane(
                         isIncome = isIncome,
                         items = parentItems,
                         lazyListState = listState,
+                        isReorderEnabled = uiState.sortOption == CategorySortOption.CUSTOM,
                         onCategoryClick = onCategoryClick,
                         onExpandToggle = viewModel::toggleParentExpanded,
                         onReorderCategories = viewModel::reorderCategories
@@ -125,6 +138,7 @@ private fun CategoryTabPane(
     isIncome: Boolean,
     items: List<ParentCategoryItem>,
     lazyListState: LazyListState,
+    isReorderEnabled: Boolean = true,
     onCategoryClick: (String) -> Unit,
     onExpandToggle: (String) -> Unit,
     onReorderCategories: (List<String>) -> Unit
@@ -135,6 +149,7 @@ private fun CategoryTabPane(
         CategoryReorderableList(
             items = items,
             lazyListState = lazyListState,
+            isReorderEnabled = isReorderEnabled,
             onCategoryClick = onCategoryClick,
             onExpandToggle = onExpandToggle,
             onReorderParents = onReorderCategories,
