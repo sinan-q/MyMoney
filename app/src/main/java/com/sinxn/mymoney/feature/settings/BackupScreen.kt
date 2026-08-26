@@ -3,6 +3,9 @@ package com.sinxn.mymoney.feature.settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -52,6 +55,12 @@ fun BackupScreen(
     val analysisReport by viewModel.analysisReport.collectAsState()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri ->
+        uri?.let { viewModel.exportBackup(it) }
+    }
 
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -160,13 +169,15 @@ fun BackupScreen(
                 CircularProgressIndicator()
             } else {
                 Button(
-                    onClick = { /* Export Disabled */ },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = false // Disabled as requested
+                    onClick = {
+                        val fileName = "MoneyWallet_" + SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ENGLISH).format(Date()) + ".mwbx"
+                        exportLauncher.launch(fileName)
+                    },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(Icons.Default.Backup, contentDescription = null)
                     Spacer(modifier = Modifier.size(8.dp))
-                    Text("Export Backup (Coming Soon)")
+                    Text("Export Backup")
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))

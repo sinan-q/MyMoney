@@ -36,6 +36,19 @@ class BackupViewModel @Inject constructor(
         }
     }
 
+    fun exportBackup(uri: Uri) {
+        viewModelScope.launch {
+            _uiState.value = BackupUiState.Loading
+            try {
+                repository.exportBackup(uri)
+                _uiState.value = BackupUiState.Success("Backup exported successfully.")
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _uiState.value = BackupUiState.Error(e.message ?: "Export failed")
+            }
+        }
+    }
+
     fun analyzeBackup(uri: Uri) {
         viewModelScope.launch {
             _uiState.value = BackupUiState.Loading

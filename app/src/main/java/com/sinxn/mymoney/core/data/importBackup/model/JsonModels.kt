@@ -2,30 +2,35 @@ package com.sinxn.mymoney.core.data.importBackup.model
 
 import com.google.gson.annotations.SerializedName
 
+data class JsonHeader(
+    @SerializedName("version_code") val versionCode: Int = 2
+)
+
 data class BackupRoot(
+    @SerializedName("header") val header: JsonHeader? = JsonHeader(),
+    @SerializedName("currencies") val currencies: List<JsonCurrency>?,
     @SerializedName("wallets") val wallets: List<JsonWallet>?,
     @SerializedName("categories") val categories: List<JsonCategory>?,
-    @SerializedName("transactions") val transactions: List<JsonTransaction>?,
+    @SerializedName("events") val events: List<JsonEvent>?,
     @SerializedName("places") val places: List<JsonPlace>?,
     @SerializedName("people") val people: List<JsonPerson>?,
-    @SerializedName("events") val events: List<JsonEvent>?,
+    @SerializedName("event_people") val eventPeople: List<JsonEventPerson>?,
     @SerializedName("debts") val debts: List<JsonDebt>?,
-    @SerializedName("savings") val savings: List<JsonSaving>?,
-    @SerializedName("recurrent_transactions") val recurrentTransactions: List<JsonRecurrentTransaction>?,
-    @SerializedName("transfers") val transfers: List<JsonTransfer>?,
-    @SerializedName("recurrent_transfers") val recurrentTransfers: List<JsonRecurrentTransfer>?,
+    @SerializedName("debt_people") val debtPeople: List<JsonDebtPerson>?,
     @SerializedName("budgets") val budgets: List<JsonBudget>?,
     @SerializedName("budget_wallets") val budgetWallets: List<JsonBudgetWallet>?,
-    @SerializedName("attachments") val attachments: List<JsonAttachment>?,
-    @SerializedName(value = "transaction_attachments", alternate = ["transaction_attachment"]) val transactionAttachments: List<JsonTransactionAttachment>?,
-    @SerializedName(value = "transfer_attachments", alternate = ["transfer_attachment"]) val transferAttachments: List<JsonTransferAttachment>?,
+    @SerializedName("savings") val savings: List<JsonSaving>?,
+    @SerializedName("recurrent_transactions") val recurrentTransactions: List<JsonRecurrentTransaction>?,
+    @SerializedName("recurrent_transfers") val recurrentTransfers: List<JsonRecurrentTransfer>?,
+    @SerializedName("transactions") val transactions: List<JsonTransaction>?,
     @SerializedName("transaction_people") val transactionPeople: List<JsonTransactionPerson>?,
-    @SerializedName("transfer_people") val transferPeople: List<JsonTransferPerson>?,
-    @SerializedName("currencies") val currencies: List<JsonCurrency>?,
     @SerializedName("transaction_models") val transactionModels: List<JsonTransactionModel>?,
+    @SerializedName("transfers") val transfers: List<JsonTransfer>?,
+    @SerializedName("transfer_people") val transferPeople: List<JsonTransferPerson>?,
     @SerializedName("transfer_models") val transferModels: List<JsonTransferModel>?,
-    @SerializedName("event_people") val eventPeople: List<JsonEventPerson>?,
-    @SerializedName("debt_people") val debtPeople: List<JsonDebtPerson>?
+    @SerializedName("attachments") val attachments: List<JsonAttachment>?,
+    @SerializedName(value = "transaction_attachment", alternate = ["transaction_attachments"]) val transactionAttachments: List<JsonTransactionAttachment>?,
+    @SerializedName(value = "transfer_attachment", alternate = ["transfer_attachments"]) val transferAttachments: List<JsonTransferAttachment>?
 )
 
 data class JsonWallet(

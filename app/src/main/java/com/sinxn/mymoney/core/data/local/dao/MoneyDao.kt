@@ -1343,6 +1343,76 @@ interface MoneyDao {
 
     @Query("SELECT * FROM recurrent_transfers WHERE isDeleted = 0 AND nextOccurrence IS NOT NULL AND DATE(nextOccurrence) <= DATE(:today)")
     suspend fun getPendingRecurrentTransfers(today: String): List<com.sinxn.mymoney.core.data.local.entity.RecurrentTransferEntity>
+
+    // Backup Export Queries
+    @Query("SELECT * FROM wallets WHERE isDeleted = 0")
+    suspend fun getAllWalletsForExport(): List<WalletEntity>
+
+    @Query("SELECT * FROM categories WHERE isDeleted = 0 ORDER BY parentId ASC, `index` ASC")
+    suspend fun getAllCategoriesForExport(): List<CategoryEntity>
+
+    @Query("SELECT * FROM places WHERE isDeleted = 0")
+    suspend fun getAllPlacesForExport(): List<com.sinxn.mymoney.core.data.local.entity.PlaceEntity>
+
+    @Query("SELECT * FROM people WHERE isDeleted = 0")
+    suspend fun getAllPeopleForExport(): List<com.sinxn.mymoney.core.data.local.entity.PersonEntity>
+
+    @Query("SELECT * FROM events WHERE isDeleted = 0")
+    suspend fun getAllEventsForExport(): List<com.sinxn.mymoney.core.data.local.entity.EventEntity>
+
+    @Query("SELECT * FROM debts WHERE isDeleted = 0")
+    suspend fun getAllDebtsForExport(): List<DebtEntity>
+
+    @Query("SELECT * FROM debt_people WHERE isDeleted = 0")
+    suspend fun getAllDebtPeopleForExport(): List<DebtPeopleEntity>
+
+    @Query("SELECT * FROM budgets WHERE isDeleted = 0")
+    suspend fun getAllBudgetsForExport(): List<com.sinxn.mymoney.core.data.local.entity.BudgetEntity>
+
+    @Query("SELECT * FROM budget_wallets WHERE isDeleted = 0")
+    suspend fun getAllBudgetWalletsForExport(): List<com.sinxn.mymoney.core.data.local.entity.BudgetWalletEntity>
+
+    @Query("SELECT * FROM savings WHERE isDeleted = 0")
+    suspend fun getAllSavingsForExport(): List<com.sinxn.mymoney.core.data.local.entity.SavingEntity>
+
+    @Query("SELECT * FROM recurrent_transactions WHERE isDeleted = 0")
+    suspend fun getAllRecurrentTransactionsForExport(): List<com.sinxn.mymoney.core.data.local.entity.RecurrentTransactionEntity>
+
+    @Query("SELECT * FROM recurrent_transfers WHERE isDeleted = 0")
+    suspend fun getAllRecurrentTransfersForExport(): List<com.sinxn.mymoney.core.data.local.entity.RecurrentTransferEntity>
+
+    @Query("SELECT * FROM transactions WHERE isDeleted = 0")
+    suspend fun getAllTransactionsForExport(): List<TransactionEntity>
+
+    @Query("SELECT * FROM transaction_people WHERE isDeleted = 0")
+    suspend fun getAllTransactionPeopleForExport(): List<com.sinxn.mymoney.core.data.local.entity.TransactionPeopleEntity>
+
+    @Query("SELECT * FROM transaction_models WHERE isDeleted = 0")
+    suspend fun getAllTransactionModelsForExport(): List<com.sinxn.mymoney.core.data.local.entity.TransactionModelEntity>
+
+    @Query("SELECT * FROM transfers WHERE isDeleted = 0")
+    suspend fun getAllTransfersForExport(): List<com.sinxn.mymoney.core.data.local.entity.TransferEntity>
+
+    @Query("SELECT * FROM transfer_people WHERE isDeleted = 0")
+    suspend fun getAllTransferPeopleForExport(): List<com.sinxn.mymoney.core.data.local.entity.TransferPeopleEntity>
+
+    @Query("SELECT * FROM transfer_models WHERE isDeleted = 0")
+    suspend fun getAllTransferModelsForExport(): List<com.sinxn.mymoney.core.data.local.entity.TransferModelEntity>
+
+    @Query("SELECT * FROM attachments WHERE isDeleted = 0")
+    suspend fun getAllAttachmentsForExport(): List<com.sinxn.mymoney.core.data.local.entity.AttachmentEntity>
+
+    @Query("SELECT * FROM transaction_attachment WHERE isDeleted = 0")
+    suspend fun getAllTransactionAttachmentsForExport(): List<com.sinxn.mymoney.core.data.local.entity.TransactionAttachmentEntity>
+
+    @Query("SELECT * FROM transfer_attachment WHERE isDeleted = 0")
+    suspend fun getAllTransferAttachmentsForExport(): List<com.sinxn.mymoney.core.data.local.entity.TransferAttachmentEntity>
+
+    @Query("SELECT * FROM currencies WHERE isDeleted = 0")
+    suspend fun getAllCurrenciesForExport(): List<com.sinxn.mymoney.core.data.local.entity.CurrencyEntity>
+
+    @Query("SELECT * FROM event_people WHERE isDeleted = 0")
+    suspend fun getAllEventPeopleForExport(): List<com.sinxn.mymoney.core.data.local.entity.EventPeopleEntity>
 }
 
 
