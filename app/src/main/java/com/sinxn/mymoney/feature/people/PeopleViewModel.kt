@@ -2,10 +2,11 @@ package com.sinxn.mymoney.feature.people
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.sinxn.mymoney.core.data.local.entity.PersonEntity
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.PersonRepository
+import com.sinxn.mymoney.core.ui.components.IconData
 import com.sinxn.mymoney.core.ui.components.SortOption
+import com.sinxn.mymoney.core.ui.components.parseIconData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,21 +22,22 @@ enum class PersonSortOption(override val title: String) : SortOption {
     ALPHABETICAL("Alphabetical (A-Z)")
 }
 
-data class PersonFormState(
-    val isOpen: Boolean = false,
-    val editingPerson: PersonEntity? = null,
-    val name: String = "",
-    val note: String = ""
+data class PersonItemUi(
+    val id: String,
+    val name: String,
+    val note: String? = null,
+    val tag: String? = null,
+    val iconData: IconData,
+    val lastUsed: Long = 0L,
+    val lastEdit: Long = 0L
 )
 
 data class PeopleUiState(
-    val people: List<PersonEntity> = emptyList(),
+    val people: List<PersonItemUi> = emptyList(),
+    val totalPeopleCount: Int = 0,
+    val searchQuery: String = "",
     val sortOption: PersonSortOption = PersonSortOption.LAST_USED,
-    val isLoading: Boolean = false,
-    val isEditDialogOpen: Boolean = false,
-    val editingPerson: PersonEntity? = null,
-    val editName: String = "",
-    val editNote: String = ""
+    val isLoading: Boolean = false
 )
 
 @HiltViewModel
@@ -44,94 +46,72 @@ class PeopleViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
-    private val _formState = MutableStateFlow(PersonFormState())
+    private val _searchQuery = MutableStateFlow("")
 
     val uiState: StateFlow<PeopleUiState> = combine(
         personRepository.getPeople(),
         settingsRepository.peopleSortOption,
-        _formState
-    ) { people, sortOptionName, form ->
+        _searchQuery
+    ) { people, sortOptionName, searchQuery ->
         val sortOption = try {
             PersonSortOption.valueOf(sortOptionName)
         } catch (e: Exception) {
             PersonSortOption.LAST_USED
         }
 
+        val personItems = people.map { person ->
+            PersonItemUi(
+                id = person.id,
+                name = person.name,
+                note = person.note,
+                tag = person.tag,
+                iconData = parseIconData(person.icon, person.name),
+                lastUsed = person.lastUsed,
+                lastEdit = person.lastEdit
+            )
+        }
+
         val sortedPeople = when (sortOption) {
-            PersonSortOption.LAST_USED -> people.sortedWith(
-                compareByDescending<PersonEntity> { it.lastUsed }
+            PersonSortOption.LAST_USED -> personItems.sortedWith(
+                compareByDescending<PersonItemUi> { it.lastUsed }
                     .thenByDescending { it.lastEdit }
             )
-            PersonSortOption.LAST_EDIT -> people.sortedByDescending { it.lastEdit }
-            PersonSortOption.ALPHABETICAL -> people.sortedWith(
+            PersonSortOption.LAST_EDIT -> personItems.sortedByDescending { it.lastEdit }
+            PersonSortOption.ALPHABETICAL -> personItems.sortedWith(
                 compareBy(String.CASE_INSENSITIVE_ORDER) { it.name }
             )
         }
 
+        val filteredPeople = if (searchQuery.isBlank()) {
+            sortedPeople
+        } else {
+            sortedPeople.filter { person ->
+                person.name.contains(searchQuery, ignoreCase = true) ||
+                (!person.note.isNullOrBlank() && person.note.contains(searchQuery, ignoreCase = true)) ||
+                (!person.tag.isNullOrBlank() && person.tag.contains(searchQuery, ignoreCase = true))
+            }
+        }
+
         PeopleUiState(
-            people = sortedPeople,
+            people = filteredPeople,
+            totalPeopleCount = sortedPeople.size,
+            searchQuery = searchQuery,
             sortOption = sortOption,
-            isLoading = false,
-            isEditDialogOpen = form.isOpen,
-            editingPerson = form.editingPerson,
-            editName = form.name,
-            editNote = form.note
+            isLoading = false
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = PeopleUiState()
+        initialValue = PeopleUiState(isLoading = true)
     )
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
 
     fun setSortOption(sortOption: PersonSortOption) {
         viewModelScope.launch {
             settingsRepository.setPeopleSortOption(sortOption.name)
-        }
-    }
-
-    fun openCreatePersonDialog() {
-        _formState.value = PersonFormState(isOpen = true)
-    }
-
-    fun openEditPersonDialog(person: PersonEntity) {
-        _formState.value = PersonFormState(
-            isOpen = true,
-            editingPerson = person,
-            name = person.name,
-            note = person.note ?: ""
-        )
-    }
-
-    fun closeDialog() {
-        _formState.value = _formState.value.copy(isOpen = false)
-    }
-
-    fun onNameChange(name: String) {
-        _formState.value = _formState.value.copy(name = name)
-    }
-
-    fun onNoteChange(note: String) {
-        _formState.value = _formState.value.copy(note = note)
-    }
-
-    fun savePerson() {
-        viewModelScope.launch {
-            val form = _formState.value
-            val name = form.name.trim()
-            if (name.isEmpty()) return@launch
-
-            personRepository.savePerson(
-                id = form.editingPerson?.id,
-                name = name,
-                note = form.note.takeIf { it.isNotBlank() }
-            )
-            closeDialog()
-        }
-    }
-
-    fun deletePerson(person: PersonEntity) {
-        viewModelScope.launch {
-            personRepository.deletePerson(person.id)
         }
     }
 }

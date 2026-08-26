@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sinxn.mymoney.core.data.local.model.DebtWithDetails
 import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import com.sinxn.mymoney.core.ui.components.TabPill
@@ -61,7 +62,7 @@ fun DebtListScreen(
     onAddDebt: (type: Int) -> Unit,
     viewModel: DebtListViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     var debtToDelete by remember { mutableStateOf<String?>(null) }
 

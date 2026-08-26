@@ -7,6 +7,8 @@ import com.sinxn.mymoney.core.data.local.model.SavingWithDetails
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.SavingRepository
+import com.sinxn.mymoney.core.ui.components.IconData
+import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,10 +22,27 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+data class SavingItemUi(
+    val id: String,
+    val title: String,
+    val walletName: String,
+    val iconData: IconData,
+    val currentAmountFormatted: String,
+    val targetAmountFormatted: String,
+    val neededAmountFormatted: String,
+    val percentage: Double,
+    val progressFraction: Float,
+    val isGoalReached: Boolean,
+    val targetDateLabel: String?,
+    val isComplete: Boolean,
+    val currentMoney: Long,
+    val rawItem: SavingWithDetails
+)
+
 data class SavingListUiState(
     val selectedTab: Int = 0, // 0: IN_PROGRESS, 1: COMPLETED
     val filterWalletId: String? = null,
-    val savings: List<SavingWithDetails> = emptyList(),
+    val savings: List<SavingItemUi> = emptyList(),
     val isLoading: Boolean = true,
     val formatterConfig: MoneyFormatter.Config = MoneyFormatter.Config(),
     val dateFormat: Int = 0,
@@ -67,10 +86,75 @@ class SavingListViewModel @Inject constructor(
             roundDecimals = formatting.roundDecimals,
             showPlusMinus = formatting.showPlusMinus
         )
+
+        val savingItems = list.map { item ->
+            val saving = item.saving
+            val targetAmount = saving.endMoney
+            val currentAmount = item.currentMoney
+            val neededAmount = item.neededMoney
+            val currency = item.walletCurrency
+
+            val percentage = if (targetAmount > 0) {
+                ((currentAmount.toDouble() / targetAmount.toDouble()) * 100.0)
+            } else 0.0
+
+            val progressFraction = (percentage / 100.0).coerceIn(0.0, 1.0).toFloat()
+            val isGoalReached = item.isGoalReached || saving.isComplete
+
+            val targetDateLabel = saving.endDate?.let { exp ->
+                val parsed = DateUtils.parseDate(exp)
+                DateUtils.formatDate(parsed, formatting.dateFormat)
+            }
+
+            val iconData = parseIconData(saving.icon.ifBlank { "ic_saving" }, saving.description ?: "Saving Goal")
+
+            val decimals = try {
+                java.util.Currency.getInstance(currency).defaultFractionDigits
+            } catch (_: Exception) {
+                2
+            }
+
+            val currentAmountFormatted = MoneyFormatter.format(
+                amount = currentAmount,
+                currencyCode = currency,
+                decimals = decimals,
+                config = formatterConfig
+            )
+            val targetAmountFormatted = MoneyFormatter.format(
+                amount = targetAmount,
+                currencyCode = currency,
+                decimals = decimals,
+                config = formatterConfig
+            )
+            val neededAmountFormatted = MoneyFormatter.format(
+                amount = neededAmount,
+                currencyCode = currency,
+                decimals = decimals,
+                config = formatterConfig
+            )
+
+            SavingItemUi(
+                id = saving.id,
+                title = saving.description ?: "Saving Goal",
+                walletName = item.walletName,
+                iconData = iconData,
+                currentAmountFormatted = currentAmountFormatted,
+                targetAmountFormatted = targetAmountFormatted,
+                neededAmountFormatted = neededAmountFormatted,
+                percentage = percentage,
+                progressFraction = progressFraction,
+                isGoalReached = isGoalReached,
+                targetDateLabel = targetDateLabel,
+                isComplete = saving.isComplete,
+                currentMoney = currentAmount,
+                rawItem = item
+            )
+        }
+
         SavingListUiState(
             selectedTab = tab,
             filterWalletId = actualWId,
-            savings = list,
+            savings = savingItems,
             isLoading = false,
             formatterConfig = formatterConfig,
             dateFormat = formatting.dateFormat,

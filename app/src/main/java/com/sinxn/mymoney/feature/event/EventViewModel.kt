@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.EventRepository
+import com.sinxn.mymoney.core.ui.components.IconData
 import com.sinxn.mymoney.core.ui.components.SortOption
+import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -26,7 +28,7 @@ data class EventItemUi(
     val name: String,
     val note: String? = null,
     val tag: String? = null,
-    val icon: String = "ic_event",
+    val iconData: IconData,
     val lastEdit: Long = 0L,
     val formattedDateRange: String = "",
     val amountText: String = "",
@@ -109,13 +111,14 @@ class EventViewModel @Inject constructor(
             val isPositive = total > 0
             val isNegative = total < 0
             val amountText = (if (isPositive && !formattedMoney.startsWith("+")) "+" else "") + formattedMoney
+            val iconData = parseIconData(event.icon.ifBlank { "ic_event" }, event.name)
 
             EventItemUi(
                 id = event.id,
                 name = event.name,
                 note = event.note,
                 tag = event.tag,
-                icon = event.icon,
+                iconData = iconData,
                 lastEdit = event.lastEdit,
                 formattedDateRange = formattedDateRange,
                 amountText = amountText,

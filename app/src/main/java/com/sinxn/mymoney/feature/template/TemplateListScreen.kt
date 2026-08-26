@@ -1,7 +1,6 @@
 package com.sinxn.mymoney.feature.template
 
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,63 +17,29 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import com.sinxn.mymoney.core.data.local.model.TransactionModelWithDetails
-import com.sinxn.mymoney.core.data.local.model.TransferModelWithDetails
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.FinanceListItem
-import com.sinxn.mymoney.core.ui.components.IconData
-import com.sinxn.mymoney.core.ui.components.parseIconData
-import com.sinxn.mymoney.core.util.MoneyFormatter
+import com.sinxn.mymoney.core.ui.components.SearchBar
 import com.sinxn.mymoney.ui.theme.TransferColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TemplateListScreen(
-    onNavigateBack: () -> Unit,
     onAddTemplateClick: (Boolean) -> Unit = {},
     onTemplateClick: (String, Boolean) -> Unit = { _, _ -> },
     viewModel: TemplateViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Transactions, 1: Transfers
-    var searchQuery by remember { mutableStateOf("") }
     val context = LocalContext.current
 
     val txListState = rememberLazyListState()
     val transferListState = rememberLazyListState()
     val currentListState = if (selectedTab == 0) txListState else transferListState
-
-    val filteredTxTemplates = remember(uiState.transactionTemplates, searchQuery) {
-        if (searchQuery.isBlank()) {
-            uiState.transactionTemplates
-        } else {
-            uiState.transactionTemplates.filter { item ->
-                (item.model.description?.contains(searchQuery, ignoreCase = true) == true) ||
-                (item.categoryName?.contains(searchQuery, ignoreCase = true) == true) ||
-                (item.walletName.contains(searchQuery, ignoreCase = true)) ||
-                (item.model.tag?.contains(searchQuery, ignoreCase = true) == true) ||
-                (item.model.note?.contains(searchQuery, ignoreCase = true) == true)
-            }
-        }
-    }
-
-    val filteredTransferTemplates = remember(uiState.transferTemplates, searchQuery) {
-        if (searchQuery.isBlank()) {
-            uiState.transferTemplates
-        } else {
-            uiState.transferTemplates.filter { item ->
-                (item.model.description?.contains(searchQuery, ignoreCase = true) == true) ||
-                (item.walletFromName.contains(searchQuery, ignoreCase = true)) ||
-                (item.walletToName.contains(searchQuery, ignoreCase = true)) ||
-                (item.model.tag?.contains(searchQuery, ignoreCase = true) == true) ||
-                (item.model.note?.contains(searchQuery, ignoreCase = true) == true)
-            }
-        }
-    }
 
     val isTx = selectedTab == 0
     val fabText = if (isTx) "New Template" else "New Transfer Template"
@@ -99,55 +64,9 @@ fun TemplateListScreen(
                 .padding(innerPadding)
         ) {
             // Search field
-            val totalCount = uiState.transactionTemplates.size + uiState.transferTemplates.size
-            if (totalCount > 5 || searchQuery.isNotEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        placeholder = {
-                            Text(
-                                "Search templates...",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        },
-                        trailingIcon = if (searchQuery.isNotEmpty()) {
-                            {
-                                IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(
-                                        Icons.Default.Close,
-                                        contentDescription = "Clear",
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                        } else null,
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
-                        )
-                    )
-                }
+            val totalCount = uiState.totalTxCount + uiState.totalTrCount
+            if (totalCount > 5 || uiState.searchQuery.isNotEmpty()) {
+                SearchBar(searchQuery = uiState.searchQuery, setSearchQuery = viewModel::setSearchQuery)
             }
 
             // Tabs
@@ -157,7 +76,7 @@ fun TemplateListScreen(
                     onClick = { selectedTab = 0 },
                     text = {
                         Text(
-                            text = "Transactions (${uiState.transactionTemplates.size})",
+                            text = if (uiState.searchQuery.isNotEmpty()) "Transactions (${uiState.transactionTemplates.size})" else "Transactions (${uiState.totalTxCount})",
                             fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal
                         )
                     }
@@ -167,7 +86,7 @@ fun TemplateListScreen(
                     onClick = { selectedTab = 1 },
                     text = {
                         Text(
-                            text = "Transfers (${uiState.transferTemplates.size})",
+                            text = if (uiState.searchQuery.isNotEmpty()) "Transfers (${uiState.transferTemplates.size})" else "Transfers (${uiState.totalTrCount})",
                             fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal
                         )
                     }
@@ -182,10 +101,10 @@ fun TemplateListScreen(
                 if (uiState.isLoading) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 } else if (selectedTab == 0) {
-                    if (filteredTxTemplates.isEmpty()) {
+                    if (uiState.transactionTemplates.isEmpty()) {
                         EmptyTemplateState(
-                            message = if (searchQuery.isNotEmpty()) "No matching transaction templates" else "No transaction templates created yet",
-                            isSearching = searchQuery.isNotEmpty()
+                            message = if (uiState.searchQuery.isNotEmpty()) "No matching transaction templates" else "No transaction templates created yet",
+                            isSearching = uiState.searchQuery.isNotEmpty()
                         )
                     } else {
                         LazyColumn(
@@ -194,15 +113,15 @@ fun TemplateListScreen(
                             contentPadding = PaddingValues(bottom = 88.dp)
                         ) {
                             items(
-                                items = filteredTxTemplates,
-                                key = { it.model.id },
+                                items = uiState.transactionTemplates,
+                                key = { it.id },
                                 contentType = { "tx_template" }
                             ) { item ->
                                 TransactionTemplateListItem(
                                     item = item,
-                                    onClick = { onTemplateClick(item.model.id, false) },
+                                    onClick = { onTemplateClick(item.id, false) },
                                     onApply = {
-                                        viewModel.applyTransactionTemplate(item)
+                                        viewModel.applyTransactionTemplate(item.rawItem)
                                         Toast.makeText(context, "Template applied!", Toast.LENGTH_SHORT).show()
                                     }
                                 )
@@ -210,10 +129,10 @@ fun TemplateListScreen(
                         }
                     }
                 } else {
-                    if (filteredTransferTemplates.isEmpty()) {
+                    if (uiState.transferTemplates.isEmpty()) {
                         EmptyTemplateState(
-                            message = if (searchQuery.isNotEmpty()) "No matching transfer templates" else "No transfer templates created yet",
-                            isSearching = searchQuery.isNotEmpty()
+                            message = if (uiState.searchQuery.isNotEmpty()) "No matching transfer templates" else "No transfer templates created yet",
+                            isSearching = uiState.searchQuery.isNotEmpty()
                         )
                     } else {
                         LazyColumn(
@@ -222,15 +141,15 @@ fun TemplateListScreen(
                             contentPadding = PaddingValues(bottom = 88.dp)
                         ) {
                             items(
-                                items = filteredTransferTemplates,
-                                key = { it.model.id },
+                                items = uiState.transferTemplates,
+                                key = { it.id },
                                 contentType = { "transfer_template" }
                             ) { item ->
                                 TransferTemplateListItem(
                                     item = item,
-                                    onClick = { onTemplateClick(item.model.id, true) },
+                                    onClick = { onTemplateClick(item.id, true) },
                                     onApply = {
-                                        viewModel.applyTransferTemplate(item)
+                                        viewModel.applyTransferTemplate(item.rawItem)
                                         Toast.makeText(context, "Transfer applied!", Toast.LENGTH_SHORT).show()
                                     }
                                 )
@@ -245,40 +164,22 @@ fun TemplateListScreen(
 
 @Composable
 private fun TransactionTemplateListItem(
-    item: TransactionModelWithDetails,
+    item: TransactionTemplateUi,
     onClick: () -> Unit,
     onApply: () -> Unit
 ) {
-    val isIncome = item.model.direction == 1
-    val formattedMoney = (if (isIncome) "+" else "-") + MoneyFormatter.format(
-        amount = item.model.money,
-        currencyCode = item.walletCurrency,
-        decimals = item.walletDecimals
-    )
-    val amountColor = if (isIncome) Color(0xFF2E7D32) else Color(0xFFC62828)
-    val title = item.model.description?.takeIf { it.isNotBlank() } ?: (item.categoryName ?: "Template")
-    val subtitle = buildString {
-        append(item.walletName)
-        if (!item.model.tag.isNullOrBlank()) {
-            append(" • ")
-            append(item.model.tag)
-        }
-    }
-
-    val iconData = remember(item.categoryIcon, item.categoryName) {
-        parseIconData(item.categoryIcon ?: "ic_category_other", item.categoryName ?: "Category")
-    }
+    val amountColor = if (item.isIncome) Color(0xFF2E7D32) else Color(0xFFC62828)
 
     FinanceListItem(
         icon = {
-            CategoryIcon(iconData = iconData)
+            CategoryIcon(iconData = item.iconData)
         },
-        title = title,
-        subtitle = subtitle,
+        title = item.title,
+        subtitle = item.subtitle,
         trailingContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = formattedMoney,
+                    text = item.formattedMoney,
                     style = MaterialTheme.typography.titleMedium,
                     color = amountColor,
                     fontWeight = FontWeight.Bold
@@ -302,18 +203,10 @@ private fun TransactionTemplateListItem(
 
 @Composable
 private fun TransferTemplateListItem(
-    item: TransferModelWithDetails,
+    item: TransferTemplateUi,
     onClick: () -> Unit,
     onApply: () -> Unit
 ) {
-    val formattedMoney = MoneyFormatter.format(
-        amount = item.model.moneyFrom,
-        currencyCode = item.walletFromCurrency,
-        decimals = item.walletFromDecimals
-    )
-    val title = item.model.description?.takeIf { it.isNotBlank() } ?: "Transfer"
-    val subtitle = "${item.walletFromName} ➔ ${item.walletToName}"
-
     FinanceListItem(
         icon = {
             Box(
@@ -325,19 +218,19 @@ private fun TransferTemplateListItem(
                 Icon(
                     imageVector = Icons.Default.SwapHoriz,
                     contentDescription = null,
-                    modifier = Modifier.size(28.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = TransferColor,
+                    modifier = Modifier.size(24.dp)
                 )
             }
         },
-        title = title,
-        subtitle = subtitle,
+        title = item.title,
+        subtitle = item.subtitle,
         trailingContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = formattedMoney,
+                    text = item.formattedMoney,
                     style = MaterialTheme.typography.titleMedium,
-                    color = Color(0xFF1565C0),
+                    color = TransferColor,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(Modifier.width(8.dp))
@@ -347,8 +240,8 @@ private fun TransferTemplateListItem(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Bolt,
-                        contentDescription = "Apply Transfer",
-                        tint = MaterialTheme.colorScheme.primary
+                        contentDescription = "Apply Transfer Template",
+                        tint = TransferColor
                     )
                 }
             }
@@ -365,21 +258,31 @@ private fun EmptyTemplateState(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = if (isSearching) Icons.Default.SearchOff else Icons.Default.Bolt,
+            imageVector = if (isSearching) Icons.Default.SearchOff else Icons.Default.BookmarkBorder,
             contentDescription = null,
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier.size(64.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
         )
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = message,
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Medium
         )
+        if (!isSearching) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Use the + button below to create reusable transaction or transfer templates.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+        }
     }
 }

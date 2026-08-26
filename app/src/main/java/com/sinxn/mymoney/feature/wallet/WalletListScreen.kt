@@ -35,13 +35,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sinxn.mymoney.core.ui.components.AppExtendedFab
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
-import com.sinxn.mymoney.core.ui.components.IconData
 import com.sinxn.mymoney.core.ui.components.TabPill
-import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.MoneyFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,7 +49,7 @@ fun WalletListScreen(
     onAddWalletClick: () -> Unit,
     viewModel: WalletListViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedTab by remember { mutableStateOf(0) } // 0: Active, 1: Archived
 
     val currentWallets = if (selectedTab == 0) uiState.activeWallets else uiState.archivedWallets
@@ -236,13 +233,6 @@ fun WalletListScreen(
                 }
 
                 // 4. Content List
-                val currentWalletUiModels = remember(currentWallets, formatterConfig) {
-                    currentWallets.map { it.toUiModel(formatterConfig) }
-                }
-                val reorderWalletUiModels = remember(uiState.sortedWalletsForReorder, formatterConfig) {
-                    uiState.sortedWalletsForReorder.map { it.toUiModel(formatterConfig) }
-                }
-
                 if (uiState.isSortMode) {
                     // Reorder List View
                     LazyColumn(
@@ -253,14 +243,14 @@ fun WalletListScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         itemsIndexed(
-                            items = reorderWalletUiModels,
+                            items = uiState.sortedWalletsForReorder,
                             key = { _, item -> item.id },
                             contentType = { _, _ -> "reorder_wallet" }
                         ) { index, item ->
                             ReorderWalletRow(
                                 wallet = item,
                                 index = index,
-                                totalCount = reorderWalletUiModels.size,
+                                totalCount = uiState.sortedWalletsForReorder.size,
                                 onMoveUp = { viewModel.moveWalletUp(index) },
                                 onMoveDown = { viewModel.moveWalletDown(index) }
                             )
@@ -278,7 +268,7 @@ fun WalletListScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         itemsIndexed(
-                            items = currentWalletUiModels,
+                            items = currentWallets,
                             key = { _, item -> item.id },
                             contentType = { _, _ -> "wallet_card" }
                         ) { _, item ->
@@ -297,55 +287,6 @@ fun WalletListScreen(
 private val WalletCardShape = RoundedCornerShape(16.dp)
 private val WalletTagShape = RoundedCornerShape(6.dp)
 private val ReorderCardShape = RoundedCornerShape(14.dp)
-
-@Immutable
-private data class WalletUiModel(
-    val id: String,
-    val name: String,
-    val currency: String,
-    val currentBalance: Long,
-    val formattedBalance: String,
-    val formattedStartMoney: String?,
-    val isNegativeBalance: Boolean,
-    val iconData: IconData,
-    val isExcludedFromTotal: Boolean,
-    val note: String?
-)
-
-private fun WalletWithBalance.toUiModel(formatterConfig: MoneyFormatter.Config): WalletUiModel {
-    val currencyCode = currencySymbol ?: wallet.currency
-    val formattedBalance = MoneyFormatter.format(
-        amount = currentBalance,
-        currencyCode = currencyCode,
-        decimals = decimals,
-        config = formatterConfig
-    )
-    val formattedStartMoney = if (wallet.countInTotal && wallet.note.isNullOrBlank()) {
-        val startFormatted = MoneyFormatter.format(
-            amount = wallet.startMoney,
-            currencyCode = currencyCode,
-            decimals = decimals,
-            config = formatterConfig
-        )
-        "Start: $startFormatted"
-    } else null
-    val isNegativeBalance = currentBalance < 0
-    val iconData = parseIconData(wallet.icon, wallet.name)
-    val note = wallet.note?.takeIf { it.isNotBlank() }
-
-    return WalletUiModel(
-        id = wallet.id,
-        name = wallet.name,
-        currency = wallet.currency,
-        currentBalance = currentBalance,
-        formattedBalance = formattedBalance,
-        formattedStartMoney = formattedStartMoney,
-        isNegativeBalance = isNegativeBalance,
-        iconData = iconData,
-        isExcludedFromTotal = !wallet.countInTotal,
-        note = note
-    )
-}
 
 @Composable
 private fun WalletCardRow(

@@ -1,11 +1,14 @@
 package com.sinxn.mymoney.feature.wallet
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.WalletRepository
+import com.sinxn.mymoney.core.ui.components.IconData
+import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,10 +24,26 @@ import java.util.Collections
 import java.util.Date
 import javax.inject.Inject
 
+@Immutable
+data class WalletUiModel(
+    val id: String,
+    val name: String,
+    val currency: String,
+    val currentBalance: Long,
+    val formattedBalance: String,
+    val formattedStartMoney: String?,
+    val isNegativeBalance: Boolean,
+    val iconData: IconData,
+    val isExcludedFromTotal: Boolean,
+    val note: String?,
+    val rawItem: WalletWithBalance
+)
+
 data class WalletListUiState(
-    val activeWallets: List<WalletWithBalance> = emptyList(),
-    val archivedWallets: List<WalletWithBalance> = emptyList(),
-    val sortedWalletsForReorder: List<WalletWithBalance> = emptyList(),
+    val activeWallets: List<WalletUiModel> = emptyList(),
+    val archivedWallets: List<WalletUiModel> = emptyList(),
+    val sortedWalletsForReorder: List<WalletUiModel> = emptyList(),
+    val rawWalletsForReorder: List<WalletWithBalance> = emptyList(),
     val totalBalance: Long = 0L,
     val totalBreakdown: String? = null,
     val isTotalValid: Boolean = true,
@@ -84,6 +103,49 @@ class WalletListViewModel @Inject constructor(
                 }.joinToString(", ")
         } else null
 
+        val formatterConfig = MoneyFormatter.Config(
+            showCurrency = settings.showCurrency,
+            groupDigits = settings.groupDigits,
+            roundDecimals = settings.roundDecimals,
+            showPlusMinus = settings.showPlusMinus
+        )
+
+        fun WalletWithBalance.toUi(): WalletUiModel {
+            val currencyCode = currencySymbol ?: wallet.currency
+            val formattedBalance = MoneyFormatter.format(
+                amount = currentBalance,
+                currencyCode = currencyCode,
+                decimals = decimals,
+                config = formatterConfig
+            )
+            val formattedStartMoney = if (wallet.countInTotal && wallet.note.isNullOrBlank()) {
+                val startFormatted = MoneyFormatter.format(
+                    amount = wallet.startMoney,
+                    currencyCode = currencyCode,
+                    decimals = decimals,
+                    config = formatterConfig
+                )
+                "Start: $startFormatted"
+            } else null
+            val isNegativeBalance = currentBalance < 0
+            val iconData = parseIconData(wallet.icon, wallet.name)
+            val note = wallet.note?.takeIf { it.isNotBlank() }
+
+            return WalletUiModel(
+                id = wallet.id,
+                name = wallet.name,
+                currency = wallet.currency,
+                currentBalance = currentBalance,
+                formattedBalance = formattedBalance,
+                formattedStartMoney = formattedStartMoney,
+                isNegativeBalance = isNegativeBalance,
+                iconData = iconData,
+                isExcludedFromTotal = !wallet.countInTotal,
+                note = note,
+                rawItem = this
+            )
+        }
+
         val filteredWallets = if (searchQuery.isBlank()) {
             allWallets
         } else {
@@ -103,9 +165,10 @@ class WalletListViewModel @Inject constructor(
         }
 
         WalletListUiState(
-            activeWallets = active,
-            archivedWallets = archived,
-            sortedWalletsForReorder = effectiveReorderList,
+            activeWallets = active.map { it.toUi() },
+            archivedWallets = archived.map { it.toUi() },
+            sortedWalletsForReorder = effectiveReorderList.map { it.toUi() },
+            rawWalletsForReorder = effectiveReorderList,
             totalBalance = totalBalance,
             totalBreakdown = breakdown,
             isTotalValid = isTotalValid,
@@ -131,7 +194,7 @@ class WalletListViewModel @Inject constructor(
         val current = _isSortMode.value
         if (!current) {
             // entering sort mode -> initialize reorder list with current all wallets
-            val currentWallets = uiState.value.activeWallets + uiState.value.archivedWallets
+            val currentWallets = uiState.value.rawWalletsForReorder
             _reorderList.value = currentWallets.sortedBy { it.wallet.index }
         } else {
             // exiting sort mode -> save changes

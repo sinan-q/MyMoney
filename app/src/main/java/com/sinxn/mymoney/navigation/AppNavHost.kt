@@ -661,7 +661,6 @@ fun AppNavHost(
 
         composable(Screen.Templates.routePattern) {
             TemplateListScreen(
-                onNavigateBack = { navController.navigateUp() },
                 onAddTemplateClick = { isTransfer ->
                     navController.navigate(Screen.TemplateAddEdit.createRoute(isTransfer = isTransfer))
                 },

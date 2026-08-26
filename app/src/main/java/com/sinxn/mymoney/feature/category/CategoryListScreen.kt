@@ -20,14 +20,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.util.CategoryType
 import com.sinxn.mymoney.feature.category.components.CategoryReorderableList
@@ -43,9 +43,9 @@ fun CategoryListScreen(
     onAddCategoryClick: (Int) -> Unit = {},
     viewModel: CategoryViewModel = hiltViewModel()
 ) {
-    val isLoading by viewModel.isLoading.collectAsState()
-    val incomeCategories by viewModel.incomeCategories.collectAsState()
-    val expenseCategories by viewModel.expenseCategories.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val incomeCategories by viewModel.incomeCategories.collectAsStateWithLifecycle()
+    val expenseCategories by viewModel.expenseCategories.collectAsStateWithLifecycle()
 
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
     val coroutineScope = rememberCoroutineScope()

@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sinxn.mymoney.core.data.local.model.BudgetWithDetails
 import com.sinxn.mymoney.core.data.repository.BudgetPeriod
 import com.sinxn.mymoney.core.ui.components.AppExtendedFab
@@ -45,7 +46,7 @@ fun BudgetListScreen(
     onNavigateToSettings: () -> Unit = {},
     viewModel: BudgetListViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredBudgets = remember(uiState.budgets, searchQuery) {

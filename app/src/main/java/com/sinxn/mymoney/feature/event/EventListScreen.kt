@@ -25,6 +25,8 @@ import com.sinxn.mymoney.core.ui.components.FilterComponent
 import com.sinxn.mymoney.core.ui.components.FinanceListItem
 import com.sinxn.mymoney.core.ui.components.SearchBar
 import com.sinxn.mymoney.core.ui.components.parseIconData
+import com.sinxn.mymoney.ui.theme.ExpenseColor
+import com.sinxn.mymoney.ui.theme.IncomeColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,8 +94,16 @@ fun EventListScreen(
                             key = { it.id },
                             contentType = { "event_item" }
                         ) { item ->
-                            EventListItem(
-                                item = item,
+                            FinanceListItem(
+                                icon = { CategoryIcon(iconData = item.iconData) },
+                                title = item.name,
+                                subtitle = item.formattedDateRange,
+                                amountText = item.amountText,
+                                amountColor = when {
+                                    item.isPositive -> IncomeColor
+                                    item.isNegative -> ExpenseColor
+                                    else -> MaterialTheme.colorScheme.onSurface
+                                },
                                 onClick = { onEventClick(item.id) }
                             )
                         }
@@ -104,29 +114,3 @@ fun EventListScreen(
     }
 }
 
-@Composable
-private fun EventListItem(
-    item: EventItemUi,
-    onClick: () -> Unit
-) {
-    val amountColor = when {
-        item.isPositive -> Color(0xFF2E7D32)
-        item.isNegative -> Color(0xFFC62828)
-        else -> MaterialTheme.colorScheme.onSurface
-    }
-
-    val iconData = remember(item.icon, item.name) {
-        parseIconData(item.icon.ifBlank { "ic_event" }, item.name)
-    }
-
-    FinanceListItem(
-        icon = {
-            CategoryIcon(iconData = iconData)
-        },
-        title = item.name,
-        subtitle = item.formattedDateRange,
-        amountText = item.amountText,
-        amountColor = amountColor,
-        onClick = onClick
-    )
-}

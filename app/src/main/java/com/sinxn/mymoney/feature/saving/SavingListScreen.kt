@@ -32,19 +32,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.sinxn.mymoney.core.data.local.model.SavingWithDetails
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
-import com.sinxn.mymoney.core.ui.components.IconData
-import com.sinxn.mymoney.core.ui.components.parseIconData
+import com.sinxn.mymoney.core.ui.components.EmptyListItem
+import com.sinxn.mymoney.core.ui.components.SearchBar
 import com.sinxn.mymoney.core.ui.components.TabPill
-import com.sinxn.mymoney.core.util.DateUtils
-import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.ui.theme.IncomeColor
 
 private val InProgressColor = Color(0xFF3F51B5)
 private val CompletedColor = IncomeColor
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SavingListScreen(
     onNavigateUp: () -> Unit,
@@ -59,7 +58,7 @@ fun SavingListScreen(
     onNavigateToSettings: () -> Unit = {},
     viewModel: SavingListViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
     var pendingDeleteSavingId by remember { mutableStateOf<String?>(null) }
 
@@ -98,11 +97,10 @@ fun SavingListScreen(
             uiState.savings
         } else {
             uiState.savings.filter { item ->
-                val desc = item.saving.description ?: "Saving Goal"
-                desc.contains(searchQuery, ignoreCase = true) ||
-                        (!item.saving.note.isNullOrBlank() && item.saving.note.contains(searchQuery, ignoreCase = true)) ||
-                        (!item.saving.tag.isNullOrBlank() && item.saving.tag.contains(searchQuery, ignoreCase = true)) ||
-                        item.walletName.contains(searchQuery, ignoreCase = true)
+                item.title.contains(searchQuery, ignoreCase = true) ||
+                (item.rawItem.saving.note?.contains(searchQuery, ignoreCase = true) == true) ||
+                (item.rawItem.saving.tag?.contains(searchQuery, ignoreCase = true) == true) ||
+                item.walletName.contains(searchQuery, ignoreCase = true)
             }
         }
     }
@@ -113,19 +111,17 @@ fun SavingListScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             AppExtendedFab(
-                text = "New Goal",
+                text = "Add Goal",
                 icon = Icons.Default.Add,
                 onClick = onAddSaving,
-                expanded = !listState.isScrollInProgress,
-                containerColor = InProgressColor,
-                contentColor = Color.White
+                expanded = !listState.isScrollInProgress
             )
         }
-    ) { paddingValues ->
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(innerPadding)
         ) {
             // Tab Pill Selector (In Progress vs Completed)
             TabPill(
@@ -138,53 +134,10 @@ fun SavingListScreen(
 
             // Search bar (shown when > 5 items or actively searching)
             if (uiState.savings.size > 5 || searchQuery.isNotEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        placeholder = {
-                            Text(
-                                "Search savings goals...",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        },
-                        trailingIcon = if (searchQuery.isNotEmpty()) {
-                            {
-                                IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(
-                                        Icons.Default.Close,
-                                        contentDescription = "Clear",
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                        } else null,
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
-                        )
-                    )
-                }
+                SearchBar(
+                    searchQuery = searchQuery,
+                    setSearchQuery = { searchQuery = it },
+                )
             }
 
             Box(
@@ -195,34 +148,31 @@ fun SavingListScreen(
                 if (uiState.isLoading) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 } else if (filteredSavings.isEmpty()) {
-                    EmptySavingsView(
-                        isCompletedTab = uiState.selectedTab == 1,
-                        isSearch = searchQuery.isNotEmpty(),
-                        modifier = Modifier.align(Alignment.Center)
+                    EmptyListItem(
+                        isSearching = searchQuery.isNotEmpty(),
+                        text = if (uiState.selectedTab == 0) "savings in progress" else "completed savings"
                     )
                 } else {
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 88.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(
                             items = filteredSavings,
-                            key = { it.saving.id },
-                            contentType = { "saving_item" }
+                            key = { it.id },
+                            contentType = { "saving_card" }
                         ) { item ->
                             SavingItemCard(
                                 item = item,
-                                formatterConfig = uiState.formatterConfig,
-                                dateFormat = uiState.dateFormat,
-                                onClick = { onSavingClick(item.saving.id) },
-                                onEdit = { onEditSaving(item.saving.id) },
-                                onDeposit = { onDeposit(item.saving.id) },
-                                onWithdraw = { onWithdraw(item.saving.id) },
-                                onWithdrawEverything = { onWithdrawEverything(item.saving.id) },
-                                onToggleComplete = { viewModel.toggleComplete(item.saving.id, item.saving.isComplete) },
-                                onDelete = { pendingDeleteSavingId = item.saving.id }
+                                onClick = { onSavingClick(item.id) },
+                                onEdit = { onEditSaving(item.id) },
+                                onDeposit = { onDeposit(item.id) },
+                                onWithdraw = { onWithdraw(item.id) },
+                                onWithdrawEverything = { onWithdrawEverything(item.id) },
+                                onToggleComplete = { viewModel.toggleComplete(item.id, item.isComplete) },
+                                onDelete = { pendingDeleteSavingId = item.id }
                             )
                         }
                     }
@@ -236,9 +186,7 @@ private val SavingCardShape = RoundedCornerShape(16.dp)
 
 @Composable
 fun SavingItemCard(
-    item: SavingWithDetails,
-    formatterConfig: MoneyFormatter.Config,
-    dateFormat: Int,
+    item: SavingItemUi,
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onDeposit: () -> Unit,
@@ -249,30 +197,8 @@ fun SavingItemCard(
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
-    val saving = item.saving
-    val targetAmount = saving.endMoney
-    val currentAmount = item.currentMoney
-    val neededAmount = item.neededMoney
-    val currency = item.walletCurrency
-
-    val percentage = if (targetAmount > 0) {
-        ((currentAmount.toDouble() / targetAmount.toDouble()) * 100.0)
-    } else 0.0
-
-    val progressFraction = (percentage / 100.0).coerceIn(0.0, 1.0).toFloat()
-    val isGoalReached = item.isGoalReached || saving.isComplete
+    val isGoalReached = item.isGoalReached || item.isComplete
     val baseColor = if (isGoalReached) CompletedColor else InProgressColor
-
-    val targetDateLabel = remember(saving.endDate, dateFormat) {
-        saving.endDate?.let { exp ->
-            val parsed = DateUtils.parseDate(exp)
-            DateUtils.formatDate(parsed, dateFormat)
-        }
-    }
-
-    val iconData = remember(saving.icon, saving.description) {
-        parseIconData(saving.icon.ifBlank { "ic_saving" }, saving.description ?: "Saving Goal")
-    }
 
     Card(
         modifier = Modifier
@@ -293,12 +219,12 @@ fun SavingItemCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                CategoryIcon(iconData = iconData)
+                CategoryIcon(iconData = item.iconData)
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = saving.description?.takeIf { it.isNotBlank() } ?: "Saving Goal",
+                        text = item.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
@@ -313,9 +239,9 @@ fun SavingItemCard(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        if (targetDateLabel != null) {
+                        if (item.targetDateLabel != null) {
                             Text(
-                                text = "• Target: $targetDateLabel",
+                                text = "• Target: ${item.targetDateLabel}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -330,7 +256,7 @@ fun SavingItemCard(
                     else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
                 ) {
                     Text(
-                        text = if (isGoalReached) "100%" else "${percentage.toInt()}%",
+                        text = if (isGoalReached) "100%" else "${item.percentage.toInt()}%",
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
@@ -352,10 +278,10 @@ fun SavingItemCard(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text(if (saving.isComplete) "Mark In Progress" else "Mark Completed") },
+                            text = { Text(if (item.isComplete) "Mark In Progress" else "Mark Completed") },
                             leadingIcon = {
                                 Icon(
-                                    if (saving.isComplete) Icons.Default.Unarchive else Icons.Default.Archive,
+                                    if (item.isComplete) Icons.Default.Unarchive else Icons.Default.Archive,
                                     contentDescription = null
                                 )
                             },
@@ -379,7 +305,7 @@ fun SavingItemCard(
             // Progress Bar Section
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 LinearProgressIndicator(
-                    progress = { progressFraction },
+                    progress = { item.progressFraction },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(8.dp)
@@ -394,22 +320,22 @@ fun SavingItemCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Saved: ${MoneyFormatter.format(amount = currentAmount, currencyCode = currency, config = formatterConfig)}",
+                        text = "Saved: ${item.currentAmountFormatted}",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Bold,
                         color = baseColor
                     )
                     Text(
-                        text = "Goal: ${MoneyFormatter.format(amount = targetAmount, currencyCode = currency, config = formatterConfig)}",
+                        text = "Goal: ${item.targetAmountFormatted}",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
-                if (!saving.isComplete && neededAmount > 0) {
+                if (!item.isComplete && !item.isGoalReached) {
                     Text(
-                        text = "Needed: ${MoneyFormatter.format(amount = neededAmount, currencyCode = currency, config = formatterConfig)}",
+                        text = "Needed: ${item.neededAmountFormatted}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -417,7 +343,7 @@ fun SavingItemCard(
             }
 
             // Quick Actions (Deposit / Withdraw / Withdraw All)
-            if (!saving.isComplete) {
+            if (!item.isComplete) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
