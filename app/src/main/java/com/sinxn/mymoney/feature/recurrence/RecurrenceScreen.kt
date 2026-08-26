@@ -27,6 +27,8 @@ import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.FinanceListItem
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
+import com.sinxn.mymoney.ui.theme.ExpenseColor
+import com.sinxn.mymoney.ui.theme.IncomeColor
 import com.sinxn.mymoney.ui.theme.TransferColor
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -153,21 +155,11 @@ fun RecurrentTransactionCard(
     item: RecurrentTxUiModel,
     onClick: () -> Unit
 ) {
-    val amountColor = if (item.isIncome) Color(0xFF2E7D32) else Color(0xFFC62828)
+    val amountColor = if (item.isIncome) IncomeColor else ExpenseColor
 
     FinanceListItem(
         icon = {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                CategoryIcon(
-                    iconData = item.iconData,
-                    modifier = Modifier.size(44.dp)
-                )
-            }
+            CategoryIcon(iconData = item.iconData)
         },
         title = item.title,
         subtitle = item.subtitle,

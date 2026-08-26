@@ -2,6 +2,7 @@ package com.sinxn.mymoney.core.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -67,16 +68,13 @@ fun FinanceListItem(
     trailingContent: (@Composable () -> Unit)? = null,
     onClick: () -> Unit = {}
 ) {
-    Box(
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 3.dp)
             .clickable(onClick = onClick)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             icon()
@@ -110,5 +108,8 @@ fun FinanceListItem(
                 trailingContent()
             }
         }
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+        )
     }
 }

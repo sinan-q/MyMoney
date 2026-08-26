@@ -2,12 +2,13 @@ package com.sinxn.mymoney.feature.event
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.sinxn.mymoney.core.data.local.entity.EventEntity
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.EventRepository
 import com.sinxn.mymoney.core.ui.components.SortOption
+import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -21,21 +22,26 @@ enum class EventSortOption(override val title: String) : SortOption {
 }
 
 data class EventItemUi(
-    val event: EventEntity,
+    val id: String,
+    val name: String,
+    val note: String? = null,
+    val tag: String? = null,
+    val icon: String = "ic_event",
+    val lastEdit: Long = 0L,
+    val formattedDateRange: String = "",
+    val amountText: String = "",
     val totalAmount: Long = 0L,
-    val income: Long = 0L,
-    val expense: Long = 0L,
-    val transactionCount: Int = 0,
-    val currencyCode: String = "USD",
-    val decimals: Int = 2
+    val isPositive: Boolean = false,
+    val isNegative: Boolean = false,
+    val transactionCount: Int = 0
 )
 
 data class EventUiState(
     val events: List<EventItemUi> = emptyList(),
+    val totalEventsCount: Int = 0,
+    val searchQuery: String = "",
     val sortOption: EventSortOption = EventSortOption.LAST_EDIT,
-    val isLoading: Boolean = false,
-    val formatterConfig: MoneyFormatter.Config = MoneyFormatter.Config(),
-    val dateFormat: Int = 0
+    val isLoading: Boolean = false
 )
 
 @HiltViewModel
@@ -44,12 +50,15 @@ class EventViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
+    private val _searchQuery = MutableStateFlow("")
+
     val uiState: StateFlow<EventUiState> = combine(
         eventRepository.getEvents(),
         eventRepository.getAllEventTransactions(),
         settingsRepository.eventsSortOption,
-        settingsRepository.formattingSettings
-    ) { events, allTransactions, sortOptionName, formattingSettings ->
+        settingsRepository.formattingSettings,
+        _searchQuery
+    ) { events, allTransactions, sortOptionName, formattingSettings, searchQuery ->
         val sortOption = try {
             EventSortOption.valueOf(sortOptionName)
         } catch (e: Exception) {
@@ -57,6 +66,13 @@ class EventViewModel @Inject constructor(
         }
 
         val txGrouped = allTransactions.groupBy { it.transaction.eventId }
+
+        val formatterConfig = MoneyFormatter.Config(
+            showCurrency = formattingSettings.showCurrency,
+            groupDigits = formattingSettings.groupDigits,
+            roundDecimals = formattingSettings.roundDecimals,
+            showPlusMinus = formattingSettings.showPlusMinus
+        )
 
         val eventItems = events.map { event ->
             val txs = txGrouped[event.id] ?: emptyList()
@@ -78,43 +94,71 @@ class EventViewModel @Inject constructor(
             val currencyCode = if (distinctCurrencies.size == 1) distinctCurrencies.first() else formattingSettings.globalCurrency
             val decimals = txs.firstOrNull()?.decimals ?: 2
 
-            EventItemUi(
-                event = event,
-                totalAmount = total,
-                income = income,
-                expense = expense,
-                transactionCount = txs.size,
+            val startDateObj = DateUtils.parseDate(event.startDate)
+            val endDateObj = DateUtils.parseDate(event.endDate)
+            val startStr = DateUtils.formatDate(startDateObj, formattingSettings.dateFormat)
+            val endStr = DateUtils.formatDate(endDateObj, formattingSettings.dateFormat)
+            val formattedDateRange = if (startStr == endStr) startStr else "$startStr - $endStr"
+
+            val formattedMoney = MoneyFormatter.format(
+                amount = total,
                 currencyCode = currencyCode,
-                decimals = decimals
+                decimals = decimals,
+                config = formatterConfig
+            )
+            val isPositive = total > 0
+            val isNegative = total < 0
+            val amountText = (if (isPositive && !formattedMoney.startsWith("+")) "+" else "") + formattedMoney
+
+            EventItemUi(
+                id = event.id,
+                name = event.name,
+                note = event.note,
+                tag = event.tag,
+                icon = event.icon,
+                lastEdit = event.lastEdit,
+                formattedDateRange = formattedDateRange,
+                amountText = amountText,
+                totalAmount = total,
+                isPositive = isPositive,
+                isNegative = isNegative,
+                transactionCount = txs.size
             )
         }
 
         val sortedEvents = when (sortOption) {
-            EventSortOption.LAST_EDIT -> eventItems.sortedByDescending { it.event.lastEdit }
+            EventSortOption.LAST_EDIT -> eventItems.sortedByDescending { it.lastEdit }
             EventSortOption.ALPHABETICAL -> eventItems.sortedWith(
-                compareBy(String.CASE_INSENSITIVE_ORDER) { it.event.name }
+                compareBy(String.CASE_INSENSITIVE_ORDER) { it.name }
             )
         }
 
-        val formatterConfig = MoneyFormatter.Config(
-            showCurrency = formattingSettings.showCurrency,
-            groupDigits = formattingSettings.groupDigits,
-            roundDecimals = formattingSettings.roundDecimals,
-            showPlusMinus = formattingSettings.showPlusMinus
-        )
+        val filteredEvents = if (searchQuery.isBlank()) {
+            sortedEvents
+        } else {
+            sortedEvents.filter { item ->
+                item.name.contains(searchQuery, ignoreCase = true) ||
+                (!item.note.isNullOrBlank() && item.note.contains(searchQuery, ignoreCase = true)) ||
+                (!item.tag.isNullOrBlank() && item.tag.contains(searchQuery, ignoreCase = true))
+            }
+        }
 
         EventUiState(
-            events = sortedEvents,
+            events = filteredEvents,
+            totalEventsCount = sortedEvents.size,
+            searchQuery = searchQuery,
             sortOption = sortOption,
-            isLoading = false,
-            formatterConfig = formatterConfig,
-            dateFormat = formattingSettings.dateFormat
+            isLoading = false
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = EventUiState(isLoading = true)
     )
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
 
     fun setSortOption(sortOption: EventSortOption) {
         viewModelScope.launch {

@@ -277,10 +277,7 @@ private fun PersonRow(
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        CategoryIcon(
-            iconData = item.iconData,
-            modifier = Modifier.size(42.dp)
-        )
+        CategoryIcon(iconData = item.iconData)
 
         Spacer(modifier = Modifier.width(14.dp))
 

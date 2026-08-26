@@ -372,10 +372,7 @@ private fun WalletCardRow(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                CategoryIcon(
-                    iconData = item.iconData,
-                    modifier = Modifier.size(44.dp)
-                )
+                CategoryIcon(iconData = item.iconData)
 
                 Spacer(modifier = Modifier.width(14.dp))
 
@@ -479,14 +476,8 @@ private fun ReorderWalletRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-                CategoryIcon(
-                    iconData = wallet.iconData,
-                    modifier = Modifier.size(36.dp)
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CategoryIcon(iconData = wallet.iconData)
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     text = wallet.name,

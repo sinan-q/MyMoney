@@ -113,7 +113,7 @@ fun TransactionFormRowItem(
         trailingIcon =  { if (trailingIconData != null)
             CategoryIcon(
                 iconData = trailingIconData,
-                modifier = Modifier.size(32.dp)
+                size = 36.dp
             )
         },
         onClick = onClick

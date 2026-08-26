@@ -293,18 +293,7 @@ fun SavingItemCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CategoryIcon(
-                        iconData = iconData,
-                        modifier = Modifier.size(44.dp)
-                    )
-                }
-
+                CategoryIcon(iconData = iconData)
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {

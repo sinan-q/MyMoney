@@ -143,7 +143,7 @@ fun SubcategoriesSection(
 
                             CategoryIcon(
                                 iconData = subItem.iconData,
-                                modifier = Modifier.size(32.dp)
+                                size = 38.dp
                             )
 
                             Spacer(modifier = Modifier.width(10.dp))

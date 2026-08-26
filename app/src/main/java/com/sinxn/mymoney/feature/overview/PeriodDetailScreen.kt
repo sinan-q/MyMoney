@@ -344,10 +344,7 @@ private fun CategoryBreakdownRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                CategoryIcon(
-                    iconData = item.iconData,
-                    modifier = Modifier.size(40.dp)
-                )
+                CategoryIcon(iconData = item.iconData)
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(

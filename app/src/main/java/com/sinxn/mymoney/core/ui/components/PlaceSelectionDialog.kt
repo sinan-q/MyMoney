@@ -329,10 +329,7 @@ private fun PlaceRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (item.iconData != null) {
-            CategoryIcon(
-                iconData = item.iconData,
-                modifier = Modifier.size(42.dp)
-            )
+            CategoryIcon(iconData = item.iconData)
         } else {
             Box(
                 modifier = Modifier

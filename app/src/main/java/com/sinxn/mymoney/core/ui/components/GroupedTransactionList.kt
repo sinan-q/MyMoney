@@ -198,7 +198,6 @@ fun LazyListScope.monthGroupedTransactionItems(
                 if (uiModel != null) {
                     TransactionItem(
                         uiModel = uiModel,
-                        isLastItem = isLastItem,
                         showDate = true,
                         onClick = { onTransactionClick(uiModel.id) }
                     )

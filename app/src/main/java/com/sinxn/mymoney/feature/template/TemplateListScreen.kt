@@ -271,17 +271,7 @@ private fun TransactionTemplateListItem(
 
     FinanceListItem(
         icon = {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                CategoryIcon(
-                    iconData = iconData,
-                    modifier = Modifier.size(44.dp)
-                )
-            }
+            CategoryIcon(iconData = iconData)
         },
         title = title,
         subtitle = subtitle,

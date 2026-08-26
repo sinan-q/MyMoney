@@ -198,20 +198,12 @@ fun CategoryDetailsScreen(
                                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(56.dp)
-                                            .clip(CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        uiState.categoryIconData?.let { iconData ->
-                                            CategoryIcon(
-                                                iconData = iconData,
-                                                modifier = Modifier.size(44.dp)
-                                            )
-                                        }
+                                    uiState.categoryIconData?.let { iconData ->
+                                        CategoryIcon(
+                                            iconData = iconData,
+                                            size = 48.dp
+                                        )
                                     }
-
                                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                         Surface(
                                             shape = RoundedCornerShape(6.dp),
@@ -249,7 +241,6 @@ fun CategoryDetailsScreen(
                                                     modifier = Modifier.clickable { onSubcategoryClick(parentCat.id) },
                                                     shape = SubcategoryChipShape,
                                                     color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
-                                                    // border = CardDefaults.outlinedCardBorder()
                                                 ) {
                                                     Row(
                                                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
@@ -258,7 +249,7 @@ fun CategoryDetailsScreen(
                                                     ) {
                                                         CategoryIcon(
                                                             iconData = parentIcon,
-                                                            modifier = Modifier.size(22.dp)
+                                                            size = 28.dp
                                                         )
                                                         Text(
                                                             text = parentCat.name,
@@ -321,7 +312,7 @@ fun CategoryDetailsScreen(
                                             ) {
                                                 CategoryIcon(
                                                     iconData = sub.iconData,
-                                                    modifier = Modifier.size(24.dp)
+                                                    size = 28.dp
                                                 )
                                                 Text(
                                                     text = sub.name,

@@ -561,7 +561,6 @@ fun AppNavHost(
         }
         composable(Screen.People.routePattern) {
             PeopleListScreen(
-                onNavigateBack = { navController.navigateUp() },
                 onPersonClick = { personId ->
                     navController.navigate(Screen.PersonDetails.createRoute(personId))
                 },
@@ -598,7 +597,6 @@ fun AppNavHost(
         }
         composable(Screen.Places.routePattern) {
             PlaceListScreen(
-                onNavigateBack = { navController.navigateUp() },
                 onAddPlaceClick = {
                     navController.navigate(Screen.PlaceAddEdit.createRoute())
                 },
@@ -630,7 +628,6 @@ fun AppNavHost(
         }
         composable(Screen.Events.routePattern) {
             EventListScreen(
-                onNavigateBack = { navController.navigateUp() },
                 onAddEventClick = {
                     navController.navigate(Screen.EventAddEdit.createRoute())
                 },

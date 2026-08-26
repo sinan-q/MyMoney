@@ -148,7 +148,7 @@ fun CategoryQuickGrid(
                     ) {
                         CategoryIcon(
                             iconData = item.iconData,
-                            modifier = Modifier.size(26.dp)
+                            size = 26.dp
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(

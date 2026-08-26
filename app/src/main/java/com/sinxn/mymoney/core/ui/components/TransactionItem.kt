@@ -91,7 +91,6 @@ fun TransactionWithCategory.toUiModel(
 @Composable
 fun TransactionItem(
     uiModel: TransactionUiModel,
-    isLastItem: Boolean = false,
     showDate: Boolean = true,
     onClick: () -> Unit = {}
 ) {
@@ -114,17 +113,7 @@ fun TransactionItem(
                     )
                 }
             } else {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CategoryIcon(
-                        iconData = uiModel.iconData,
-                        modifier = Modifier.size(44.dp)
-                    )
-                }
+                CategoryIcon(iconData = uiModel.iconData)
             }
         },
         title = uiModel.primaryTitle,
@@ -152,7 +141,6 @@ fun TransactionItem(
     }
     TransactionItem(
         uiModel = uiModel,
-        isLastItem = isLastItem,
         showDate = showDate,
         onClick = onClick
     )

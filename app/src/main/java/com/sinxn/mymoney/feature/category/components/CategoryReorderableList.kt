@@ -165,10 +165,7 @@ fun CategoryReorderableList(
                                 )
                             }
 
-                            CategoryIcon(
-                                iconData = parentItem.iconData,
-                                modifier = Modifier.size(40.dp)
-                            )
+                            CategoryIcon(iconData = parentItem.iconData)
 
                             Spacer(modifier = Modifier.width(12.dp))
 

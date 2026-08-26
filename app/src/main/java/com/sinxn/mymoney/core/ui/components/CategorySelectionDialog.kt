@@ -473,10 +473,7 @@ private fun ParentCategoryRow(
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        CategoryIcon(
-            iconData = iconData,
-            modifier = Modifier.size(42.dp)
-        )
+        CategoryIcon(iconData = iconData,)
 
         Spacer(modifier = Modifier.width(14.dp))
 
@@ -545,10 +542,7 @@ private fun SubcategoryCategoryRow(
             .padding(start = 48.dp, end = 16.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        CategoryIcon(
-            iconData = iconData,
-            modifier = Modifier.size(42.dp)
-        )
+        CategoryIcon(iconData = iconData)
 
         Spacer(modifier = Modifier.width(14.dp))
 

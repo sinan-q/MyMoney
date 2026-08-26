@@ -223,10 +223,7 @@ fun BudgetItemCard(
                         }
                         else -> {
                             if (item.iconData != null) {
-                                CategoryIcon(
-                                    iconData = item.iconData,
-                                    modifier = Modifier.size(44.dp)
-                                )
+                                CategoryIcon(iconData = item.iconData)
                             }
                         }
                     }

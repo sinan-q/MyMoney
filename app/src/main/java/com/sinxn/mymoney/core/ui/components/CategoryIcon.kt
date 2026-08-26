@@ -30,12 +30,14 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.text.PlatformTextStyle
 
 import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.unit.Dp
 import androidx.core.graphics.toColorInt
 
 @Composable
 fun CategoryIcon(
-    iconData: IconData,
     modifier: Modifier = Modifier,
+    iconData: IconData,
+    size: Dp = 42.dp,
     textColor: Color = Color.White
 ) {
     val fontSize = remember(iconData.text) {
@@ -61,6 +63,7 @@ fun CategoryIcon(
 
     Box(
         modifier = modifier
+            .size(size)
             .background(iconData.color, CircleShape)
             .padding(2.dp),
         contentAlignment = Alignment.Center
