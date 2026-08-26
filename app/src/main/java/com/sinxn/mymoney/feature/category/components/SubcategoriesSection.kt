@@ -1,6 +1,5 @@
 package com.sinxn.mymoney.feature.category.components
 
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -13,10 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.DragIndicator
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -39,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
+import com.sinxn.mymoney.core.ui.components.ReorderDragHandle
 import com.sinxn.mymoney.feature.category.SubcategoryItem
 import sh.calvin.reorderable.ReorderableColumn
 
@@ -126,23 +123,18 @@ fun SubcategoriesSection(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             if (isReorderEnabled) {
-                                // Drag handle for subcategory
-                                Box(
+                                ReorderDragHandle(
                                     modifier = Modifier
                                         .draggableHandle(
                                             onDragStarted = {
                                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                                             }
                                         )
-                                        .padding(end = 8.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.DragIndicator,
-                                        contentDescription = "Reorder subcategory",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
+                                        .padding(end = 8.dp),
+                                    iconSize = 18.dp,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                    contentDescription = "Reorder subcategory"
+                                )
                             }
 
                             CategoryIcon(

@@ -1,11 +1,8 @@
 package com.sinxn.mymoney.feature.wallet
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -18,29 +15,24 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Wallet
-import androidx.compose.material.icons.rounded.DragIndicator
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
+import com.sinxn.mymoney.core.ui.components.EmptyListItem
 import com.sinxn.mymoney.core.ui.components.FilterComponent
+import com.sinxn.mymoney.core.ui.components.ReorderDragHandle
+import com.sinxn.mymoney.core.ui.components.ReorderableLazyColumn
 import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import kotlinx.coroutines.launch
-import sh.calvin.reorderable.ReorderableItem
-import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -248,7 +240,10 @@ fun WalletListScreen(
                     val listState = if (isArchived) archivedListState else activeListState
 
                     if (wallets.isEmpty()) {
-                        EmptyWalletState(isSearching = uiState.searchQuery.isNotEmpty(), isArchivedTab = isArchived)
+                        EmptyListItem(
+                            isSearching = uiState.searchQuery.isNotEmpty(),
+                            text = if (isArchivedTab) "archived wallet" else "wallet"
+                        )
                     } else {
                         WalletReorderableList(
                             items = wallets,
@@ -275,237 +270,137 @@ private fun WalletReorderableList(
     onWalletClick: (String) -> Unit,
     onReorderWallets: (List<String>) -> Unit
 ) {
-    var walletList by remember { mutableStateOf(items) }
-    val hapticFeedback = LocalHapticFeedback.current
-    val currentOnReorderWallets by rememberUpdatedState(onReorderWallets)
-
-    LaunchedEffect(items) {
-        val currentIds = walletList.map { it.id }
-        val newIds = items.map { it.id }
-        if (currentIds != newIds || items != walletList) {
-            walletList = items
-        }
-    }
-
-    val reorderableState = rememberReorderableLazyListState(
-        lazyListState = lazyListState
-    ) { from, to ->
-        val fromIdx = from.index
-        val toIdx = to.index
-        if (fromIdx in walletList.indices && toIdx in walletList.indices && fromIdx != toIdx) {
-            walletList = walletList.toMutableList().apply {
-                add(toIdx, removeAt(fromIdx))
-            }
-        }
-    }
-
-    LazyColumn(
-        state = lazyListState,
-        modifier = Modifier
-            .fillMaxWidth(),
+    ReorderableLazyColumn(
+        items = items,
+        key = { it.id },
+        lazyListState = lazyListState,
+        isReorderEnabled = isReorderEnabled,
+        itemShape = WalletCardShape,
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentType = { "wallet_card" },
+        onReorder = { reordered -> onReorderWallets(reordered.map { it.id }) }
+    ) { item, _, handleModifier ->
+        WalletListItem(
+            item = item,
+            isReorderEnabled = isReorderEnabled,
+            handleModifier = handleModifier,
+            onWalletClick = onWalletClick
+        )
+    }
+}
+
+@Composable
+private fun WalletListItem(
+    item: WalletUiModel,
+    isReorderEnabled: Boolean,
+    handleModifier: Modifier,
+    onWalletClick: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onWalletClick(item.id) },
+        shape = WalletCardShape,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+        )
     ) {
-        items(
-            items = walletList,
-            key = { it.id },
-            contentType = { "wallet_card" }
-        ) { item ->
-            ReorderableItem(
-                state = reorderableState,
-                key = item.id
-            ) { isDragging ->
-                val scale by animateFloatAsState(
-                    targetValue = if (isDragging) 1.02f else 1.0f,
-                    label = "walletDragScale"
-                )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                if (isReorderEnabled) {
+                    ReorderDragHandle(
+                        modifier = handleModifier.padding(end = 10.dp),
+                        enabled = true
+                    )
+                }
 
-                Surface(
-                    shape = WalletCardShape,
-                    color = if (isDragging) {
-                        MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                        Color.Transparent
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .zIndex(if (isDragging) 1f else 0f)
-                        .graphicsLayer {
-                            scaleX = scale
-                            scaleY = scale
-                        }
-                        .longPressDraggableHandle(
-                            enabled = isReorderEnabled,
-                            onDragStarted = {
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                            },
-                            onDragStopped = {
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
-                                currentOnReorderWallets(walletList.map { it.id })
-                            }
+                CategoryIcon(iconData = item.iconData)
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = item.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                ) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onWalletClick(item.id) },
-                        shape = WalletCardShape,
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(
+                            shape = WalletTagShape,
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                if (isReorderEnabled) {
-                                    Box(
-                                        modifier = Modifier
-                                            .draggableHandle(
-                                                onDragStarted = {
-                                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                },
-                                                onDragStopped = {
-                                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
-                                                    currentOnReorderWallets(walletList.map { it.id })
-                                                }
-                                            )
-                                            .padding(end = 10.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Rounded.DragIndicator,
-                                            contentDescription = "Reorder",
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                }
-
-                                CategoryIcon(iconData = item.iconData)
-
-                                Spacer(modifier = Modifier.width(14.dp))
-
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = item.name,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Surface(
-                                            shape = WalletTagShape,
-                                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                                        ) {
-                                            Text(
-                                                text = item.currency,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                            )
-                                        }
-                                    }
-
-                                    Spacer(modifier = Modifier.height(2.dp))
-
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        if (item.isExcludedFromTotal) {
-                                            Icon(
-                                                imageVector = Icons.Default.VisibilityOff,
-                                                contentDescription = "Excluded from total",
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                                modifier = Modifier.size(14.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Text(
-                                                text = "Excluded from total",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                            )
-                                        } else if (!item.note.isNullOrBlank()) {
-                                            Text(
-                                                text = item.note,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        } else if (item.formattedStartMoney != null) {
-                                            Text(
-                                                text = item.formattedStartMoney,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Balance
-                            val balanceColor = if (item.isNegativeBalance) {
-                                MaterialTheme.colorScheme.error
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            }
-
                             Text(
-                                text = item.formattedBalance,
-                                style = MaterialTheme.typography.titleMedium,
+                                text = item.currency,
+                                style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = balanceColor,
-                                modifier = Modifier.padding(start = 8.dp)
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (item.isExcludedFromTotal) {
+                            Icon(
+                                imageVector = Icons.Default.VisibilityOff,
+                                contentDescription = "Excluded from total",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Excluded from total",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            )
+                        } else if (!item.note.isNullOrBlank()) {
+                            Text(
+                                text = item.note,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        } else if (item.formattedStartMoney != null) {
+                            Text(
+                                text = item.formattedStartMoney,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                             )
                         }
                     }
                 }
             }
-        }
-    }
-}
 
-@Composable
-private fun EmptyWalletState(isSearching: Boolean, isArchivedTab: Boolean) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(
-                imageVector = if (isArchivedTab) Icons.Default.Archive else Icons.Default.Wallet,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
-                modifier = Modifier.size(64.dp)
-            )
+            // Balance
+            val balanceColor = if (item.isNegativeBalance) {
+                MaterialTheme.colorScheme.error
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            }
+
             Text(
-                text = when {
-                    isSearching -> "No wallets found matching search"
-                    isArchivedTab -> "No archived wallets"
-                    else -> "No wallets created yet"
-                },
+                text = item.formattedBalance,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = if (isArchivedTab) "Archived wallets will appear here" else "Tap + button below to create your first wallet",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                fontWeight = FontWeight.Bold,
+                color = balanceColor,
+                modifier = Modifier.padding(start = 8.dp)
             )
         }
     }
