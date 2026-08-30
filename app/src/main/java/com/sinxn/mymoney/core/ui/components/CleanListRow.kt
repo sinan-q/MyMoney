@@ -27,13 +27,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun CleanListRow(
-    icon: (@Composable () -> Unit)? = null,
-    label: String? = null,
-    active: Boolean = true,
-    value: String? = null,
-    onClick: (() -> Unit)? = null,
-    trailingIcon:  (@Composable () -> Unit)? = null
+fun ListRow(
+    onClick: (() -> Unit)?,
+    content: (@Composable () -> Unit)
 ) {
     Row(
         modifier = Modifier
@@ -42,6 +38,21 @@ fun CleanListRow(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        content()
+    }
+}
+@Composable
+fun CleanListRow(
+    icon: (@Composable () -> Unit)? = null,
+    label: String? = null,
+    active: Boolean = true,
+    value: String? = null,
+    onClick: (() -> Unit)? = null,
+    trailingIcon:  (@Composable () -> Unit)? = null
+) {
+    ListRow(
+        onClick = onClick,
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

@@ -9,6 +9,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.BarChart
@@ -23,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
@@ -36,6 +39,11 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLa
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
+import com.sinxn.mymoney.core.ui.components.AppExtendedFab
+import com.sinxn.mymoney.core.ui.components.CategoryIcon
+import com.sinxn.mymoney.core.ui.components.CategoryIconExtended
+import com.sinxn.mymoney.core.ui.components.CleanListRow
+import com.sinxn.mymoney.core.ui.components.ListRow
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.feature.overview.component.OverviewHeader
@@ -65,103 +73,108 @@ fun OverviewScreen(
             }
         )
     }
-
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Header: View-only active context status card + settings action
-        item {
-            OverviewHeader(
-                walletName = uiState.walletName,
-                walletIcon = uiState.walletIcon,
-                settings = uiState.settings,
-                selectedCategoryName = uiState.selectedCategoryName,
-                onConfigureClick = { viewModel.toggleSettingsSheet() }
-            )
-        }
-
-        if (uiState.isLoading) {
+    Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = paddingValues,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Header: View-only active context status card + settings action
             item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
+                OverviewHeader(
+                    walletName = uiState.walletName,
+                    walletIcon = uiState.walletIcon,
+                    settings = uiState.settings,
+                    selectedCategoryName = uiState.selectedCategoryName,
+                    onConfigureClick = { viewModel.toggleSettingsSheet() }
+                )
             }
-        } else {
-            val overviewData = uiState.overviewData
-            if (overviewData != null && overviewData.periods.isNotEmpty()) {
-                // Chart Section — Bar + Line in pager
-                item {
-                    ChartPager(
-                        overviewData = overviewData,
-                        currencyCode = uiState.currencyCode
-                    )
-                }
 
-                // Total Summary Card
+            if (uiState.isLoading) {
                 item {
-                    TotalSummaryCard(
-                        totalNetIncomes = overviewData.totalNetIncomes,
-                        currencyCode = uiState.currencyCode,
-                        decimals = uiState.currencyDecimals,
-                        formattingSettings = uiState.formattingSettings
-                    )
-                }
-
-                // Period List — matching legacy OverviewItemAdapter
-                item {
-                    Text(
-                        text = "Period Breakdown",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-
-                items(
-                    items = uiState.periodsUi,
-                    key = { it.id },
-                    contentType = { "period_row" }
-                ) { item ->
-                    PeriodRow(
-                        item = item,
-                        onClick = { onPeriodClick(item.startDateTimeSql, item.endDateTimeSql) }
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
                 }
             } else {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                val overviewData = uiState.overviewData
+                if (overviewData != null && overviewData.periods.isNotEmpty()) {
+                    // Chart Section — Bar + Line in pager
+                    item {
+                        ChartPager(
+                            overviewData = overviewData,
+                            currencyCode = uiState.currencyCode
                         )
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(48.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "No data for the selected period",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
+                    }
+
+                    // Total Summary Card
+                    item {
+                        TotalSummaryCard(
+                            totalNetIncomes = overviewData.totalNetIncomes,
+                            currencyCode = uiState.currencyCode,
+                            decimals = uiState.currencyDecimals,
+                            formattingSettings = uiState.formattingSettings
+                        )
+                    }
+
+                    // Period List — matching legacy OverviewItemAdapter
+                    item {
+                        Text(
+                            text = "Period Breakdown",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+
+                    items(
+                        items = uiState.periodsUi,
+                        key = { it.id },
+                        contentType = { "period_row" }
+                    ) { item ->
+                        PeriodRow(
+                            item = item,
+                            onClick = { onPeriodClick(item.startDateTimeSql, item.endDateTimeSql) }
+                        )
+                    }
+                } else {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                             )
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(48.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "No data for the selected period",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
                     }
                 }
             }
         }
     }
+
+
 }
 
 @Composable
@@ -172,17 +185,17 @@ private fun ChartPager(
     val pagerState = rememberPagerState(pageCount = { 2 })
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(8.dp)) {
             // Tab indicators
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp),
+                    .padding(bottom = 4.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -393,48 +406,24 @@ private fun PeriodRow(
     item: OverviewPeriodUiModel,
     onClick: () -> Unit
 ) {
-    Card(
+    ListRow(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = PeriodCardShape,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Period index badge
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.size(36.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "${item.index}",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Date range
-            Column(modifier = Modifier.weight(1f)) {
+            CategoryIconExtended(
+                text = "${item.index}",
+                color = MaterialTheme.colorScheme.primaryContainer
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column() {
                 Text(
                     text = item.dateRangeText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
                 )
-
-                // Show income/expense breakdown
                 if (item.formattedIncome != null || item.formattedExpense != null) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (item.formattedIncome != null) {
@@ -454,19 +443,17 @@ private fun PeriodRow(
                     }
                 }
             }
-
-            // Net amount for the period
-            val color = when (item.netAmountColorType) {
-                1 -> Color(0xFF2E7D32)
-                -1 -> Color(0xFFC62828)
-                else -> MaterialTheme.colorScheme.onSurfaceVariant
-            }
-            Text(
-                text = item.formattedNetAmount,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
         }
+        val color = when (item.netAmountColorType) {
+            1 -> Color(0xFF2E7D32)
+            -1 -> Color(0xFFC62828)
+            else -> MaterialTheme.colorScheme.onSurfaceVariant
+        }
+        Text(
+            text = item.formattedNetAmount,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
     }
 }
