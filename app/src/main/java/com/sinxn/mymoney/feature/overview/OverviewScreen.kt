@@ -50,12 +50,14 @@ fun OverviewScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val allWallets by viewModel.allWallets.collectAsState()
+    val allCategories by viewModel.allCategories.collectAsState()
 
     if (uiState.showSettingsSheet && uiState.settings != null) {
         OverviewSettingsSheet(
             settings = uiState.settings!!,
             currentWalletId = uiState.currentWalletId,
             wallets = allWallets,
+            categories = allCategories,
             formattingSettings = uiState.formattingSettings,
             onDismiss = { viewModel.dismissSettingsSheet() },
             onApply = { newSettings, newWalletId ->

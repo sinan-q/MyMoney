@@ -19,9 +19,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
+import com.sinxn.mymoney.core.ui.components.CategorySelectionDialog
 import com.sinxn.mymoney.core.util.Constants
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
@@ -34,7 +36,8 @@ import java.util.Date
 
 /**
  * Bottom sheet for configuring overview settings.
- * Includes Account/Wallet selection, Date Range, Group By, View Type, and Cash Flow Filters.
+ * Includes Account/Wallet selection, Date Range, Group By, View Type (Cash Flow / Category),
+ * and Category selection.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,6 +45,7 @@ fun OverviewSettingsSheet(
     settings: OverviewSettings,
     currentWalletId: String,
     wallets: List<WalletWithBalance>,
+    categories: List<CategoryEntity>,
     formattingSettings: FormattingSettings,
     onDismiss: () -> Unit,
     onApply: (OverviewSettings, String) -> Unit
@@ -62,6 +66,13 @@ fun OverviewSettingsSheet(
     var groupType by remember(settings) { mutableStateOf(settings.groupType) }
     var overviewType by remember(settings) { mutableStateOf(settings.overviewType) }
     var cashFlowFilter by remember(settings) { mutableStateOf(settings.cashFlowFilter) }
+    var selectedCategoryId by remember(settings.categoryId) { mutableStateOf(settings.categoryId) }
+    var showCategoryPicker by remember { mutableStateOf(false) }
+
+    val selectedCategory = remember(selectedCategoryId, categories) {
+        categories.find { it.id == selectedCategoryId }
+    }
+
     var startDate by remember(settings) { mutableStateOf(settings.startDate) }
     var endDate by remember(settings) { mutableStateOf(settings.endDate) }
 
@@ -270,6 +281,61 @@ fun OverviewSettingsSheet(
                 }
             }
 
+            // ── Category Selector — when overviewType is CATEGORY ──
+            if (overviewType == OverviewType.CATEGORY) {
+                Text(
+                    text = "Category Filter",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Surface(
+                    onClick = { showCategoryPicker = true },
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CategoryIcon(
+                            iconString = selectedCategory?.icon,
+                            categoryName = selectedCategory?.name ?: "All",
+                            modifier = Modifier.size(36.dp)
+                        )
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = selectedCategory?.name ?: "All Categories",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = if (selectedCategory != null) {
+                                    if (selectedCategory.type == 1) "Income Category" else "Expense Category"
+                                } else {
+                                    "Showing all categories"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Select Category",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
             // ── Apply button ──
             Button(
                 onClick = {
@@ -280,7 +346,7 @@ fun OverviewSettingsSheet(
                             groupType = groupType,
                             overviewType = overviewType,
                             cashFlowFilter = cashFlowFilter,
-                            categoryId = settings.categoryId
+                            categoryId = if (overviewType == OverviewType.CATEGORY) selectedCategoryId else null
                         ),
                         selectedWalletId
                     )
@@ -306,6 +372,22 @@ fun OverviewSettingsSheet(
                 showWalletPicker = false
             },
             onDismiss = { showWalletPicker = false }
+        )
+    }
+
+    // ── Category Picker Dialog ──
+    if (showCategoryPicker) {
+        CategorySelectionDialog(
+            categories = categories,
+            selectedCategoryId = selectedCategoryId,
+            showNoneOption = true,
+            noneOptionLabel = "All Categories",
+            title = "Filter by Category",
+            onCategorySelected = { cat ->
+                selectedCategoryId = cat?.id
+                showCategoryPicker = false
+            },
+            onDismissRequest = { showCategoryPicker = false }
         )
     }
 

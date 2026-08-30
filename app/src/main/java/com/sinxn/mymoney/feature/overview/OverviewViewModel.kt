@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.dao.MoneyDao
+import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
@@ -65,6 +66,10 @@ class OverviewViewModel @Inject constructor(
 
     val allWallets: StateFlow<List<WalletWithBalance>> = moneyDao
         .getWalletsWithBalance(DateUtils.getSQLDateTimeString(Date()))
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allCategories: StateFlow<List<CategoryEntity>> = moneyDao
+        .getCategories()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private var currentWalletId: String = Constants.TOTAL_WALLET_ID
