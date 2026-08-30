@@ -1,11 +1,13 @@
 package com.sinxn.mymoney.feature.overview.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Timeline
@@ -15,8 +17,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
+import com.sinxn.mymoney.core.data.preferences.FormattingSettings
+import com.sinxn.mymoney.core.ui.components.CategoryIcon
+import com.sinxn.mymoney.core.util.Constants
 import com.sinxn.mymoney.core.util.DateUtils
+import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.feature.overview.CashFlowFilter
 import com.sinxn.mymoney.feature.overview.GroupType
 import com.sinxn.mymoney.feature.overview.OverviewSettings
@@ -26,15 +34,31 @@ import java.util.Date
 
 /**
  * Bottom sheet for configuring overview settings.
- * Matches legacy OverviewSettingDialog functionality.
+ * Includes Account/Wallet selection, Date Range, Group By, View Type, and Cash Flow Filters.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OverviewSettingsSheet(
     settings: OverviewSettings,
+    currentWalletId: String,
+    wallets: List<WalletWithBalance>,
+    formattingSettings: FormattingSettings,
     onDismiss: () -> Unit,
-    onApply: (OverviewSettings) -> Unit
+    onApply: (OverviewSettings, String) -> Unit
 ) {
+    var selectedWalletId by remember(currentWalletId) { mutableStateOf(currentWalletId) }
+    var showWalletPicker by remember { mutableStateOf(false) }
+
+    val selectedWallet = remember(selectedWalletId, wallets) {
+        if (selectedWalletId == Constants.TOTAL_WALLET_ID) {
+            null
+        } else {
+            wallets.find { it.wallet.id == selectedWalletId }
+        }
+    }
+    val selectedWalletName = if (selectedWalletId == Constants.TOTAL_WALLET_ID) "Total (All Accounts)" else (selectedWallet?.wallet?.name ?: "Total")
+    val selectedWalletIcon = if (selectedWalletId == Constants.TOTAL_WALLET_ID) "sigma" else selectedWallet?.wallet?.icon
+
     var groupType by remember(settings) { mutableStateOf(settings.groupType) }
     var overviewType by remember(settings) { mutableStateOf(settings.overviewType) }
     var cashFlowFilter by remember(settings) { mutableStateOf(settings.cashFlowFilter) }
@@ -64,7 +88,75 @@ fun OverviewSettingsSheet(
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            // Date Range Section
+            // ── Account / Wallet Selection ──
+            Text(
+                text = "Account",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Surface(
+                onClick = { showWalletPicker = true },
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CategoryIcon(
+                        iconString = selectedWalletIcon,
+                        categoryName = selectedWalletName,
+                        modifier = Modifier.size(36.dp)
+                    )
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = selectedWalletName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (selectedWallet != null) {
+                            val balanceText = MoneyFormatter.format(
+                                amount = selectedWallet.currentBalance,
+                                currencyCode = selectedWallet.wallet.currency,
+                                decimals = selectedWallet.decimals,
+                                config = MoneyFormatter.Config(
+                                    showCurrency = formattingSettings.showCurrency,
+                                    groupDigits = formattingSettings.groupDigits,
+                                    roundDecimals = formattingSettings.roundDecimals,
+                                    showPlusMinus = false
+                                )
+                            )
+                            Text(
+                                text = balanceText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            Text(
+                                text = "Aggregated across all wallets",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = "Change Account",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // ── Date Range Section ──
             Text(
                 text = "Date Range",
                 style = MaterialTheme.typography.labelLarge,
@@ -89,7 +181,7 @@ fun OverviewSettingsSheet(
                 )
             }
 
-            // Group Type — matching legacy: Daily, Weekly, Monthly, Yearly
+            // ── Group Type — Daily, Weekly, Monthly, Yearly ──
             Text(
                 text = "Group By",
                 style = MaterialTheme.typography.labelLarge,
@@ -115,7 +207,7 @@ fun OverviewSettingsSheet(
                 }
             }
 
-            // Overview Type — Cash Flow / Category
+            // ── Overview Type — Cash Flow / Category ──
             Text(
                 text = "View Type",
                 style = MaterialTheme.typography.labelLarge,
@@ -146,7 +238,7 @@ fun OverviewSettingsSheet(
                 )
             }
 
-            // Cash Flow Sub-filter — matching legacy: Incomes, Expenses, Net Incomes
+            // ── Cash Flow Sub-filter — Incomes, Expenses, Net Incomes ──
             if (overviewType == OverviewType.CASH_FLOW) {
                 Text(
                     text = "Cash Flow Filter",
@@ -178,7 +270,7 @@ fun OverviewSettingsSheet(
                 }
             }
 
-            // Apply button
+            // ── Apply button ──
             Button(
                 onClick = {
                     onApply(
@@ -189,7 +281,8 @@ fun OverviewSettingsSheet(
                             overviewType = overviewType,
                             cashFlowFilter = cashFlowFilter,
                             categoryId = settings.categoryId
-                        )
+                        ),
+                        selectedWalletId
                     )
                 },
                 modifier = Modifier
@@ -202,7 +295,21 @@ fun OverviewSettingsSheet(
         }
     }
 
-    // Date Pickers
+    // ── Wallet Picker Sub-Sheet ──
+    if (showWalletPicker) {
+        OverviewWalletPickerSheet(
+            wallets = wallets,
+            currentWalletId = selectedWalletId,
+            formattingSettings = formattingSettings,
+            onSelectWallet = {
+                selectedWalletId = it
+                showWalletPicker = false
+            },
+            onDismiss = { showWalletPicker = false }
+        )
+    }
+
+    // ── Date Pickers ──
     if (showStartDatePicker) {
         val datePickerState = rememberDatePickerState(
             initialSelectedDateMillis = startDate.time
@@ -217,7 +324,9 @@ fun OverviewSettingsSheet(
                         }
                         showStartDatePicker = false
                     }
-                ) { Text("OK") }
+                ) {
+                    Text("OK")
+                }
             },
             dismissButton = {
                 TextButton(onClick = { showStartDatePicker = false }) {
@@ -243,7 +352,9 @@ fun OverviewSettingsSheet(
                         }
                         showEndDatePicker = false
                     }
-                ) { Text("OK") }
+                ) {
+                    Text("OK")
+                }
             },
             dismissButton = {
                 TextButton(onClick = { showEndDatePicker = false }) {
@@ -265,13 +376,13 @@ private fun DateChip(
 ) {
     Surface(
         onClick = onClick,
-        modifier = modifier,
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        border = androidx.compose.foundation.BorderStroke(
+        border = BorderStroke(
             1.dp,
             MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-        )
+        ),
+        modifier = modifier
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),

@@ -1,11 +1,9 @@
 package com.sinxn.mymoney.feature.overview
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -22,20 +20,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.compose.cartesian.data.ColumnCartesianLayerModel
 import com.patrykandpatrick.vico.compose.cartesian.data.columnModel
-import com.patrykandpatrick.vico.compose.cartesian.data.columnSeries
 import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
 import com.patrykandpatrick.vico.compose.cartesian.layer.ColumnCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
@@ -45,23 +38,29 @@ import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
+import com.sinxn.mymoney.feature.overview.component.OverviewHeader
 import com.sinxn.mymoney.feature.overview.component.OverviewSettingsSheet
+import com.sinxn.mymoney.feature.overview.component.OverviewWalletPickerSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OverviewScreen(
-    onNavigateBack: () -> Unit = {},
-    onNavigateToRecap: () -> Unit = {},
     onPeriodClick: (startDate: String, endDate: String) -> Unit = { _, _ -> },
     viewModel: OverviewViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val allWallets by viewModel.allWallets.collectAsState()
 
     if (uiState.showSettingsSheet && uiState.settings != null) {
         OverviewSettingsSheet(
             settings = uiState.settings!!,
+            currentWalletId = uiState.currentWalletId,
+            wallets = allWallets,
+            formattingSettings = uiState.formattingSettings,
             onDismiss = { viewModel.dismissSettingsSheet() },
-            onApply = { viewModel.updateSettings(it) }
+            onApply = { newSettings, newWalletId ->
+                viewModel.applyOverviewConfig(newSettings, newWalletId)
+            }
         )
     }
 
@@ -70,95 +69,15 @@ fun OverviewScreen(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header: Wallet name + settings button
+        // Header: View-only active context status card + settings action
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = uiState.walletName,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    uiState.settings?.let { settings ->
-                        Text(
-                            text = "${DateUtils.formatMonthDayYear(settings.startDate)} – ${DateUtils.formatMonthDayYear(settings.endDate)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                FilledTonalIconButton(
-                    onClick = { viewModel.toggleSettingsSheet() }
-                ) {
-                    Icon(Icons.Default.Settings, contentDescription = "Settings")
-                }
-            }
-        }
-
-        // Group Type Quick Selector
-        item {
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                GroupType.entries.forEachIndexed { index, type ->
-                    SegmentedButton(
-                        selected = uiState.settings?.groupType == type,
-                        onClick = { viewModel.setGroupType(type) },
-                        shape = SegmentedButtonDefaults.itemShape(
-                            index = index,
-                            count = GroupType.entries.size
-                        )
-                    ) {
-                        Text(
-                            text = type.name.lowercase().replaceFirstChar { it.uppercase() },
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    }
-                }
-            }
-        }
-
-        // Cash Flow Filter Chips
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                CashFlowFilter.entries.forEach { filter ->
-                    FilterChip(
-                        selected = uiState.settings?.cashFlowFilter == filter,
-                        onClick = { viewModel.setCashFlowFilter(filter) },
-                        label = {
-                            Text(
-                                text = when (filter) {
-                                    CashFlowFilter.INCOMES -> "Incomes"
-                                    CashFlowFilter.EXPENSES -> "Expenses"
-                                    CashFlowFilter.NET_INCOMES -> "Net Income"
-                                },
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        },
-                        leadingIcon = {
-                            when (filter) {
-                                CashFlowFilter.INCOMES -> Icon(
-                                    Icons.Default.ArrowUpward, null,
-                                    modifier = Modifier.size(14.dp),
-                                    tint = Color(0xFF2E7D32)
-                                )
-                                CashFlowFilter.EXPENSES -> Icon(
-                                    Icons.Default.ArrowDownward, null,
-                                    modifier = Modifier.size(14.dp),
-                                    tint = Color(0xFFC62828)
-                                )
-                                CashFlowFilter.NET_INCOMES -> {}
-                            }
-                        }
-                    )
-                }
-            }
+            OverviewHeader(
+                walletName = uiState.walletName,
+                walletIcon = uiState.walletIcon,
+                settings = uiState.settings,
+                selectedCategoryName = uiState.selectedCategoryName,
+                onConfigureClick = { viewModel.toggleSettingsSheet() }
+            )
         }
 
         if (uiState.isLoading) {

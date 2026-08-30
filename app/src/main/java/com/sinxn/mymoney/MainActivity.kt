@@ -2,6 +2,7 @@ package com.sinxn.mymoney
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
@@ -116,6 +117,16 @@ class MainActivity : ComponentActivity() {
                         }
                         val dynamicTabTitle = dynamicMenuItem?.title ?: "Overview"
                         val dynamicTabIcon = dynamicMenuItem?.icon ?: Icons.Default.Equalizer
+
+                        // Navigate back to Transactions on Back Press from any top-level module/menu
+                        BackHandler(enabled = isTopLevelScreen && !isTransactions) {
+                            handleSidebarNavigation(
+                                context = this@MainActivity,
+                                navController = navController,
+                                itemId = Screen.Transactions.sidebarItemId,
+                                currentWalletId = currentWalletId
+                            )
+                        }
 
                         Scaffold(
                             contentWindowInsets = WindowInsets(0, 0, 0, 0),

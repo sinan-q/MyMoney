@@ -40,13 +40,17 @@ data class OverviewUiState(
     val overviewData: OverviewData? = null,
     val periodsUi: List<OverviewPeriodUiModel> = emptyList(),
     val settings: OverviewSettings? = null,
+    val currentWalletId: String = Constants.TOTAL_WALLET_ID,
     val walletName: String = "Total",
+    val walletIcon: String? = "sigma",
     val currencyCode: String = "USD",
     val currencySymbol: String = "$",
     val currencyDecimals: Int = 2,
     val formattingSettings: FormattingSettings = FormattingSettings(),
+    val selectedCategoryName: String? = null,
     val isLoading: Boolean = true,
-    val showSettingsSheet: Boolean = false
+    val showSettingsSheet: Boolean = false,
+    val showWalletPickerSheet: Boolean = false
 )
 
 @HiltViewModel
@@ -77,16 +81,16 @@ class OverviewViewModel @Inject constructor(
                     currentWalletId = effectiveWalletId
 
                     // Resolve wallet info
-                    val (walletName, currCode, currSymbol, decimals) = resolveWalletInfo(
-                        effectiveWalletId, formatting
-                    )
+                    val walletInfo = resolveWalletInfo(effectiveWalletId, formatting)
 
                     _uiState.update {
                         it.copy(
-                            walletName = walletName,
-                            currencyCode = currCode,
-                            currencySymbol = currSymbol,
-                            currencyDecimals = decimals,
+                            currentWalletId = effectiveWalletId,
+                            walletName = walletInfo.name,
+                            walletIcon = walletInfo.icon,
+                            currencyCode = walletInfo.currencyCode,
+                            currencySymbol = walletInfo.currencySymbol,
+                            currencyDecimals = walletInfo.decimals,
                             formattingSettings = formatting
                         )
                     }
@@ -141,6 +145,32 @@ class OverviewViewModel @Inject constructor(
         _uiState.update { it.copy(showSettingsSheet = false) }
     }
 
+    fun toggleWalletPickerSheet() {
+        _uiState.update { it.copy(showWalletPickerSheet = !it.showWalletPickerSheet) }
+    }
+
+    fun dismissWalletPickerSheet() {
+        _uiState.update { it.copy(showWalletPickerSheet = false) }
+    }
+
+    fun selectWallet(walletId: String) {
+        dismissWalletPickerSheet()
+        viewModelScope.launch {
+            settingsRepository.setCurrentWalletId(walletId)
+        }
+    }
+
+    fun applyOverviewConfig(newSettings: OverviewSettings, newWalletId: String) {
+        _uiState.update { it.copy(settings = newSettings, showSettingsSheet = false) }
+        viewModelScope.launch {
+            if (newWalletId != currentWalletId) {
+                settingsRepository.setCurrentWalletId(newWalletId)
+            } else {
+                loadData(currentWalletId, newSettings)
+            }
+        }
+    }
+
     private suspend fun loadData(walletId: String, settings: OverviewSettings) {
         _uiState.update { it.copy(isLoading = true) }
         try {
@@ -152,11 +182,19 @@ class OverviewViewModel @Inject constructor(
                 decimals = currentState.currencyDecimals,
                 formattingSettings = currentState.formattingSettings
             )
+            val categoryName = if (settings.overviewType == OverviewType.CATEGORY && !settings.categoryId.isNullOrEmpty()) {
+                moneyDao.getCategoryById(settings.categoryId)?.name ?: "Category"
+            } else if (settings.overviewType == OverviewType.CATEGORY) {
+                "All Categories"
+            } else {
+                null
+            }
             _uiState.update {
                 it.copy(
                     overviewData = data,
                     periodsUi = periodsUi,
                     settings = settings,
+                    selectedCategoryName = categoryName,
                     isLoading = false
                 )
             }
@@ -230,6 +268,7 @@ class OverviewViewModel @Inject constructor(
             } catch (e: Exception) { null }
             WalletInfo(
                 name = "Total",
+                icon = "sigma",
                 currencyCode = currCode,
                 currencySymbol = currency?.symbol ?: currCode,
                 decimals = currency?.defaultFractionDigits ?: 2
@@ -243,18 +282,20 @@ class OverviewViewModel @Inject constructor(
                 } catch (e: Exception) { 2 }
                 WalletInfo(
                     name = wallet.name,
+                    icon = wallet.icon,
                     currencyCode = wallet.currency,
                     currencySymbol = currSymbol,
                     decimals = decimals
                 )
             } else {
-                WalletInfo("Total", formatting.globalCurrency, formatting.globalCurrency, 2)
+                WalletInfo("Total", "sigma", formatting.globalCurrency, formatting.globalCurrency, 2)
             }
         }
     }
 
     private data class WalletInfo(
         val name: String,
+        val icon: String?,
         val currencyCode: String,
         val currencySymbol: String,
         val decimals: Int

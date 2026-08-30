@@ -701,8 +701,6 @@ fun AppNavHost(
         }
         composable(Screen.Overview.routePattern) {
             OverviewScreen(
-                onNavigateBack = { navController.navigateUp() },
-                onNavigateToRecap = { navController.navigate(Screen.Recap.routePattern) },
                 onPeriodClick = { startDate, endDate ->
                     navController.navigate(Screen.PeriodDetail.createRoute(startDate, endDate))
                 }
