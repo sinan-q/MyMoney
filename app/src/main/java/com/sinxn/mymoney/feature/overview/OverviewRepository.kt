@@ -88,7 +88,11 @@ data class ChartDataPoint(
 data class OverviewData(
     val periods: List<PeriodMoney>,
     val chartDataByCurrency: Map<String, List<ChartDataPoint>>,
-    val totalNetIncomes: MultiCurrencyMoney
+    val totalNetIncomes: MultiCurrencyMoney,
+    val totalIncomes: MultiCurrencyMoney = MultiCurrencyMoney(),
+    val totalExpenses: MultiCurrencyMoney = MultiCurrencyMoney(),
+    val transactionCount: Int = 0,
+    val globalTotalExpenses: Long = 0L
 )
 
 @Singleton
@@ -183,6 +187,8 @@ class OverviewRepository @Inject constructor(
         // Build periods (matching legacy getNextPeriod / isAnotherPeriodNeeded)
         val formattingSettings = settingsRepository.formattingSettings.first()
         val totalNetIncomes = MultiCurrencyMoney()
+        val totalIncomes = MultiCurrencyMoney()
+        val totalExpenses = MultiCurrencyMoney()
         val periods = mutableListOf<PeriodMoney>()
 
         var transactionIndex = 0
@@ -199,9 +205,11 @@ class OverviewRepository @Inject constructor(
                     if (t.direction == 1) { // INCOME
                         currentPeriod.addIncome(t.walletCurrency, t.money)
                         totalNetIncomes.addMoney(t.walletCurrency, t.money)
+                        totalIncomes.addMoney(t.walletCurrency, t.money)
                     } else { // EXPENSE
                         currentPeriod.addExpense(t.walletCurrency, t.money)
                         totalNetIncomes.removeMoney(t.walletCurrency, t.money)
+                        totalExpenses.addMoney(t.walletCurrency, t.money)
                     }
                     transactionIndex++
                 } else {
@@ -211,6 +219,9 @@ class OverviewRepository @Inject constructor(
 
             periods.add(currentPeriod)
         }
+
+        // Calculate global unfiltered total expenses for category share
+        val globalTotalExpenses = transactions.filter { it.direction == 0 }.sumOf { it.money }
 
         // Generate chart data (matching legacy lines 150-207, excluding radar)
         val chartData = mutableMapOf<String, MutableList<ChartDataPoint>>()
@@ -237,7 +248,11 @@ class OverviewRepository @Inject constructor(
         return OverviewData(
             periods = periods,
             chartDataByCurrency = chartData,
-            totalNetIncomes = totalNetIncomes
+            totalNetIncomes = totalNetIncomes,
+            totalIncomes = totalIncomes,
+            totalExpenses = totalExpenses,
+            transactionCount = filtered.size,
+            globalTotalExpenses = globalTotalExpenses
         )
     }
 

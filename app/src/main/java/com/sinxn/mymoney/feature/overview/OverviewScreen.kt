@@ -48,6 +48,7 @@ import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.feature.overview.component.OverviewHeader
 import com.sinxn.mymoney.feature.overview.component.OverviewSettingsSheet
+import com.sinxn.mymoney.feature.overview.component.OverviewTotalSummaryCard
 import com.sinxn.mymoney.feature.overview.component.OverviewWalletPickerSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -114,13 +115,15 @@ fun OverviewScreen(
                         )
                     }
 
-                    // Total Summary Card
+                    // Adaptive Total Summary Card
                     item {
-                        TotalSummaryCard(
-                            totalNetIncomes = overviewData.totalNetIncomes,
+                        OverviewTotalSummaryCard(
+                            overviewData = overviewData,
+                            settings = uiState.settings,
                             currencyCode = uiState.currencyCode,
                             decimals = uiState.currencyDecimals,
-                            formattingSettings = uiState.formattingSettings
+                            formattingSettings = uiState.formattingSettings,
+                            selectedCategoryName = uiState.selectedCategoryName
                         )
                     }
 
@@ -184,80 +187,73 @@ private fun ChartPager(
 ) {
     val pagerState = rememberPagerState(pageCount = { 2 })
 
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(modifier = Modifier.padding(8.dp)) {
-            // Tab indicators
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        // Tab indicators
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 4.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.BarChart,
+                contentDescription = null,
+                tint = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 4.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Icon(
-                    Icons.Default.BarChart,
-                    contentDescription = null,
-                    tint = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    repeat(2) { index ->
-                        Box(
-                            modifier = Modifier
-                                .size(if (pagerState.currentPage == index) 8.dp else 6.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (pagerState.currentPage == index) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                                )
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Icon(
-                    Icons.Default.ShowChart,
-                    contentDescription = null,
-                    tint = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            // Chart pages
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-            ) { page ->
-                val chartValues = overviewData.chartDataByCurrency[currencyCode]
-                    ?: overviewData.chartDataByCurrency.values.firstOrNull()
-
-                if (!chartValues.isNullOrEmpty()) {
-                    when (page) {
-                        0 -> BarChartView(chartValues)
-                        1 -> LineChartView(chartValues)
-                    }
-                } else {
+                repeat(2) { index ->
                     Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "No chart data",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                        modifier = Modifier
+                            .size(if (pagerState.currentPage == index) 8.dp else 6.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (pagerState.currentPage == index) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                            )
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Icon(
+                Icons.Default.ShowChart,
+                contentDescription = null,
+                tint = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        // Chart pages
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(220.dp)
+        ) { page ->
+            val chartValues = overviewData.chartDataByCurrency[currencyCode]
+                ?: overviewData.chartDataByCurrency.values.firstOrNull()
+
+            if (!chartValues.isNullOrEmpty()) {
+                when (page) {
+                    0 -> BarChartView(chartValues)
+                    1 -> LineChartView(chartValues)
+                }
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No chart data",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
@@ -323,80 +319,6 @@ private fun LineChartView(dataPoints: List<ChartDataPoint>) {
         modelProducer = modelProducer,
         modifier = Modifier.fillMaxSize()
     )
-}
-
-@Composable
-private fun TotalSummaryCard(
-    totalNetIncomes: MultiCurrencyMoney,
-    currencyCode: String,
-    decimals: Int,
-    formattingSettings: com.sinxn.mymoney.core.data.preferences.FormattingSettings
-) {
-    val config = remember(formattingSettings) {
-        MoneyFormatter.Config(
-            showCurrency = formattingSettings.showCurrency,
-            groupDigits = formattingSettings.groupDigits,
-            roundDecimals = formattingSettings.roundDecimals,
-            showPlusMinus = true
-        )
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Total for Period",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Show all currencies
-            for (currency in totalNetIncomes.getCurrencies()) {
-                val amount = totalNetIncomes.getMoney(currency)
-                val currDecimals = try {
-                    java.util.Currency.getInstance(currency).defaultFractionDigits
-                } catch (e: Exception) { decimals }
-
-                val formatted = MoneyFormatter.format(
-                    amount = amount,
-                    currencyCode = currency,
-                    decimals = currDecimals,
-                    config = config
-                )
-                val color = when {
-                    amount > 0 -> Color(0xFF2E7D32)
-                    amount < 0 -> Color(0xFFC62828)
-                    else -> MaterialTheme.colorScheme.onSurfaceVariant
-                }
-                Text(
-                    text = formatted,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = color
-                )
-            }
-
-            if (totalNetIncomes.getCurrencies().isEmpty()) {
-                Text(
-                    text = MoneyFormatter.format(0L, currencyCode, decimals, config),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
 }
 
 private val PeriodCardShape = RoundedCornerShape(14.dp)
