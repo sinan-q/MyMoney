@@ -240,7 +240,16 @@ fun OverviewSettingsSheet(
                 )
                 FilterChip(
                     selected = overviewType == OverviewType.CATEGORY,
-                    onClick = { overviewType = OverviewType.CATEGORY },
+                    onClick = {
+                        overviewType = OverviewType.CATEGORY
+                        if (selectedCategoryId == null) {
+                            val defaultCat = categories.firstOrNull { it.type == 0 } ?: categories.firstOrNull()
+                            selectedCategoryId = defaultCat?.id
+                            if (selectedCategoryId == null) {
+                                showCategoryPicker = true
+                            }
+                        }
+                    },
                     label = { Text("Category") },
                     leadingIcon = {
                         Icon(Icons.Default.Category, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -304,13 +313,13 @@ fun OverviewSettingsSheet(
                     ) {
                         CategoryIcon(
                             iconString = selectedCategory?.icon,
-                            categoryName = selectedCategory?.name ?: "All",
+                            categoryName = selectedCategory?.name ?: "Category",
                             modifier = Modifier.size(36.dp)
                         )
                         Spacer(modifier = Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = selectedCategory?.name ?: "All Categories",
+                                text = selectedCategory?.name ?: "Select Category",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface,
@@ -321,7 +330,7 @@ fun OverviewSettingsSheet(
                                 text = if (selectedCategory != null) {
                                     if (selectedCategory.type == 1) "Income Category" else "Expense Category"
                                 } else {
-                                    "Showing all categories"
+                                    "Tap to choose a category"
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -337,6 +346,7 @@ fun OverviewSettingsSheet(
             }
 
             // ── Apply button ──
+            val isApplyEnabled = overviewType != OverviewType.CATEGORY || selectedCategoryId != null
             Button(
                 onClick = {
                     onApply(
@@ -351,6 +361,7 @@ fun OverviewSettingsSheet(
                         selectedWalletId
                     )
                 },
+                enabled = isApplyEnabled,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp),
@@ -380,11 +391,12 @@ fun OverviewSettingsSheet(
         CategorySelectionDialog(
             categories = categories,
             selectedCategoryId = selectedCategoryId,
-            showNoneOption = true,
-            noneOptionLabel = "All Categories",
-            title = "Filter by Category",
+            showNoneOption = false,
+            title = "Select Category",
             onCategorySelected = { cat ->
-                selectedCategoryId = cat?.id
+                if (cat != null) {
+                    selectedCategoryId = cat.id
+                }
                 showCategoryPicker = false
             },
             onDismissRequest = { showCategoryPicker = false }

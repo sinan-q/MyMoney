@@ -189,8 +189,6 @@ class OverviewViewModel @Inject constructor(
             )
             val categoryName = if (settings.overviewType == OverviewType.CATEGORY && !settings.categoryId.isNullOrEmpty()) {
                 moneyDao.getCategoryById(settings.categoryId)?.name ?: "Category"
-            } else if (settings.overviewType == OverviewType.CATEGORY) {
-                "All Categories"
             } else {
                 null
             }
