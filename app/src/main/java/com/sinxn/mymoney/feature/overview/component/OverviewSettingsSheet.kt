@@ -1,21 +1,17 @@
 package com.sinxn.mymoney.feature.overview.component
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Category
-import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -24,15 +20,18 @@ import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CategorySelectionDialog
+import com.sinxn.mymoney.core.ui.components.FormCardContainer
+import com.sinxn.mymoney.core.ui.components.TabPill
+import com.sinxn.mymoney.core.ui.components.TransactionFormRowItem
+import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.Constants
 import com.sinxn.mymoney.core.util.DateUtils
-import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.feature.overview.CashFlowFilter
 import com.sinxn.mymoney.feature.overview.GroupType
 import com.sinxn.mymoney.feature.overview.OverviewSettings
 import com.sinxn.mymoney.feature.overview.OverviewType
-import java.util.Calendar
 import java.util.Date
+import kotlin.collections.map
 
 /**
  * Bottom sheet for configuring overview settings.
@@ -79,6 +78,11 @@ fun OverviewSettingsSheet(
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
 
+    val walletIconData = remember(selectedWalletIcon, selectedWalletName) {
+        parseIconData(selectedWalletIcon, selectedWalletName)
+    }
+
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
@@ -88,11 +92,12 @@ fun OverviewSettingsSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
+                .padding(horizontal = 8.dp)
                 .padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
+                modifier = Modifier.padding(start = 16.dp),
                 text = "Overview Settings",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
@@ -100,248 +105,94 @@ fun OverviewSettingsSheet(
             )
 
             // ── Account / Wallet Selection ──
-            Text(
-                text = "Account",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Surface(
-                onClick = { showWalletPicker = true },
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CategoryIcon(
-                        iconString = selectedWalletIcon,
-                        categoryName = selectedWalletName,
-                        modifier = Modifier.size(36.dp)
-                    )
-                    Spacer(modifier = Modifier.width(14.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = selectedWalletName,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        if (selectedWallet != null) {
-                            val balanceText = MoneyFormatter.format(
-                                amount = selectedWallet.currentBalance,
-                                currencyCode = selectedWallet.wallet.currency,
-                                decimals = selectedWallet.decimals,
-                                config = MoneyFormatter.Config(
-                                    showCurrency = formattingSettings.showCurrency,
-                                    groupDigits = formattingSettings.groupDigits,
-                                    roundDecimals = formattingSettings.roundDecimals,
-                                    showPlusMinus = false
-                                )
-                            )
-                            Text(
-                                text = balanceText,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        } else {
-                            Text(
-                                text = "Aggregated across all wallets",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    Icon(
-                        imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = "Change Account",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            CustomText("Wallet")
+            FormCardContainer {
+                TransactionFormRowItem(
+                    icon = Icons.Default.AccountBalanceWallet,
+                    active = true,
+                    accentColor = MaterialTheme.colorScheme.primary,
+                    label = "Wallet",
+                    value = selectedWalletName,
+                    trailingIconData = walletIconData,
+                    onClick = { showWalletPicker = true }
+                )
             }
 
             // ── Date Range Section ──
-            Text(
-                text = "Date Range",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                DateChip(
+            CustomText("Date Range")
+            FormCardContainer {
+                TransactionFormRowItem(
+                    icon = Icons.Default.CalendarMonth,
+                    active = true,
+                    accentColor = MaterialTheme.colorScheme.primary,
                     label = "From",
-                    date = DateUtils.formatMonthDayYear(startDate),
-                    onClick = { showStartDatePicker = true },
-                    modifier = Modifier.weight(1f)
+                    value = DateUtils.formatMonthDayYear(startDate),
+                    onClick = { showStartDatePicker = true }
+
                 )
-                DateChip(
+                TransactionFormRowItem(
+                    icon = Icons.Default.CalendarMonth,
+                    active = true,
+                    accentColor = MaterialTheme.colorScheme.primary,
                     label = "To",
-                    date = DateUtils.formatMonthDayYear(endDate),
-                    onClick = { showEndDatePicker = true },
-                    modifier = Modifier.weight(1f)
+                    value = DateUtils.formatMonthDayYear(endDate),
+                    onClick = { showEndDatePicker = true }
                 )
             }
 
             // ── Group Type — Daily, Weekly, Monthly, Yearly ──
-            Text(
-                text = "Group By",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                GroupType.entries.forEachIndexed { index, type ->
-                    SegmentedButton(
-                        selected = groupType == type,
-                        onClick = { groupType = type },
-                        shape = SegmentedButtonDefaults.itemShape(
-                            index = index,
-                            count = GroupType.entries.size
-                        )
-                    ) {
-                        Text(
-                            text = type.name.lowercase()
-                                .replaceFirstChar { it.uppercase() },
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    }
-                }
-            }
+            CustomText("Group By")
+            TabPill(
+                tabs = GroupType.entries.map { it.name.lowercase()
+                    .replaceFirstChar { it.uppercase() } to MaterialTheme.colorScheme.primary },
+                activeTab = groupType.ordinal
+            ) { groupType = GroupType.entries[it] }
+
 
             // ── Overview Type — Cash Flow / Category ──
-            Text(
-                text = "View Type",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            CustomText("View Type")
+            TabPill(
+                tabs = listOf("Cash flow" to MaterialTheme.colorScheme.primary, "Category" to MaterialTheme.colorScheme.primary),
+                activeTab = overviewType.ordinal
             ) {
-                FilterChip(
-                    selected = overviewType == OverviewType.CASH_FLOW,
-                    onClick = { overviewType = OverviewType.CASH_FLOW },
-                    label = { Text("Cash Flow") },
-                    leadingIcon = {
-                        Icon(Icons.Default.Timeline, contentDescription = null, modifier = Modifier.size(18.dp))
-                    },
-                    modifier = Modifier.weight(1f)
-                )
-                FilterChip(
-                    selected = overviewType == OverviewType.CATEGORY,
-                    onClick = {
-                        overviewType = OverviewType.CATEGORY
-                        if (selectedCategoryId == null) {
-                            val defaultCat = categories.firstOrNull { it.type == 0 } ?: categories.firstOrNull()
-                            selectedCategoryId = defaultCat?.id
-                            if (selectedCategoryId == null) {
-                                showCategoryPicker = true
-                            }
-                        }
-                    },
-                    label = { Text("Category") },
-                    leadingIcon = {
-                        Icon(Icons.Default.Category, contentDescription = null, modifier = Modifier.size(18.dp))
-                    },
-                    modifier = Modifier.weight(1f)
-                )
+                overviewType = OverviewType.entries[it]
+                if (overviewType == OverviewType.CATEGORY) showCategoryPicker = true
+
             }
+
 
             // ── Cash Flow Sub-filter — Incomes, Expenses, Net Incomes ──
             if (overviewType == OverviewType.CASH_FLOW) {
-                Text(
-                    text = "Cash Flow Filter",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    val filters = CashFlowFilter.entries
-                    filters.forEachIndexed { index, filter ->
-                        SegmentedButton(
-                            selected = cashFlowFilter == filter,
-                            onClick = { cashFlowFilter = filter },
-                            shape = SegmentedButtonDefaults.itemShape(
-                                index = index,
-                                count = filters.size
-                            )
-                        ) {
-                            Text(
-                                text = when (filter) {
-                                    CashFlowFilter.INCOMES -> "Incomes"
-                                    CashFlowFilter.EXPENSES -> "Expenses"
-                                    CashFlowFilter.NET_INCOMES -> "Net"
-                                },
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        }
-                    }
+                CustomText("Cash Flow Filter")
+                TabPill(
+                    tabs = CashFlowFilter.entries.map { when (it) {
+                        CashFlowFilter.INCOMES -> "Incomes"
+                        CashFlowFilter.EXPENSES -> "Expenses"
+                        CashFlowFilter.NET_INCOMES -> "Net"
+                    } to MaterialTheme.colorScheme.primary} ,
+                    activeTab = cashFlowFilter.ordinal
+                ) {
+                     cashFlowFilter = CashFlowFilter.entries[it]
                 }
+
             }
 
             // ── Category Selector — when overviewType is CATEGORY ──
             if (overviewType == OverviewType.CATEGORY) {
-                Text(
-                    text = "Category Filter",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Surface(
-                    onClick = { showCategoryPicker = true },
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        CategoryIcon(
-                            iconString = selectedCategory?.icon,
-                            categoryName = selectedCategory?.name ?: "Category",
-                            modifier = Modifier.size(36.dp)
-                        )
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = selectedCategory?.name ?: "Select Category",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = if (selectedCategory != null) {
-                                    if (selectedCategory.type == 1) "Income Category" else "Expense Category"
-                                } else {
-                                    "Tap to choose a category"
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.Default.ArrowDropDown,
-                            contentDescription = "Select Category",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                val categoryIconData = remember(selectedCategory) {
+                    parseIconData(selectedCategory?.icon, selectedCategory?.name?: "Category")
+                }
+                CustomText("Category Filter")
+                FormCardContainer {
+                    TransactionFormRowItem(
+                        icon = Icons.Default.Category,
+                        accentColor = MaterialTheme.colorScheme.primary,
+                        label = "Category",
+                        value = selectedCategory?.name ?: "Select Category",
+                        trailingIconData = if (selectedCategory!= null) categoryIconData else null,
+                        onClick = { showCategoryPicker = true }
+
+                    )
                 }
             }
 
@@ -462,46 +313,12 @@ fun OverviewSettingsSheet(
 }
 
 @Composable
-private fun DateChip(
-    label: String,
-    date: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-        ),
-        modifier = modifier
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Icon(
-                Icons.Default.CalendarMonth,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp)
-            )
-            Column {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                )
-                Text(
-                    text = date,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
-    }
+private fun CustomText(text: String) {
+    Text(
+        modifier = Modifier.padding(start = 16.dp),
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }
