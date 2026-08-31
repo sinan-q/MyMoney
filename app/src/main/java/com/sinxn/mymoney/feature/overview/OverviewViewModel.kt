@@ -108,39 +108,7 @@ class OverviewViewModel @Inject constructor(
         }
     }
 
-    fun updateSettings(newSettings: OverviewSettings) {
-        _uiState.update { it.copy(settings = newSettings, showSettingsSheet = false) }
-        viewModelScope.launch {
-            loadData(currentWalletId, newSettings)
-        }
-    }
 
-    fun setGroupType(groupType: GroupType) {
-        viewModelScope.launch {
-            val newSettings = overviewRepository.getDefaultSettings(groupType)
-            updateSettings(newSettings)
-        }
-    }
-
-    fun setCashFlowFilter(filter: CashFlowFilter) {
-        val current = _uiState.value.settings ?: return
-        updateSettings(current.copy(cashFlowFilter = filter))
-    }
-
-    fun setOverviewType(type: OverviewType) {
-        val current = _uiState.value.settings ?: return
-        updateSettings(current.copy(overviewType = type))
-    }
-
-    fun setCategoryFilter(categoryId: String?) {
-        val current = _uiState.value.settings ?: return
-        updateSettings(current.copy(overviewType = OverviewType.CATEGORY, categoryId = categoryId))
-    }
-
-    fun setDateRange(startDate: Date, endDate: Date) {
-        val current = _uiState.value.settings ?: return
-        updateSettings(current.copy(startDate = startDate, endDate = endDate))
-    }
 
     fun toggleSettingsSheet() {
         _uiState.update { it.copy(showSettingsSheet = !it.showSettingsSheet) }

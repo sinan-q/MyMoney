@@ -102,62 +102,30 @@ class OverviewRepository @Inject constructor(
 ) {
 
     /**
-     * Compute default settings based on group type — matching legacy OverviewSettingPicker.java lines 76-125.
+     * Default overview settings: Year start to current month end, grouped monthly.
      */
-    suspend fun getDefaultSettings(groupType: GroupType = GroupType.MONTHLY): OverviewSettings {
-        val settings = settingsRepository.formattingSettings.first()
+    fun getDefaultSettings(): OverviewSettings {
         val calendar = Calendar.getInstance()
-        val startDate: Date
-        val endDate: Date
+        val currentYear = calendar.get(Calendar.YEAR)
+        val currentMonth = calendar.get(Calendar.MONTH)
 
-        when (groupType) {
-            GroupType.DAILY -> {
-                // Current week
-                val firstDayOfWeek = settings.firstDayOfWeek
-                val currentDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
-                if (currentDayOfWeek < firstDayOfWeek) {
-                    calendar.add(Calendar.DAY_OF_MONTH, -7)
-                }
-                calendar.set(Calendar.DAY_OF_WEEK, firstDayOfWeek)
-                startDate = calendar.time
-                calendar.add(Calendar.DAY_OF_MONTH, 6)
-                endDate = calendar.time
-            }
-            GroupType.WEEKLY -> {
-                // Current month
-                val firstDayOfMonth = settings.firstDayOfMonth
-                val currentDayOfMonth = calendar.get(Calendar.DAY_OF_MONTH)
-                if (currentDayOfMonth < firstDayOfMonth) {
-                    calendar.add(Calendar.MONTH, -1)
-                }
-                calendar.set(Calendar.DAY_OF_MONTH, firstDayOfMonth)
-                startDate = calendar.time
-                calendar.add(Calendar.MONTH, 1)
-                calendar.add(Calendar.DAY_OF_MONTH, -1)
-                endDate = calendar.time
-            }
-            GroupType.MONTHLY -> {
-                // Current year
-                val currentYear = calendar.get(Calendar.YEAR)
-                calendar.set(currentYear, Calendar.JANUARY, 1)
-                startDate = calendar.time
-                calendar.set(currentYear, Calendar.DECEMBER, 31)
-                endDate = calendar.time
-            }
-            GroupType.YEARLY -> {
-                // Last 3 years
-                val currentYear = calendar.get(Calendar.YEAR)
-                calendar.set(currentYear - 3, Calendar.JANUARY, 1)
-                startDate = calendar.time
-                calendar.set(currentYear, Calendar.DECEMBER, 31)
-                endDate = calendar.time
-            }
-        }
+        calendar.set(currentYear, Calendar.JANUARY, 1, 0, 0, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startDate = calendar.time
+
+        calendar.set(currentYear, currentMonth, 1)
+        val lastDay = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
+        calendar.set(Calendar.DAY_OF_MONTH, lastDay)
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        calendar.set(Calendar.MILLISECOND, 999)
+        val endDate = calendar.time
 
         return OverviewSettings(
             startDate = startDate,
             endDate = endDate,
-            groupType = groupType,
+            groupType = GroupType.MONTHLY,
             overviewType = OverviewType.CASH_FLOW,
             cashFlowFilter = CashFlowFilter.NET_INCOMES
         )
