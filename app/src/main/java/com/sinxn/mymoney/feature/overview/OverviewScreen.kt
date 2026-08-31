@@ -9,12 +9,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,7 +20,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
@@ -39,17 +33,11 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLa
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
-import com.sinxn.mymoney.core.ui.components.AppExtendedFab
-import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CategoryIconExtended
-import com.sinxn.mymoney.core.ui.components.CleanListRow
 import com.sinxn.mymoney.core.ui.components.ListRow
-import com.sinxn.mymoney.core.util.DateUtils
-import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.feature.overview.component.OverviewHeader
 import com.sinxn.mymoney.feature.overview.component.OverviewSettingsSheet
 import com.sinxn.mymoney.feature.overview.component.OverviewTotalSummaryCard
-import com.sinxn.mymoney.feature.overview.component.OverviewWalletPickerSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,13 +72,7 @@ fun OverviewScreen(
         ) {
             // Header: View-only active context status card + settings action
             item {
-                OverviewHeader(
-                    walletName = uiState.walletName,
-                    walletIcon = uiState.walletIcon,
-                    settings = uiState.settings,
-                    selectedCategoryName = uiState.selectedCategoryName,
-                    onConfigureClick = { viewModel.toggleSettingsSheet() }
-                )
+
             }
 
             if (uiState.isLoading) {
@@ -107,15 +89,15 @@ fun OverviewScreen(
             } else {
                 val overviewData = uiState.overviewData
                 if (overviewData != null && overviewData.periods.isNotEmpty()) {
-                    // Chart Section — Bar + Line in pager
                     item {
-                        ChartPager(
-                            overviewData = overviewData,
-                            currencyCode = uiState.currencyCode
+                        OverviewHeader(
+                            walletName = uiState.walletName,
+                            settings = uiState.settings,
+                            selectedCategoryName = uiState.selectedCategoryName,
+                            onConfigureClick = { viewModel.toggleSettingsSheet() }
                         )
                     }
 
-                    // Adaptive Total Summary Card
                     item {
                         OverviewTotalSummaryCard(
                             overviewData = overviewData,
@@ -124,6 +106,15 @@ fun OverviewScreen(
                             decimals = uiState.currencyDecimals,
                             formattingSettings = uiState.formattingSettings,
                             selectedCategoryName = uiState.selectedCategoryName
+                        )
+                    }
+
+                    // Chart Section — Bar + Line in pager
+
+                    item {
+                        ChartPager(
+                            overviewData = overviewData,
+                            currencyCode = uiState.currencyCode
                         )
                     }
 

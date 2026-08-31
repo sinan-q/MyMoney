@@ -3,6 +3,7 @@ package com.sinxn.mymoney.feature.overview.component
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -16,17 +17,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
-import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.feature.overview.CashFlowFilter
 import com.sinxn.mymoney.feature.overview.GroupType
 import com.sinxn.mymoney.feature.overview.OverviewData
 import com.sinxn.mymoney.feature.overview.OverviewSettings
 import com.sinxn.mymoney.feature.overview.OverviewType
+import com.sinxn.mymoney.ui.theme.ExpenseColor
+import com.sinxn.mymoney.ui.theme.IncomeColor
 import kotlin.math.roundToInt
-
-private val GreenPositive = Color(0xFF2E7D32)
-private val RedNegative = Color(0xFFC62828)
 
 /**
  * Context-Adaptive summary card for the Overview screen.
@@ -99,8 +98,9 @@ fun OverviewTotalSummaryCard(
 
                 // ── Mode B: Cash Flow — Expenses Only ──
                 settings?.cashFlowFilter == CashFlowFilter.EXPENSES -> {
-                    ExpensesOnlyLayout(
-                        expenseAmount = expenseAmount,
+                    SingleCashFlowLayout(
+                        isExpense = true,
+                        amount = expenseAmount,
                         currencyCode = currencyCode,
                         decimals = decimals,
                         configNoSign = configNoSign,
@@ -112,11 +112,11 @@ fun OverviewTotalSummaryCard(
 
                 // ── Mode C: Cash Flow — Incomes Only ──
                 settings?.cashFlowFilter == CashFlowFilter.INCOMES -> {
-                    IncomesOnlyLayout(
-                        incomeAmount = incomeAmount,
+                    SingleCashFlowLayout(
+                        isExpense = false,
+                        amount = incomeAmount,
                         currencyCode = currencyCode,
                         decimals = decimals,
-                        configWithSign = configWithSign,
                         configNoSign = configNoSign,
                         txCount = txCount,
                         periodsCount = periodsCount,
@@ -133,12 +133,62 @@ fun OverviewTotalSummaryCard(
                         currencyCode = currencyCode,
                         decimals = decimals,
                         configWithSign = configWithSign,
-                        configNoSign = configNoSign
+                        configNoSign = configNoSign,
+                        txCount = txCount,
                     )
                 }
             }
         }
     }
+}
+
+@Composable
+private fun Header(
+    headerText: String,
+    txCount: Int,
+    amountText: String,
+    amountColour: Color
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = headerText,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            letterSpacing = 0.8.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant
+        ) {
+            Text(
+                text = "$txCount Txns",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+            )
+        }
+    }
+
+
+    Spacer(modifier = Modifier.height(6.dp))
+
+    // Hero Net Amount
+    Text(
+        text = amountText,
+        style = MaterialTheme.typography.headlineLarge,
+        fontWeight = FontWeight.ExtraBold,
+        color = amountColour
+    )
+
+    Spacer(modifier = Modifier.height(14.dp))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -152,66 +202,24 @@ private fun NetCashFlowLayout(
     currencyCode: String,
     decimals: Int,
     configWithSign: MoneyFormatter.Config,
-    configNoSign: MoneyFormatter.Config
+    configNoSign: MoneyFormatter.Config,
+    txCount: Int
 ) {
     val isPositive = netAmount > 0
     val isNegative = netAmount < 0
     val heroColor = when {
-        isPositive -> GreenPositive
-        isNegative -> RedNegative
+        isPositive -> IncomeColor
+        isNegative -> ExpenseColor
         else -> MaterialTheme.colorScheme.onSurface
     }
 
     // Top Header: Label + Status Pill
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "NET CASH FLOW",
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            letterSpacing = 0.8.sp
-        )
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = when {
-                isPositive -> GreenPositive.copy(alpha = 0.12f)
-                isNegative -> RedNegative.copy(alpha = 0.12f)
-                else -> MaterialTheme.colorScheme.surfaceVariant
-            }
-        ) {
-            Text(
-                text = when {
-                    isPositive -> "Surplus"
-                    isNegative -> "Deficit"
-                    else -> "Balanced"
-                },
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = when {
-                    isPositive -> GreenPositive
-                    isNegative -> RedNegative
-                    else -> MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-            )
-        }
-    }
-
-    Spacer(modifier = Modifier.height(6.dp))
-
-    // Hero Net Amount
-    Text(
-        text = MoneyFormatter.format(netAmount, currencyCode, decimals, configWithSign),
-        style = MaterialTheme.typography.headlineLarge,
-        fontWeight = FontWeight.ExtraBold,
-        color = heroColor
+    Header(
+        headerText = "NET SPENT ",
+        txCount = txCount,
+        amountText = MoneyFormatter.format(netAmount, currencyCode, decimals, configWithSign),
+        amountColour = heroColor,
     )
-
-    Spacer(modifier = Modifier.height(14.dp))
 
     // Split Cards: Gross Incomes & Gross Expenses
     Row(
@@ -221,13 +229,13 @@ private fun NetCashFlowLayout(
         StatCard(
             label = "Total Inflow",
             value = "↑ " + MoneyFormatter.format(incomeAmount, currencyCode, decimals, configNoSign),
-            valueColor = GreenPositive,
+            valueColor = IncomeColor,
             modifier = Modifier.weight(1f)
         )
         StatCard(
             label = "Total Outflow",
             value = "↓ " + MoneyFormatter.format(expenseAmount, currencyCode, decimals, configNoSign),
-            valueColor = RedNegative,
+            valueColor = ExpenseColor,
             modifier = Modifier.weight(1f)
         )
     }
@@ -248,7 +256,7 @@ private fun NetCashFlowLayout(
                     text = if (savingsRate >= 0) "${savingsRate.roundToInt()}% Saved" else "${(-savingsRate).roundToInt()}% Deficit",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = if (savingsRate >= 0) GreenPositive else RedNegative
+                    color = if (savingsRate >= 0) IncomeColor else ExpenseColor
                 )
                 Text(
                     text = "${(spentRatio * 100).roundToInt()}% Spent",
@@ -269,7 +277,7 @@ private fun NetCashFlowLayout(
                         .fillMaxHeight()
                         .fillMaxWidth(spentRatio)
                         .clip(RoundedCornerShape(3.dp))
-                        .background(RedNegative.copy(alpha = 0.8f))
+                        .background(ExpenseColor.copy(alpha = 0.8f))
                 )
             }
         }
@@ -277,11 +285,12 @@ private fun NetCashFlowLayout(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Mode B: Expenses Only
+// Mode C: SingleCashFlowLayout
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
-private fun ExpensesOnlyLayout(
-    expenseAmount: Long,
+private fun SingleCashFlowLayout(
+    isExpense: Boolean,
+    amount: Long,
     currencyCode: String,
     decimals: Int,
     configNoSign: MoneyFormatter.Config,
@@ -289,47 +298,16 @@ private fun ExpensesOnlyLayout(
     periodsCount: Int,
     periodUnit: String
 ) {
-    val avgExpense = expenseAmount / periodsCount
-    val formattedAvg = MoneyFormatter.format(avgExpense, currencyCode, decimals, configNoSign)
+    val avgAmount = amount / periodsCount
+    val formattedAvg = MoneyFormatter.format(avgAmount, currencyCode, decimals, configNoSign)
 
     // Top Header
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "TOTAL EXPENSES",
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            letterSpacing = 0.8.sp
-        )
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant
-        ) {
-            Text(
-                text = "$txCount Transactions",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-            )
-        }
-    }
-
-    Spacer(modifier = Modifier.height(6.dp))
-
-    // Hero Total Expense (clean positive number)
-    Text(
-        text = MoneyFormatter.format(expenseAmount, currencyCode, decimals, configNoSign),
-        style = MaterialTheme.typography.headlineLarge,
-        fontWeight = FontWeight.ExtraBold,
-        color = RedNegative
+    Header(
+        headerText = "TOTAL" + if (isExpense) "EXPENSE" else "EARNINGS",
+        txCount = txCount,
+        amountText = MoneyFormatter.format(amount, currencyCode, decimals, configNoSign),
+        amountColour = if (isExpense) ExpenseColor else IncomeColor,
     )
-
-    Spacer(modifier = Modifier.height(14.dp))
 
     // Secondary Metrics Row
     Row(
@@ -337,84 +315,8 @@ private fun ExpensesOnlyLayout(
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         StatCard(
-            label = "Burn Rate",
-            value = "$formattedAvg / $periodUnit",
-            valueColor = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f)
-        )
-        StatCard(
-            label = "Active Span",
-            value = "$periodsCount ${periodUnit}s",
-            valueColor = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Mode C: Incomes Only
-// ─────────────────────────────────────────────────────────────────────────────
-@Composable
-private fun IncomesOnlyLayout(
-    incomeAmount: Long,
-    currencyCode: String,
-    decimals: Int,
-    configWithSign: MoneyFormatter.Config,
-    configNoSign: MoneyFormatter.Config,
-    txCount: Int,
-    periodsCount: Int,
-    periodUnit: String
-) {
-    val avgIncome = incomeAmount / periodsCount
-    val formattedAvg = MoneyFormatter.format(avgIncome, currencyCode, decimals, configNoSign)
-
-    // Top Header
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "TOTAL EARNINGS",
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            letterSpacing = 0.8.sp
-        )
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant
-        ) {
-            Text(
-                text = "$txCount Transactions",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-            )
-        }
-    }
-
-    Spacer(modifier = Modifier.height(6.dp))
-
-    // Hero Total Income
-    Text(
-        text = MoneyFormatter.format(incomeAmount, currencyCode, decimals, configWithSign),
-        style = MaterialTheme.typography.headlineLarge,
-        fontWeight = FontWeight.ExtraBold,
-        color = GreenPositive
-    )
-
-    Spacer(modifier = Modifier.height(14.dp))
-
-    // Secondary Metrics Row
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        StatCard(
-            label = "Average Inflow",
-            value = "$formattedAvg / $periodUnit",
+            label = (if (isExpense) "Burn Rate" else "Average Inflow") + "/ $periodUnit",
+            value = formattedAvg,
             valueColor = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f)
         )
@@ -452,57 +354,13 @@ private fun CategorySpotlightLayout(
         (totalAmount.toFloat() / globalTotalExpenses) * 100f
     } else null
 
-    // Top Header: Category Icon + Title
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.weight(1f, fill = false)
-        ) {
-            CategoryIcon(
-                iconString = null,
-                categoryName = categoryName,
-                modifier = Modifier.size(20.dp)
-            )
-            Text(
-                text = "SPENT ON " + categoryName.uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                letterSpacing = 0.8.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant
-        ) {
-            Text(
-                text = "$txCount Txns",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-            )
-        }
-    }
-
-    Spacer(modifier = Modifier.height(6.dp))
-
-    // Hero Category Amount
-    Text(
-        text = MoneyFormatter.format(totalAmount, currencyCode, decimals, configNoSign),
-        style = MaterialTheme.typography.headlineLarge,
-        fontWeight = FontWeight.ExtraBold,
-        color = if (isExpense) RedNegative else GreenPositive
+    // Top Header
+    Header(
+        headerText = (if (isExpense) "SPENT ON " else "EARNINGS FROM") + categoryName.uppercase(),
+        txCount = txCount,
+        amountText = MoneyFormatter.format(totalAmount, currencyCode, decimals, configNoSign),
+        amountColour = if (isExpense) ExpenseColor else IncomeColor,
     )
-
-    Spacer(modifier = Modifier.height(14.dp))
 
     // Secondary Metrics Row
     Row(
