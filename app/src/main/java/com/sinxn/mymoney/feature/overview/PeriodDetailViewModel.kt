@@ -191,16 +191,12 @@ class PeriodDetailViewModel @Inject constructor(
         }.flowOn(Dispatchers.Default)
     }
 
-    val uiState: StateFlow<PeriodDetailUiState> = combine(
-        rawPeriodDataFlow,
-        _selectedTab
-    ) { baseState, tab ->
-        baseState.copy(selectedTab = tab)
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = PeriodDetailUiState(startDate = startDate, endDate = endDate)
-    )
+    val uiState: StateFlow<PeriodDetailUiState> = rawPeriodDataFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = PeriodDetailUiState(startDate = startDate, endDate = endDate)
+        )
 
     fun selectTab(tabIndex: Int) {
         _selectedTab.value = tabIndex

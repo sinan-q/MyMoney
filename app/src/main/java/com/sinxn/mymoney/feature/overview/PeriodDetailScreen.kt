@@ -62,6 +62,13 @@ import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.ui.theme.ExpenseColor
 import com.sinxn.mymoney.ui.theme.IncomeColor
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PeriodDetailScreen(
@@ -72,6 +79,13 @@ fun PeriodDetailScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var collapsedGroups by rememberSaveable { mutableStateOf(setOf<String>()) }
     var expandedParentIds by rememberSaveable { mutableStateOf(setOf<String>()) }
+
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 3 })
+    val coroutineScope = rememberCoroutineScope()
+
+    val incomeListState = rememberLazyListState()
+    val expenseListState = rememberLazyListState()
+    val transactionsListState = rememberLazyListState()
 
     val config = remember(uiState.formattingSettings) {
         MoneyFormatter.Config(
@@ -99,7 +113,11 @@ fun PeriodDetailScreen(
 
     val primaryColor = MaterialTheme.colorScheme.primary
     val tabItems = remember(primaryColor) {
-        listOf("Incomes", "Expenses", "Transactions").map { it to primaryColor }
+        listOf(
+            "Incomes" to IncomeColor,
+            "Expenses" to ExpenseColor,
+            "Transactions" to primaryColor
+        )
     }
 
     Scaffold(
@@ -141,239 +159,278 @@ fun PeriodDetailScreen(
                     modifier = Modifier.align(Alignment.Center)
                 )
             } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                Column(
+                    modifier = Modifier.fillMaxSize()
                 ) {
                     // Period Summary Card
-                    item(key = "summary_card", contentType = "summary") {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column {
-                                    Text(
-                                        text = "Net Flow",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                                    )
-                                    val netColor = when {
-                                        uiState.netTotal > 0 -> IncomeColor
-                                        uiState.netTotal < 0 -> ExpenseColor
-                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
-                                    }
-                                    val configWithPlusMinus = remember(config) { config.copy(showPlusMinus = true) }
-                                    Text(
-                                        text = MoneyFormatter.format(
-                                            uiState.netTotal,
-                                            uiState.currencyCode,
-                                            uiState.currencyDecimals,
-                                            configWithPlusMinus
-                                        ),
-                                        style = MaterialTheme.typography.headlineMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = netColor
-                                    )
-                                }
-                            }
-
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                            )
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Surface(
-                                        shape = CircleShape,
-                                        color = IncomeColor.copy(alpha = 0.15f),
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                Icons.Default.ArrowUpward,
-                                                contentDescription = null,
-                                                tint = IncomeColor,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
-                                    }
-                                    Column {
-                                        Text(
-                                            text = "Incomes",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Text(
-                                            text = MoneyFormatter.format(
-                                                uiState.totalIncomes,
-                                                uiState.currencyCode,
-                                                uiState.currencyDecimals,
-                                                config
-                                            ),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = IncomeColor
-                                        )
-                                    }
-                                }
-
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Surface(
-                                        shape = CircleShape,
-                                        color = ExpenseColor.copy(alpha = 0.15f),
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                Icons.Default.ArrowDownward,
-                                                contentDescription = null,
-                                                tint = ExpenseColor,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
-                                    }
-                                    Column {
-                                        Text(
-                                            text = "Expenses",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Text(
-                                            text = MoneyFormatter.format(
-                                                uiState.totalExpenses,
-                                                uiState.currencyCode,
-                                                uiState.currencyDecimals,
-                                                config
-                                            ),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = ExpenseColor
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    PeriodSummaryCard(
+                        netTotal = uiState.netTotal,
+                        totalIncomes = uiState.totalIncomes,
+                        totalExpenses = uiState.totalExpenses,
+                        currencyCode = uiState.currencyCode,
+                        currencyDecimals = uiState.currencyDecimals,
+                        config = config
+                    )
 
                     // Tabs: Incomes / Expenses / Transactions
-                    item(key = "tab_pill", contentType = "tabs") {
-                        TabPill(
-                            tabs = tabItems,
-                            activeTab = uiState.selectedTab,
-                        ) {
-                            viewModel.selectTab(it)
+                    TabPill(
+                        tabs = tabItems,
+                        activeTab = pagerState.currentPage,
+                        onTabChange = { index ->
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(index)
+                            }
                         }
-                    }
+                    )
 
-                    // Content based on tab
-                    when (uiState.selectedTab) {
-                        0 -> {
-                            // Incomes Category Breakdown
-                            if (uiState.incomeCategories.isEmpty()) {
-                                item(key = "empty_incomes") {
+                    // HorizontalPager across Incomes, Expenses, and Transactions
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        beyondViewportPageCount = 1
+                    ) { page ->
+                        when (page) {
+                            0 -> {
+                                // Incomes Category Breakdown
+                                if (uiState.incomeCategories.isEmpty()) {
                                     EmptyStateMessage("No income categories recorded for this period")
-                                }
-                            } else {
-                                items(
-                                    items = uiState.incomeCategories,
-                                    key = { "income_${it.categoryId ?: it.categoryName}" },
-                                    contentType = { "category_breakdown" }
-                                ) { item ->
-                                    val itemId = item.categoryId ?: item.categoryName
-                                    CategoryBreakdownGroup(
-                                        iconData = item.iconData,
-                                        categoryName = item.categoryName,
-                                        percentageFormatted = item.percentageFormatted,
-                                        formattedAmount = item.formattedAmount,
-                                        percentage = item.percentage,
-                                        subcategories = item.subcategories,
-                                        isExpanded = expandedParentIds.contains(itemId),
-                                        barColor = IncomeColor,
-                                        onToggleExpand = {
-                                            expandedParentIds = if (expandedParentIds.contains(itemId)) {
-                                                expandedParentIds - itemId
-                                            } else {
-                                                expandedParentIds + itemId
-                                            }
+                                } else {
+                                    LazyColumn(
+                                        modifier = Modifier.fillMaxSize(),
+                                        state = incomeListState,
+                                        contentPadding = PaddingValues(bottom = 24.dp)
+                                    ) {
+                                        items(
+                                            items = uiState.incomeCategories,
+                                            key = { "income_${it.categoryId ?: it.categoryName}" },
+                                            contentType = { "category_breakdown" }
+                                        ) { item ->
+                                            val itemId = item.categoryId ?: item.categoryName
+                                            CategoryBreakdownGroup(
+                                                iconData = item.iconData,
+                                                categoryName = item.categoryName,
+                                                percentageFormatted = item.percentageFormatted,
+                                                formattedAmount = item.formattedAmount,
+                                                percentage = item.percentage,
+                                                subcategories = item.subcategories,
+                                                isExpanded = expandedParentIds.contains(itemId),
+                                                barColor = IncomeColor,
+                                                onToggleExpand = {
+                                                    expandedParentIds = if (expandedParentIds.contains(itemId)) {
+                                                        expandedParentIds - itemId
+                                                    } else {
+                                                        expandedParentIds + itemId
+                                                    }
+                                                }
+                                            )
                                         }
-                                    )
+                                    }
                                 }
                             }
-                        }
-                        1 -> {
-                            // Expenses Category Breakdown
-                            if (uiState.expenseCategories.isEmpty()) {
-                                item(key = "empty_expenses") {
+                            1 -> {
+                                // Expenses Category Breakdown
+                                if (uiState.expenseCategories.isEmpty()) {
                                     EmptyStateMessage("No expense categories recorded for this period")
-                                }
-                            } else {
-                                items(
-                                    items = uiState.expenseCategories,
-                                    key = { "expense_${it.categoryId ?: it.categoryName}" },
-                                    contentType = { "category_breakdown" }
-                                ) { item ->
-                                    val itemId = item.categoryId ?: item.categoryName
-                                    CategoryBreakdownGroup(
-                                        iconData = item.iconData,
-                                        categoryName = item.categoryName,
-                                        percentageFormatted = item.percentageFormatted,
-                                        formattedAmount = item.formattedAmount,
-                                        percentage = item.percentage,
-                                        subcategories = item.subcategories,
-                                        isExpanded = expandedParentIds.contains(itemId),
-                                        barColor = ExpenseColor,
-                                        onToggleExpand = {
-                                            expandedParentIds = if (expandedParentIds.contains(itemId)) {
-                                                expandedParentIds - itemId
-                                            } else {
-                                                expandedParentIds + itemId
-                                            }
+                                } else {
+                                    LazyColumn(
+                                        modifier = Modifier.fillMaxSize(),
+                                        state = expenseListState,
+                                        contentPadding = PaddingValues(bottom = 24.dp)
+                                    ) {
+                                        items(
+                                            items = uiState.expenseCategories,
+                                            key = { "expense_${it.categoryId ?: it.categoryName}" },
+                                            contentType = { "category_breakdown" }
+                                        ) { item ->
+                                            val itemId = item.categoryId ?: item.categoryName
+                                            CategoryBreakdownGroup(
+                                                iconData = item.iconData,
+                                                categoryName = item.categoryName,
+                                                percentageFormatted = item.percentageFormatted,
+                                                formattedAmount = item.formattedAmount,
+                                                percentage = item.percentage,
+                                                subcategories = item.subcategories,
+                                                isExpanded = expandedParentIds.contains(itemId),
+                                                barColor = ExpenseColor,
+                                                onToggleExpand = {
+                                                    expandedParentIds = if (expandedParentIds.contains(itemId)) {
+                                                        expandedParentIds - itemId
+                                                    } else {
+                                                        expandedParentIds + itemId
+                                                    }
+                                                }
+                                            )
                                         }
-                                    )
+                                    }
                                 }
                             }
-                        }
-                        2 -> {
-                            // Transactions list
-                            if (uiState.groupedTransactions.isEmpty()) {
-                                item(key = "empty_transactions") {
+                            2 -> {
+                                // Transactions list
+                                if (uiState.groupedTransactions.isEmpty()) {
                                     EmptyStateMessage("No transactions recorded for this period")
+                                } else {
+                                    LazyColumn(
+                                        modifier = Modifier.fillMaxSize(),
+                                        state = transactionsListState,
+                                        contentPadding = PaddingValues(bottom = 24.dp)
+                                    ) {
+                                        monthGroupedTransactionItems(
+                                            monthGroups = uiState.groupedTransactions,
+                                            collapsedGroups = collapsedGroups,
+                                            onToggleGroup = { groupKey ->
+                                                collapsedGroups = if (collapsedGroups.contains(groupKey)) {
+                                                    collapsedGroups - groupKey
+                                                } else {
+                                                    collapsedGroups + groupKey
+                                                }
+                                            },
+                                            onTransactionClick = onTransactionClick,
+                                            decimals = uiState.currencyDecimals,
+                                            currencyCode = uiState.currencyCode,
+                                            formatterConfig = config,
+                                            dateFormat = uiState.formattingSettings.dateFormat
+                                        )
+                                    }
                                 }
-                            } else {
-                                monthGroupedTransactionItems(
-                                    monthGroups = uiState.groupedTransactions,
-                                    collapsedGroups = collapsedGroups,
-                                    onToggleGroup = { groupKey ->
-                                        collapsedGroups = if (collapsedGroups.contains(groupKey)) {
-                                            collapsedGroups - groupKey
-                                        } else {
-                                            collapsedGroups + groupKey
-                                        }
-                                    },
-                                    onTransactionClick = onTransactionClick,
-                                    decimals = uiState.currencyDecimals,
-                                    currencyCode = uiState.currencyCode,
-                                    formatterConfig = config,
-                                    dateFormat = uiState.formattingSettings.dateFormat
-                                )
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PeriodSummaryCard(
+    netTotal: Long,
+    totalIncomes: Long,
+    totalExpenses: Long,
+    currencyCode: String,
+    currencyDecimals: Int,
+    config: MoneyFormatter.Config,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "Net Flow",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+                val netColor = when {
+                    netTotal > 0 -> IncomeColor
+                    netTotal < 0 -> ExpenseColor
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                }
+                val configWithPlusMinus = remember(config) { config.copy(showPlusMinus = true) }
+                Text(
+                    text = MoneyFormatter.format(
+                        netTotal,
+                        currencyCode,
+                        currencyDecimals,
+                        configWithPlusMinus
+                    ),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = netColor
+                )
+            }
+        }
+
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = IncomeColor.copy(alpha = 0.15f),
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.ArrowUpward,
+                            contentDescription = null,
+                            tint = IncomeColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+                Column {
+                    Text(
+                        text = "Incomes",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = MoneyFormatter.format(
+                            totalIncomes,
+                            currencyCode,
+                            currencyDecimals,
+                            config
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = IncomeColor
+                    )
+                }
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = ExpenseColor.copy(alpha = 0.15f),
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.ArrowDownward,
+                            contentDescription = null,
+                            tint = ExpenseColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+                Column {
+                    Text(
+                        text = "Expenses",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = MoneyFormatter.format(
+                            totalExpenses,
+                            currencyCode,
+                            currencyDecimals,
+                            config
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = ExpenseColor
+                    )
                 }
             }
         }
