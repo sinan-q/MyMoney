@@ -27,6 +27,10 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -126,20 +130,7 @@ fun PeriodDetailScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "Period Details",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = if (headerDateString.isNotEmpty()) "${uiState.walletName} • $headerDateString" else uiState.walletName,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
+                title = {},
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
@@ -166,6 +157,9 @@ fun PeriodDetailScreen(
                 ) {
                     // Period Summary Card
                     PeriodSummaryCard(
+                        startDate = uiState.startDate,
+                        endDate = uiState.endDate,
+                        walletName = uiState.walletName,
                         netTotal = uiState.netTotal,
                         totalIncomes = uiState.totalIncomes,
                         totalExpenses = uiState.totalExpenses,
@@ -221,7 +215,7 @@ fun PeriodDetailScreen(
                                             Box(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(vertical = 16.dp),
+                                                    .padding(vertical = 20.dp),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 DonutChart(
@@ -365,6 +359,9 @@ fun PeriodDetailScreen(
 
 @Composable
 private fun PeriodSummaryCard(
+    startDate: String,
+    endDate: String,
+    walletName: String,
     netTotal: Long,
     totalIncomes: Long,
     totalExpenses: Long,
@@ -373,27 +370,52 @@ private fun PeriodSummaryCard(
     config: MoneyFormatter.Config,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+    // Format dates
+    val formattedDateRange = remember(startDate, endDate) {
+        val start = DateUtils.parseDate(startDate)
+        val end = DateUtils.parseDate(endDate)
+        val startFormatted = DateUtils.formatMonthDayYear(start)
+        val endFormatted = DateUtils.formatMonthDayYear(end)
+        if (startFormatted == endFormatted) startFormatted else "$startFormatted - $endFormatted"
+    }
+
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(  bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            Column {
-                Text(
-                    text = "Net Flow",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                )
+            // Middle: Net Flow
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Date Pill
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CalendarToday,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = formattedDateRange,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
                 val netColor = when {
                     netTotal > 0 -> IncomeColor
                     netTotal < 0 -> ExpenseColor
-                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    else -> MaterialTheme.colorScheme.onSurface
                 }
                 val configWithPlusMinus = remember(config) { config.copy(showPlusMinus = true) }
                 Text(
@@ -403,14 +425,33 @@ private fun PeriodSummaryCard(
                         currencyDecimals,
                         configWithPlusMinus
                     ),
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = netColor
                 )
+                // Wallet Pill
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AccountBalanceWallet,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = walletName,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
-        
         }
-    }
 }
 
 private val ProgressClipShape = RoundedCornerShape(3.dp)
