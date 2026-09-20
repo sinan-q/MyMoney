@@ -6,16 +6,19 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.dao.MoneyDao
 import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
+import com.sinxn.mymoney.core.data.local.model.TransactionMonthGroup
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
 import com.sinxn.mymoney.core.data.repository.CategoryRepository
 import com.sinxn.mymoney.core.ui.components.IconData
+import com.sinxn.mymoney.core.ui.components.groupTransactionsIntoMonthGroups
 import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.Constants
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -23,8 +26,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
@@ -51,8 +54,7 @@ data class ParentCategoryBreakdownItem(
     val percentage: Float,
     val percentageFormatted: String,
     val formattedAmount: String,
-    val subcategories: List<SubcategoryBreakdownItem> = emptyList(),
-    val isExpanded: Boolean = false
+    val subcategories: List<SubcategoryBreakdownItem> = emptyList()
 )
 
 @Immutable
@@ -69,6 +71,7 @@ data class PeriodDetailUiState(
     val incomeCategories: List<ParentCategoryBreakdownItem> = emptyList(),
     val expenseCategories: List<ParentCategoryBreakdownItem> = emptyList(),
     val transactions: List<TransactionWithCategory> = emptyList(),
+    val groupedTransactions: List<TransactionMonthGroup> = emptyList(),
     val selectedTab: Int = 0, // 0: Incomes, 1: Expenses, 2: Transactions
     val isLoading: Boolean = true,
     val formattingSettings: FormattingSettings = FormattingSettings()
@@ -88,29 +91,18 @@ class PeriodDetailViewModel @Inject constructor(
     private val _selectedTab = MutableStateFlow(0)
     val selectedTab: StateFlow<Int> = _selectedTab.asStateFlow()
 
-    private val _expandedParentIds = MutableStateFlow<Set<String>>(emptySet())
-
-    private data class CombinedFilterParams(
-        val walletId: String,
-        val formatting: FormattingSettings,
-        val tab: Int,
-        val expandedIds: Set<String>
-    )
-
     @OptIn(ExperimentalCoroutinesApi::class)
-    val uiState: StateFlow<PeriodDetailUiState> = combine(
+    private val rawPeriodDataFlow = combine(
         settingsRepository.currentWalletId,
-        settingsRepository.formattingSettings,
-        _selectedTab,
-        _expandedParentIds
-    ) { walletId, formatting, tab, expandedIds ->
-        CombinedFilterParams(walletId.ifEmpty { Constants.TOTAL_WALLET_ID }, formatting, tab, expandedIds)
-    }.flatMapLatest { params ->
+        settingsRepository.formattingSettings
+    ) { walletId, formatting ->
+        Pair(walletId.ifEmpty { Constants.TOTAL_WALLET_ID }, formatting)
+    }.flatMapLatest { (walletId, formatting) ->
         val maxDate = DateUtils.getSQLDateTimeString(Date())
-        val transactionsFlow = if (params.walletId == Constants.TOTAL_WALLET_ID) {
+        val transactionsFlow = if (walletId == Constants.TOTAL_WALLET_ID) {
             moneyDao.getTransactionsForTotalInPeriod(startDate, endDate, maxDate)
         } else {
-            moneyDao.getTransactionsForWalletInPeriod(params.walletId, startDate, endDate, maxDate)
+            moneyDao.getTransactionsForWalletInPeriod(walletId, startDate, endDate, maxDate)
         }
 
         combine(
@@ -118,13 +110,13 @@ class PeriodDetailViewModel @Inject constructor(
             moneyDao.getWallets(),
             categoryRepository.getCategories()
         ) { txList, wallets, categories ->
-            val currentWallet = if (params.walletId == Constants.TOTAL_WALLET_ID) null else wallets.find { it.id == params.walletId }
-            val currCode = if (params.walletId == Constants.TOTAL_WALLET_ID) {
-                params.formatting.globalCurrency.ifEmpty { "USD" }
+            val currentWallet = if (walletId == Constants.TOTAL_WALLET_ID) null else wallets.find { it.id == walletId }
+            val currCode = if (walletId == Constants.TOTAL_WALLET_ID) {
+                formatting.globalCurrency.ifEmpty { "USD" }
             } else {
-                currentWallet?.currency ?: params.formatting.globalCurrency.ifEmpty { "USD" }
+                currentWallet?.currency ?: formatting.globalCurrency.ifEmpty { "USD" }
             }
-            val walletName = if (params.walletId == Constants.TOTAL_WALLET_ID) "Total" else {
+            val walletName = if (walletId == Constants.TOTAL_WALLET_ID) "Total" else {
                 currentWallet?.name ?: "Wallet"
             }
             val decimals = try {
@@ -145,9 +137,9 @@ class PeriodDetailViewModel @Inject constructor(
             }
 
             val config = MoneyFormatter.Config(
-                showCurrency = params.formatting.showCurrency,
-                groupDigits = params.formatting.groupDigits,
-                roundDecimals = params.formatting.roundDecimals,
+                showCurrency = formatting.showCurrency,
+                groupDigits = formatting.groupDigits,
+                roundDecimals = formatting.roundDecimals,
                 showPlusMinus = false
             )
 
@@ -156,7 +148,6 @@ class PeriodDetailViewModel @Inject constructor(
                 direction = 1,
                 totalSum = incomeSum,
                 categories = categories,
-                expandedIds = params.expandedIds,
                 currencyCode = currCode,
                 decimals = decimals,
                 config = config
@@ -167,10 +158,17 @@ class PeriodDetailViewModel @Inject constructor(
                 direction = 0,
                 totalSum = expenseSum,
                 categories = categories,
-                expandedIds = params.expandedIds,
                 currencyCode = currCode,
                 decimals = decimals,
                 config = config
+            )
+
+            val groupedItems = groupTransactionsIntoMonthGroups(
+                transactions = txList,
+                decimals = decimals,
+                currencyCode = currCode,
+                formatterConfig = config,
+                dateFormat = formatting.dateFormat
             )
 
             PeriodDetailUiState(
@@ -186,11 +184,18 @@ class PeriodDetailViewModel @Inject constructor(
                 incomeCategories = incomeBreakdown,
                 expenseCategories = expenseBreakdown,
                 transactions = txList,
-                selectedTab = params.tab,
+                groupedTransactions = groupedItems,
                 isLoading = false,
-                formattingSettings = params.formatting
+                formattingSettings = formatting
             )
-        }
+        }.flowOn(Dispatchers.Default)
+    }
+
+    val uiState: StateFlow<PeriodDetailUiState> = combine(
+        rawPeriodDataFlow,
+        _selectedTab
+    ) { baseState, tab ->
+        baseState.copy(selectedTab = tab)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -201,22 +206,11 @@ class PeriodDetailViewModel @Inject constructor(
         _selectedTab.value = tabIndex
     }
 
-    fun toggleParentExpanded(parentKey: String) {
-        _expandedParentIds.update { current ->
-            if (parentKey in current) {
-                current - parentKey
-            } else {
-                current + parentKey
-            }
-        }
-    }
-
     private fun buildCategoryBreakdowns(
         txList: List<TransactionWithCategory>,
         direction: Int,
         totalSum: Long,
         categories: List<CategoryEntity>,
-        expandedIds: Set<String>,
         currencyCode: String,
         decimals: Int,
         config: MoneyFormatter.Config
@@ -305,7 +299,6 @@ class PeriodDetailViewModel @Inject constructor(
 
             val sortedSubs = subcategoryItems.sortedByDescending { it.amount }
             val parentPercentage = if (totalSum > 0) (parentTotal.toFloat() / totalSum) * 100f else 0f
-            val parentKey = parentId ?: info.first
 
             ParentCategoryBreakdownItem(
                 categoryId = parentId,
@@ -316,8 +309,7 @@ class PeriodDetailViewModel @Inject constructor(
                 percentage = parentPercentage,
                 percentageFormatted = String.format(Locale.US, "%.1f%%", parentPercentage),
                 formattedAmount = MoneyFormatter.format(parentTotal, currencyCode, decimals, config),
-                subcategories = sortedSubs,
-                isExpanded = parentKey in expandedIds
+                subcategories = sortedSubs
             )
         }.sortedByDescending { it.amount }
     }
