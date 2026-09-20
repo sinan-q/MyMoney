@@ -8,11 +8,9 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,13 +36,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -60,13 +54,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
-import com.sinxn.mymoney.core.ui.components.ListRow
+import com.sinxn.mymoney.core.ui.components.IconData
 import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.ui.components.groupTransactionsIntoMonthGroups
 import com.sinxn.mymoney.core.ui.components.monthGroupedTransactionItems
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.ui.theme.ExpenseColor
 import com.sinxn.mymoney.ui.theme.IncomeColor
+import org.dmfs.jems2.iterable.Expanded
 
     @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -296,11 +291,19 @@ fun PeriodDetailScreen(
                             contentType = { "category_breakdown" }
                         ) { item ->
                             CategoryBreakdownGroup(
-                                item = item,
                                 barColor = Color(0xFF2E7D32),
                                 onToggleExpand = {
-                                    viewModel.toggleParentExpanded(item.categoryId ?: item.categoryName)
-                                }
+                                    viewModel.toggleParentExpanded(
+                                        item.categoryId ?: item.categoryName
+                                    )
+                                },
+                                iconData = item.iconData,
+                                categoryName = item.categoryName,
+                                percentageFormatted = item.percentageFormatted,
+                                formattedAmount = item.formattedAmount,
+                                percentage = item.percentage,
+                                subcategories = item.subcategories,
+                                isExpanded = item.isExpanded
                             )
                         }
                     }
@@ -318,7 +321,13 @@ fun PeriodDetailScreen(
                             contentType = { "category_breakdown" }
                         ) { item ->
                             CategoryBreakdownGroup(
-                                item = item,
+                                iconData = item.iconData,
+                                categoryName = item.categoryName,
+                                percentageFormatted = item.percentageFormatted,
+                                formattedAmount = item.formattedAmount,
+                                percentage = item.percentage,
+                                subcategories = item.subcategories,
+                                isExpanded = item.isExpanded,
                                 barColor = Color(0xFFC62828),
                                 onToggleExpand = {
                                     viewModel.toggleParentExpanded(item.categoryId ?: item.categoryName)
@@ -362,7 +371,13 @@ private val ProgressClipShape = RoundedCornerShape(3.dp)
 
 @Composable
 private fun CategoryBreakdownGroup(
-    item: ParentCategoryBreakdownItem,
+    iconData: IconData,
+    categoryName: String,
+    percentageFormatted: String,
+    formattedAmount: String,
+    percentage: Float,
+    subcategories: List<SubcategoryBreakdownItem> = emptyList(),
+    isExpanded: Boolean,
     barColor: Color,
     onToggleExpand: () -> Unit
 ) {
@@ -373,7 +388,7 @@ private fun CategoryBreakdownGroup(
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            CategoryIcon(iconData = item.iconData)
+            CategoryIcon(iconData = iconData)
             Spacer(modifier = Modifier.width(12.dp))
             Column(
                 modifier = Modifier.weight(1f),
@@ -394,7 +409,7 @@ private fun CategoryBreakdownGroup(
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,) {
                             Row( verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = item.categoryName,
+                                    text = categoryName,
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     maxLines = 1,
@@ -402,14 +417,14 @@ private fun CategoryBreakdownGroup(
                                 )
                                 Spacer(modifier = Modifier.width(5.dp))
                                 Text(
-                                    text = item.percentageFormatted,
+                                    text = percentageFormatted,
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
 
                             Text(
-                                text = item.formattedAmount,
+                                text = formattedAmount,
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = barColor
@@ -417,7 +432,7 @@ private fun CategoryBreakdownGroup(
                         }
 
                         LinearProgressIndicator(
-                            progress = { (item.percentage / 100f).coerceIn(0f, 1f) },
+                            progress = { (percentage / 100f).coerceIn(0f, 1f) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(6.dp)
@@ -433,13 +448,13 @@ private fun CategoryBreakdownGroup(
                         modifier = Modifier.size(28.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        if (item.subcategories.isNotEmpty()) {
+                        if (subcategories.isNotEmpty()) {
                             IconButton(
                                 onClick = onToggleExpand
                             ) {
                                 Icon(
-                                    imageVector = if (item.isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                    contentDescription = if (item.isExpanded) "Collapse" else "Expand",
+                                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = if (isExpanded) "Collapse" else "Expand",
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -452,7 +467,7 @@ private fun CategoryBreakdownGroup(
         }
 
         AnimatedVisibility(
-            visible = item.isExpanded && item.subcategories.isNotEmpty(),
+            visible = isExpanded && subcategories.isNotEmpty(),
             enter = expandVertically() + fadeIn(),
             exit = shrinkVertically() + fadeOut()
         ) {
@@ -461,83 +476,23 @@ private fun CategoryBreakdownGroup(
                     .fillMaxWidth()
                     .padding(bottom = 6.dp)
             ) {
-                item.subcategories.forEach { subItem ->
-                    SubcategoryBreakdownRow(
-                        item = subItem,
-                        barColor = barColor
-                    )
+                subcategories.forEach { subItem ->
+                    Column(Modifier.padding(start = 12.dp)) {
+                        CategoryBreakdownGroup(
+                            iconData = subItem.iconData,
+                            categoryName = subItem.categoryName,
+                            percentageFormatted = subItem.percentageFormatted,
+                            formattedAmount = subItem.formattedAmount,
+                            percentage = subItem.percentage,
+                            isExpanded = false,
+                            barColor = barColor,
+                        ) { }
+                    }
                 }
             }
         }
 
         HorizontalDivider(thickness = 0.3.dp)
-    }
-}
-
-@Composable
-private fun SubcategoryBreakdownRow(
-    item: SubcategoryBreakdownItem,
-    barColor: Color
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp, horizontal = 16.dp)
-            .padding(start = 10.dp, end = 28.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        CategoryIcon(
-            iconData = item.iconData,
-            size = 32.dp
-        )
-        Spacer(modifier = Modifier.width(10.dp))
-        Column(
-            verticalArrangement = Arrangement.Bottom
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 3.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = item.categoryName,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = item.percentageFormatted,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                }
-                Text(
-                    text = item.formattedAmount,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = barColor
-                )
-
-            }
-            LinearProgressIndicator(
-                progress = { (item.percentage / 100f).coerceIn(0f, 1f) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(4.dp)
-                    .clip(ProgressClipShape),
-                color = barColor.copy(alpha = 0.8f),
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-
-        }
     }
 }
 
