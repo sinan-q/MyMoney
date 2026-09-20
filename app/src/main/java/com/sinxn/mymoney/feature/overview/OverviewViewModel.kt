@@ -225,7 +225,7 @@ class OverviewViewModel @Inject constructor(
                 formattedNetAmount = formattedNetAmount,
                 netAmountColorType = netColorType
             )
-        }
+        }.reversed()
     }
 
     private suspend fun resolveWalletInfo(
