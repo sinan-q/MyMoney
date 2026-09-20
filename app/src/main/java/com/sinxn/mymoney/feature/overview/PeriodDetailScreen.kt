@@ -1,7 +1,19 @@
     package com.sinxn.mymoney.feature.overview
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -10,10 +22,27 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Category
-import androidx.compose.material.icons.filled.ReceiptLong
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,14 +50,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
-import com.sinxn.mymoney.core.ui.components.TransactionItem
+import com.sinxn.mymoney.core.ui.components.ListRow
+import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.ui.components.groupTransactionsIntoMonthGroups
 import com.sinxn.mymoney.core.ui.components.monthGroupedTransactionItems
 import com.sinxn.mymoney.core.util.MoneyFormatter
+import com.sinxn.mymoney.ui.theme.ExpenseColor
+import com.sinxn.mymoney.ui.theme.IncomeColor
 
-@OptIn(ExperimentalMaterial3Api::class)
+    @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PeriodDetailScreen(
     onNavigateBack: () -> Unit,
@@ -64,6 +96,7 @@ fun PeriodDetailScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0,0,0,0),
         topBar = {
             TopAppBar(
                 title = {
@@ -95,8 +128,6 @@ fun PeriodDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Period Summary Card
             item {
@@ -104,7 +135,7 @@ fun PeriodDetailScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        containerColor = Color.Transparent
                     )
                 ) {
                     Column(
@@ -125,8 +156,8 @@ fun PeriodDetailScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                 )
                                 val netColor = when {
-                                    uiState.netTotal > 0 -> Color(0xFF2E7D32)
-                                    uiState.netTotal < 0 -> Color(0xFFC62828)
+                                    uiState.netTotal > 0 -> IncomeColor
+                                    uiState.netTotal < 0 -> ExpenseColor
                                     else -> MaterialTheme.colorScheme.onSurfaceVariant
                                 }
                                 Text(
@@ -157,14 +188,14 @@ fun PeriodDetailScreen(
                             ) {
                                 Surface(
                                     shape = CircleShape,
-                                    color = Color(0xFF2E7D32).copy(alpha = 0.15f),
+                                    color = IncomeColor.copy(alpha = 0.15f),
                                     modifier = Modifier.size(32.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             Icons.Default.ArrowUpward,
                                             contentDescription = null,
-                                            tint = Color(0xFF2E7D32),
+                                            tint = IncomeColor,
                                             modifier = Modifier.size(16.dp)
                                         )
                                     }
@@ -184,7 +215,8 @@ fun PeriodDetailScreen(
                                         ),
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = Color(0xFF2E7D32)
+                                        color = IncomeColor
+
                                     )
                                 }
                             }
@@ -195,14 +227,14 @@ fun PeriodDetailScreen(
                             ) {
                                 Surface(
                                     shape = CircleShape,
-                                    color = Color(0xFFC62828).copy(alpha = 0.15f),
+                                    color = ExpenseColor.copy(alpha = 0.15f),
                                     modifier = Modifier.size(32.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             Icons.Default.ArrowDownward,
                                             contentDescription = null,
-                                            tint = Color(0xFFC62828),
+                                            tint = ExpenseColor,
                                             modifier = Modifier.size(16.dp)
                                         )
                                     }
@@ -222,7 +254,7 @@ fun PeriodDetailScreen(
                                         ),
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = Color(0xFFC62828)
+                                        color = ExpenseColor
                                     )
                                 }
                             }
@@ -233,20 +265,11 @@ fun PeriodDetailScreen(
 
             // Tabs: Incomes / Expenses / Transactions
             item {
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    val tabs = listOf("Incomes", "Expenses", "Transactions")
-                    tabs.forEachIndexed { index, label ->
-                        SegmentedButton(
-                            selected = uiState.selectedTab == index,
-                            onClick = { viewModel.selectTab(index) },
-                            shape = SegmentedButtonDefaults.itemShape(
-                                index = index,
-                                count = tabs.size
-                            )
-                        ) {
-                            Text(text = label, style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
+                TabPill(
+                    tabs = listOf("Incomes", "Expenses", "Transactions").map { it to MaterialTheme.colorScheme.primary },
+                    activeTab = uiState.selectedTab,
+                ) {
+                    viewModel.selectTab(it)
                 }
             }
 
@@ -328,47 +351,37 @@ private fun CategoryBreakdownRow(
     item: CategoryBreakdownItem,
     barColor: Color
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = BreakdownCardShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
+    ListRow(onClick = {}) {
+        CategoryIcon(iconData = item.iconData)
+        Spacer(modifier = Modifier.width(8.dp))
+        Column(verticalArrangement = Arrangement.Bottom) {
+            Row (modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                CategoryIcon(iconData = item.iconData)
+                horizontalArrangement = Arrangement.SpaceBetween
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = item.categoryName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+            ) {
+                Text(
+                    text = item.categoryName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
                     Text(
                         text = item.percentageFormatted,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Text(
+                        text = item.formattedAmount,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = barColor
+                    )
                 }
-
-                Text(
-                    text = item.formattedAmount,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = barColor
-                )
             }
-
             LinearProgressIndicator(
                 progress = { (item.percentage / 100f).coerceIn(0f, 1f) },
                 modifier = Modifier
@@ -379,7 +392,9 @@ private fun CategoryBreakdownRow(
                 trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
         }
+
     }
+    HorizontalDivider(thickness = 0.3.dp)
 }
 
 @Composable

@@ -11,7 +11,7 @@ val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
 // Financial direction colors
-val IncomeColor = Color(0xFF10B981) // Emerald Green
-val ExpenseColor = Color(0xFFE11D48) // Rose Red
+val IncomeColor = Color(0xFF2E7D32)
+val ExpenseColor = Color(0xFFC62828)
 val TransferColor = Color(0xFF0284C7) // Sky Blue
 val CategoryColor = Color(0xFF6366F1) // Indigo

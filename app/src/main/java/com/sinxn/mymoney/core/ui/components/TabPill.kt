@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -28,12 +29,13 @@ import com.sinxn.mymoney.ui.theme.IncomeColor
 fun TabPill(
     tabs: List<Pair<String, Color>> = listOf("Income" to IncomeColor, "Expense" to ExpenseColor),
     activeTab: Int,
-    onTabChange: (Int) -> Unit
+    paddingValues: PaddingValues = PaddingValues(vertical = 4.dp, horizontal = 16.dp),
+    onTabChange: (Int) -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp, horizontal = 16.dp)
+            .padding(paddingValues)
             .clip(RoundedCornerShape(16.dp))
             .background(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             .padding(4.dp),

@@ -2,6 +2,7 @@ package com.sinxn.mymoney.feature.overview
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
@@ -116,17 +117,27 @@ fun OverviewScreen(
                             overviewData = overviewData,
                             currencyCode = uiState.currencyCode
                         )
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
 
                     // Period List — matching legacy OverviewItemAdapter
                     item {
-                        Text(
-                            text = "Period Breakdown",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
+                        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Period Breakdown",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground,
+                            )
+                            Text(
+                                text = "${uiState.periodsUi.size} " + "periods",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+
                     }
 
                     items(
@@ -178,7 +189,9 @@ private fun ChartPager(
 ) {
     val pagerState = rememberPagerState(pageCount = { 2 })
 
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 16.dp)) {
         // Tab indicators
         Row(
             modifier = Modifier
@@ -312,8 +325,6 @@ private fun LineChartView(dataPoints: List<ChartDataPoint>) {
     )
 }
 
-private val PeriodCardShape = RoundedCornerShape(14.dp)
-
 @Composable
 private fun PeriodRow(
     item: OverviewPeriodUiModel,
@@ -333,7 +344,7 @@ private fun PeriodRow(
             Column() {
                 Text(
                     text = item.dateRangeText,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
                 )
