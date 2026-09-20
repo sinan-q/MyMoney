@@ -5,13 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,10 +21,8 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.compose.cartesian.data.columnModel
-import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
 import com.patrykandpatrick.vico.compose.cartesian.layer.ColumnCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
@@ -110,10 +102,10 @@ fun OverviewScreen(
                         )
                     }
 
-                    // Chart Section — Bar + Line in pager
+                    // Chart Section — Bar chart
 
                     item {
-                        ChartPager(
+                        OverviewBarChart(
                             overviewData = overviewData,
                             currencyCode = uiState.currencyCode
                         )
@@ -183,82 +175,31 @@ fun OverviewScreen(
 }
 
 @Composable
-private fun ChartPager(
+private fun OverviewBarChart(
     overviewData: OverviewData,
     currencyCode: String
 ) {
-    val pagerState = rememberPagerState(pageCount = { 2 })
+    val chartValues = overviewData.chartDataByCurrency[currencyCode]
+        ?: overviewData.chartDataByCurrency.values.firstOrNull()
 
-    Column(modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 16.dp)) {
-        // Tab indicators
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 4.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                Icons.Default.BarChart,
-                contentDescription = null,
-                tint = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(220.dp)
+            .padding(horizontal = 16.dp)
+    ) {
+        if (!chartValues.isNullOrEmpty()) {
+            BarChartView(chartValues)
+        } else {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
             ) {
-                repeat(2) { index ->
-                    Box(
-                        modifier = Modifier
-                            .size(if (pagerState.currentPage == index) 8.dp else 6.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (pagerState.currentPage == index) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                            )
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Icon(
-                Icons.Default.ShowChart,
-                contentDescription = null,
-                tint = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                modifier = Modifier.size(20.dp)
-            )
-        }
-
-        // Chart pages
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(220.dp)
-        ) { page ->
-            val chartValues = overviewData.chartDataByCurrency[currencyCode]
-                ?: overviewData.chartDataByCurrency.values.firstOrNull()
-
-            if (!chartValues.isNullOrEmpty()) {
-                when (page) {
-                    0 -> BarChartView(chartValues)
-                    1 -> LineChartView(chartValues)
-                }
-            } else {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No chart data",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    text = "No chart data",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -297,33 +238,6 @@ private fun BarChartView(dataPoints: List<ChartDataPoint>) {
     )
 }
 
-@Composable
-private fun LineChartView(dataPoints: List<ChartDataPoint>) {
-    val modelProducer = remember { CartesianChartModelProducer() }
-    val primaryColor = MaterialTheme.colorScheme.primary
-
-    LaunchedEffect(dataPoints) {
-        modelProducer.runTransaction {
-            lineModel {
-                series(dataPoints.map { it.value })
-            }
-        }
-    }
-
-    CartesianChartHost(
-        chart = rememberCartesianChart(
-            rememberLineCartesianLayer(),
-            startAxis = VerticalAxis.rememberStart(),
-            bottomAxis = HorizontalAxis.rememberBottom(
-                valueFormatter = { value, x, _ ->
-                    dataPoints.getOrNull(x.toInt())?.label ?: ""
-                }
-            )
-        ),
-        modelProducer = modelProducer,
-        modifier = Modifier.fillMaxSize()
-    )
-}
 
 @Composable
 private fun PeriodRow(
