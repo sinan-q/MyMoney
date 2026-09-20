@@ -54,6 +54,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
+import com.sinxn.mymoney.core.ui.components.DonutChart
+import com.sinxn.mymoney.core.ui.components.DonutSlice
 import com.sinxn.mymoney.core.ui.components.IconData
 import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.ui.components.monthGroupedTransactionItems
@@ -197,11 +199,40 @@ fun PeriodDetailScreen(
                                 if (uiState.incomeCategories.isEmpty()) {
                                     EmptyStateMessage("No income categories recorded for this period")
                                 } else {
+                                    val incomeSlices = remember(uiState.incomeCategories) {
+                                        uiState.incomeCategories.map { cat ->
+                                            DonutSlice(
+                                                label = cat.categoryName,
+                                                value = cat.amount.toFloat(),
+                                                color = cat.iconData.color,
+                                                formattedValue = cat.formattedAmount
+                                            )
+                                        }
+                                    }
+                                    val incomeTotalFormatted = remember(uiState.totalIncomes, uiState.currencyCode, uiState.currencyDecimals, config) {
+                                        MoneyFormatter.format(uiState.totalIncomes, uiState.currencyCode, uiState.currencyDecimals, config)
+                                    }
                                     LazyColumn(
                                         modifier = Modifier.fillMaxSize(),
                                         state = incomeListState,
                                         contentPadding = PaddingValues(bottom = 24.dp)
                                     ) {
+                                        item(key = "income_donut", contentType = "donut_chart") {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(vertical = 16.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                DonutChart(
+                                                    slices = incomeSlices,
+                                                    centerTitle = "Total",
+                                                    centerSubtitle = incomeTotalFormatted,
+                                                    chartSize = 200.dp,
+                                                    strokeWidth = 32.dp
+                                                )
+                                            }
+                                        }
                                         items(
                                             items = uiState.incomeCategories,
                                             key = { "income_${it.categoryId ?: it.categoryName}" },
@@ -234,11 +265,40 @@ fun PeriodDetailScreen(
                                 if (uiState.expenseCategories.isEmpty()) {
                                     EmptyStateMessage("No expense categories recorded for this period")
                                 } else {
+                                    val expenseSlices = remember(uiState.expenseCategories) {
+                                        uiState.expenseCategories.map { cat ->
+                                            DonutSlice(
+                                                label = cat.categoryName,
+                                                value = cat.amount.toFloat(),
+                                                color = cat.iconData.color,
+                                                formattedValue = cat.formattedAmount
+                                            )
+                                        }
+                                    }
+                                    val expenseTotalFormatted = remember(uiState.totalExpenses, uiState.currencyCode, uiState.currencyDecimals, config) {
+                                        MoneyFormatter.format(uiState.totalExpenses, uiState.currencyCode, uiState.currencyDecimals, config)
+                                    }
                                     LazyColumn(
                                         modifier = Modifier.fillMaxSize(),
                                         state = expenseListState,
                                         contentPadding = PaddingValues(bottom = 24.dp)
                                     ) {
+                                        item(key = "expense_donut", contentType = "donut_chart") {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(vertical = 16.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                DonutChart(
+                                                    slices = expenseSlices,
+                                                    centerTitle = "Total",
+                                                    centerSubtitle = expenseTotalFormatted,
+                                                    chartSize = 200.dp,
+                                                    strokeWidth = 32.dp
+                                                )
+                                            }
+                                        }
                                         items(
                                             items = uiState.expenseCategories,
                                             key = { "expense_${it.categoryId ?: it.categoryName}" },
@@ -348,91 +408,7 @@ private fun PeriodSummaryCard(
                     color = netColor
                 )
             }
-        }
-
-        HorizontalDivider(
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = IncomeColor.copy(alpha = 0.15f),
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Default.ArrowUpward,
-                            contentDescription = null,
-                            tint = IncomeColor,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-                Column {
-                    Text(
-                        text = "Incomes",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = MoneyFormatter.format(
-                            totalIncomes,
-                            currencyCode,
-                            currencyDecimals,
-                            config
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = IncomeColor
-                    )
-                }
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = ExpenseColor.copy(alpha = 0.15f),
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Default.ArrowDownward,
-                            contentDescription = null,
-                            tint = ExpenseColor,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-                Column {
-                    Text(
-                        text = "Expenses",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = MoneyFormatter.format(
-                            totalExpenses,
-                            currencyCode,
-                            currencyDecimals,
-                            config
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = ExpenseColor
-                    )
-                }
-            }
+        
         }
     }
 }
