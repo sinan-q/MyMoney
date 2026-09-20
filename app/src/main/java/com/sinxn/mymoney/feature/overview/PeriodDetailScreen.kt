@@ -1,5 +1,10 @@
     package com.sinxn.mymoney.feature.overview
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +27,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -287,9 +294,12 @@ fun PeriodDetailScreen(
                             key = { it.categoryId ?: it.categoryName },
                             contentType = { "category_breakdown" }
                         ) { item ->
-                            CategoryBreakdownRow(
+                            CategoryBreakdownGroup(
                                 item = item,
-                                barColor = Color(0xFF2E7D32)
+                                barColor = Color(0xFF2E7D32),
+                                onToggleExpand = {
+                                    viewModel.toggleParentExpanded(item.categoryId ?: item.categoryName)
+                                }
                             )
                         }
                     }
@@ -306,9 +316,12 @@ fun PeriodDetailScreen(
                             key = { it.categoryId ?: it.categoryName },
                             contentType = { "category_breakdown" }
                         ) { item ->
-                            CategoryBreakdownRow(
+                            CategoryBreakdownGroup(
                                 item = item,
-                                barColor = Color(0xFFC62828)
+                                barColor = Color(0xFFC62828),
+                                onToggleExpand = {
+                                    viewModel.toggleParentExpanded(item.categoryId ?: item.categoryName)
+                                }
                             )
                         }
                     }
@@ -347,28 +360,159 @@ private val BreakdownCardShape = RoundedCornerShape(14.dp)
 private val ProgressClipShape = RoundedCornerShape(3.dp)
 
 @Composable
-private fun CategoryBreakdownRow(
-    item: CategoryBreakdownItem,
+private fun CategoryBreakdownGroup(
+    item: ParentCategoryBreakdownItem,
+    barColor: Color,
+    onToggleExpand: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            CategoryIcon(iconData = item.iconData)
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Bottom
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .padding(end = 8.dp)
+                    ) {
+                        Text(
+                            text = item.categoryName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (item.subcategories.isNotEmpty()) {
+                            Text(
+                                text = "${item.subcategories.size} subcategor${if (item.subcategories.size == 1) "y" else "ies"}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = item.percentageFormatted,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = item.formattedAmount,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = barColor
+                        )
+                        if (item.subcategories.isNotEmpty()) {
+                            IconButton(
+                                onClick = onToggleExpand,
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (item.isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = if (item.isExpanded) "Collapse" else "Expand",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+                LinearProgressIndicator(
+                    progress = { (item.percentage / 100f).coerceIn(0f, 1f) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(ProgressClipShape),
+                    color = barColor,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            }
+        }
+
+        AnimatedVisibility(
+            visible = item.isExpanded && item.subcategories.isNotEmpty(),
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 32.dp, end = 16.dp, bottom = 6.dp)
+            ) {
+                item.subcategories.forEach { subItem ->
+                    SubcategoryBreakdownRow(
+                        item = subItem,
+                        barColor = barColor
+                    )
+                }
+            }
+        }
+
+        HorizontalDivider(thickness = 0.3.dp)
+    }
+}
+
+@Composable
+private fun SubcategoryBreakdownRow(
+    item: SubcategoryBreakdownItem,
     barColor: Color
 ) {
-    ListRow(onClick = {}) {
-        CategoryIcon(iconData = item.iconData)
-        Spacer(modifier = Modifier.width(8.dp))
-        Column(verticalArrangement = Arrangement.Bottom) {
-            Row (modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        CategoryIcon(
+            iconData = item.iconData,
+            size = 32.dp
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.Bottom
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 3.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
-
             ) {
                 Text(
                     text = item.categoryName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .padding(end = 8.dp)
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text = item.percentageFormatted,
                         style = MaterialTheme.typography.labelSmall,
@@ -376,8 +520,8 @@ private fun CategoryBreakdownRow(
                     )
                     Text(
                         text = item.formattedAmount,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
                         color = barColor
                     )
                 }
@@ -386,15 +530,13 @@ private fun CategoryBreakdownRow(
                 progress = { (item.percentage / 100f).coerceIn(0f, 1f) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(6.dp)
+                    .height(4.dp)
                     .clip(ProgressClipShape),
-                color = barColor,
+                color = barColor.copy(alpha = 0.8f),
                 trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
         }
-
     }
-    HorizontalDivider(thickness = 0.3.dp)
 }
 
 @Composable
