@@ -257,15 +257,15 @@ fun OverviewSettingsSheet(
     // ── Date Pickers ──
     if (showStartDatePicker) {
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = startDate.time
+            initialSelectedDateMillis = DateUtils.dateToDatePickerMillis(startDate)
         )
         DatePickerDialog(
             onDismissRequest = { showStartDatePicker = false },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        datePickerState.selectedDateMillis?.let {
-                            startDate = Date(it)
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            startDate = DateUtils.datePickerMillisToDate(millis, endOfDay = false)
                         }
                         showStartDatePicker = false
                     }
@@ -285,15 +285,15 @@ fun OverviewSettingsSheet(
 
     if (showEndDatePicker) {
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = endDate.time
+            initialSelectedDateMillis = DateUtils.dateToDatePickerMillis(endDate)
         )
         DatePickerDialog(
             onDismissRequest = { showEndDatePicker = false },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        datePickerState.selectedDateMillis?.let {
-                            endDate = Date(it)
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            endDate = DateUtils.datePickerMillisToDate(millis, endOfDay = true)
                         }
                         showEndDatePicker = false
                     }

@@ -140,8 +140,12 @@ class OverviewRepository @Inject constructor(
         walletId: String,
         settings: OverviewSettings
     ): OverviewData {
-        val startDateStr = DateUtils.getSQLDateTimeString(setTimeStart(settings.startDate))
-        val endDateStr = DateUtils.getSQLDateTimeString(setTimeEnd(settings.endDate))
+        val normalizedSettings = settings.copy(
+            startDate = setTimeStart(settings.startDate),
+            endDate = setTimeEnd(settings.endDate)
+        )
+        val startDateStr = DateUtils.getSQLDateTimeString(normalizedSettings.startDate)
+        val endDateStr = DateUtils.getSQLDateTimeString(normalizedSettings.endDate)
         val maxDateStr = DateUtils.getSQLDateTimeString(Date())
 
         // Fetch transactions
@@ -152,7 +156,7 @@ class OverviewRepository @Inject constructor(
         }
 
         // Apply direction/category filters (matching legacy lines 102-119)
-        val filtered = filterTransactions(transactions, settings)
+        val filtered = filterTransactions(transactions, normalizedSettings)
 
         // Build periods (matching legacy getNextPeriod / isAnotherPeriodNeeded)
         val formattingSettings = settingsRepository.formattingSettings.first()
@@ -164,8 +168,8 @@ class OverviewRepository @Inject constructor(
         var transactionIndex = 0
         var currentPeriod: PeriodMoney? = null
 
-        while (isAnotherPeriodNeeded(currentPeriod, settings.endDate)) {
-            currentPeriod = getNextPeriod(currentPeriod, settings, formattingSettings)
+        while (isAnotherPeriodNeeded(currentPeriod, normalizedSettings.endDate)) {
+            currentPeriod = getNextPeriod(currentPeriod, normalizedSettings, formattingSettings)
 
             while (transactionIndex < filtered.size) {
                 val t = filtered[transactionIndex]

@@ -66,6 +66,42 @@ object DateUtils {
         return monthDayYearFormat.get()?.format(date) ?: SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(date)
     }
 
+    fun datePickerMillisToDate(millis: Long, endOfDay: Boolean = false): Date {
+        val utcCal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+            timeInMillis = millis
+        }
+        val localCal = Calendar.getInstance().apply {
+            set(Calendar.YEAR, utcCal.get(Calendar.YEAR))
+            set(Calendar.MONTH, utcCal.get(Calendar.MONTH))
+            set(Calendar.DAY_OF_MONTH, utcCal.get(Calendar.DAY_OF_MONTH))
+            if (endOfDay) {
+                set(Calendar.HOUR_OF_DAY, 23)
+                set(Calendar.MINUTE, 59)
+                set(Calendar.SECOND, 59)
+                set(Calendar.MILLISECOND, 999)
+            } else {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+        }
+        return localCal.time
+    }
+
+    fun dateToDatePickerMillis(date: Date): Long {
+        val localCal = Calendar.getInstance().apply { time = date }
+        val utcCal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+            clear()
+            set(
+                localCal.get(Calendar.YEAR),
+                localCal.get(Calendar.MONTH),
+                localCal.get(Calendar.DAY_OF_MONTH)
+            )
+        }
+        return utcCal.timeInMillis
+    }
+
     private fun fallbackParse(dateString: String): Date {
         try {
             sqlDateFormat.get()?.parse(dateString)?.let { return it }
