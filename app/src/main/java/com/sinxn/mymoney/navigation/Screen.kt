@@ -263,12 +263,15 @@ sealed class Screen(
                 cleanRoute == "wallets" -> ScreenMetadata(Wallets.sidebarItemId, Wallets.title, isTopLevel = true)
                 cleanRoute.startsWith("wallet_info") -> ScreenMetadata(Wallets.sidebarItemId, WalletInfo.title, isTopLevel = false)
                 cleanRoute.startsWith("wallet_edit") -> ScreenMetadata(Wallets.sidebarItemId, WalletAddEdit.title, isTopLevel = false)
-                cleanRoute == "categories" -> ScreenMetadata(Categories.sidebarItemId, Categories.title, isTopLevel = true)
+                cleanRoute == "categories" || cleanRoute.startsWith("category_") ->
+                    ScreenMetadata(Categories.sidebarItemId, Categories.title, isTopLevel = cleanRoute == "categories")
                 cleanRoute == "events" || cleanRoute.startsWith("event_") -> ScreenMetadata(Events.sidebarItemId, Events.title, isTopLevel = cleanRoute == "events")
                 cleanRoute == "places" || cleanRoute.startsWith("place_") -> ScreenMetadata(Places.sidebarItemId, Places.title, isTopLevel = cleanRoute == "places")
                 cleanRoute == "people" || cleanRoute.startsWith("person_") -> ScreenMetadata(People.sidebarItemId, People.title, isTopLevel = cleanRoute == "people")
                 cleanRoute == "templates" || cleanRoute.startsWith("template_") -> ScreenMetadata(Templates.sidebarItemId, Templates.title, isTopLevel = cleanRoute == "templates")
-                cleanRoute == "overview" || cleanRoute == "recap" -> ScreenMetadata(Overview.sidebarItemId, Overview.title, isTopLevel = true)
+                cleanRoute == "overview" -> ScreenMetadata(Overview.sidebarItemId, Overview.title, isTopLevel = true)
+                cleanRoute == "recap" -> ScreenMetadata(Overview.sidebarItemId, Recap.title, isTopLevel = false)
+                cleanRoute.startsWith("period_") -> ScreenMetadata(Overview.sidebarItemId, PeriodDetail.title, isTopLevel = false)
                 cleanRoute == "about" -> ScreenMetadata(About.sidebarItemId, About.title, isTopLevel = true)
                 cleanRoute == "support_developer" -> ScreenMetadata(SupportDeveloper.sidebarItemId, SupportDeveloper.title, isTopLevel = true)
                 cleanRoute == "menu" -> ScreenMetadata(Menu.sidebarItemId, Menu.title, isTopLevel = true)
@@ -276,7 +279,7 @@ sealed class Screen(
 
                 else -> {
                     val match = ALL.find { screen ->
-                        val base = screen.routePattern.substringBefore("/{")
+                        val base = screen.routePattern.substringBefore("?").substringBefore("/{")
                         cleanRoute == screen.routePattern || cleanRoute == base || cleanRoute.startsWith("$base/")
                     }
                     if (match != null) {
