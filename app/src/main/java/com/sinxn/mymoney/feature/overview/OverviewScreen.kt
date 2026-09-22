@@ -82,11 +82,11 @@ fun OverviewScreen(
                 }
             } else {
                 val overviewData = uiState.overviewData
-                if (overviewData != null && overviewData.periods.isNotEmpty()) {
+                if (overviewData != null) {
                     item {
                         OverviewHeader(
                             walletName = uiState.walletName,
-                            overviewData = overviewData,
+                            totalNetIncomes = overviewData.totalNetIncomes,
                             settings = uiState.settings,
                             currencyCode = uiState.currencyCode,
                             decimals = uiState.currencyDecimals,
@@ -132,8 +132,9 @@ fun OverviewScreen(
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onBackground,
                             )
+
                             Text(
-                                text = "${uiState.periodsUi.size} " + "periods",
+                                text = "${uiState.overviewData?.transactionCount} txns • ${uiState.periodsUi.size} " + "periods",
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }

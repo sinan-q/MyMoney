@@ -1,6 +1,5 @@
 package com.sinxn.mymoney.feature.overview.component
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,7 +10,6 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapVert
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -21,16 +19,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.util.fastCbrt
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CategoryIconExtended
-import com.sinxn.mymoney.core.ui.components.EditAmountHeader
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.feature.overview.CashFlowFilter
-import com.sinxn.mymoney.feature.overview.GroupType
-import com.sinxn.mymoney.feature.overview.OverviewData
+import com.sinxn.mymoney.feature.overview.MultiCurrencyMoney
 import com.sinxn.mymoney.feature.overview.OverviewSettings
 import com.sinxn.mymoney.feature.overview.OverviewType
 import com.sinxn.mymoney.ui.theme.ExpenseColor
@@ -39,7 +34,7 @@ import com.sinxn.mymoney.ui.theme.IncomeColor
 @Composable
 fun OverviewHeader(
     walletName: String,
-    overviewData: OverviewData,
+    totalNetIncomes: MultiCurrencyMoney,
     settings: OverviewSettings?,
     formattingSettings: FormattingSettings,
     currencyCode: String,
@@ -56,25 +51,14 @@ fun OverviewHeader(
             showPlusMinus = true
         )
     }
-    val configNoSign = remember(configWithSign) {
-        configWithSign.copy(showPlusMinus = false)
-    }
 
-    val netAmount = overviewData.totalNetIncomes.getMoney(currencyCode)
-    val txCount = overviewData.transactionCount
+    val netAmount = totalNetIncomes.getMoney(currencyCode)
     val formattedDateRange = remember(settings?.startDate, settings?.endDate) {
         settings?.let {
             val startFormatted = DateUtils.formatMonthDayYear(settings.startDate)
             val endFormatted = DateUtils.formatMonthDayYear(settings.endDate)
             if (startFormatted == endFormatted) startFormatted else "$startFormatted - $endFormatted"
         }
-    }
-    val periodUnit = when (settings?.groupType) {
-        GroupType.DAILY -> "day"
-        GroupType.WEEKLY -> "week"
-        GroupType.MONTHLY -> "month"
-        GroupType.YEARLY -> "year"
-        null -> "period"
     }
 
     val isPositive = netAmount > 0
@@ -171,7 +155,6 @@ fun OverviewHeader(
 
 
                 }
-                
                 Text(
                     text = MoneyFormatter.format(netAmount, currencyCode, decimals, configWithSign),
                     style = MaterialTheme.typography.headlineLarge,
@@ -212,7 +195,7 @@ fun OverviewHeader(
                                 )
                             }
                         }
-
+                        Spacer(modifier.width(4.dp))
                         Surface(
                             shape = RoundedCornerShape(8.dp),
                             color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
@@ -239,21 +222,6 @@ fun OverviewHeader(
 
                                     )
                             }
-                        }
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant
-                        ) {
-                            Text(
-                                text = "$txCount Txns",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(
-                                    horizontal = 8.dp,
-                                    vertical = 3.dp
-                                )
-                            )
                         }
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {

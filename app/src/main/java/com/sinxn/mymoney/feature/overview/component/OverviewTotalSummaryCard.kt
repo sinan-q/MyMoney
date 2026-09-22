@@ -183,14 +183,14 @@ private fun NetCashFlowLayout(
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         StatCard(
-            label = "Total Inflow",
-            value = "↑ " + MoneyFormatter.format(incomeAmount, currencyCode, decimals, configNoSign),
+            label = "Total Income",
+            value = MoneyFormatter.format(incomeAmount, currencyCode, decimals, configNoSign),
             valueColor = IncomeColor,
             modifier = Modifier.weight(1f)
         )
         StatCard(
-            label = "Total Outflow",
-            value = "↓ " + MoneyFormatter.format(expenseAmount, currencyCode, decimals, configNoSign),
+            label = "Total Expense",
+            value = MoneyFormatter.format(expenseAmount, currencyCode, decimals, configNoSign),
             valueColor = ExpenseColor,
             modifier = Modifier.weight(1f)
         )
@@ -199,21 +199,14 @@ private fun NetCashFlowLayout(
     // Savings Rate Indicator (when income > 0)
     if (incomeAmount > 0) {
         Spacer(modifier = Modifier.height(12.dp))
-        val savingsRate = ((incomeAmount - expenseAmount).toFloat() / incomeAmount) * 100f
-        val spentRatio = (expenseAmount.toFloat() / incomeAmount).coerceIn(0f, 1f)
+        val spentRatio = (expenseAmount.toFloat() / incomeAmount)
 
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = if (savingsRate >= 0) "${savingsRate.roundToInt()}% Saved" else "${(-savingsRate).roundToInt()}% Deficit",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = if (savingsRate >= 0) IncomeColor else ExpenseColor
-                )
                 Text(
                     text = "${(spentRatio * 100).roundToInt()}% Spent",
                     style = MaterialTheme.typography.labelSmall,

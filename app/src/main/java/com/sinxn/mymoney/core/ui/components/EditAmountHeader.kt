@@ -12,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -23,6 +25,7 @@ fun EditAmountHeader(
     hasOperatorInAmount: Boolean,
     accentColor: Color,
     isNumpadVisible: Boolean,
+    textSize: TextUnit = 40.sp,
     onHeaderClick: () -> Unit
 ) {
     Column(
@@ -56,14 +59,14 @@ fun EditAmountHeader(
         ) {
             Text(
                 text = currencySymbol,
-                fontSize = 38.sp,
+                fontSize = textSize,
                 fontWeight = FontWeight.Bold,
                 color = accentColor
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = displayAmount,
-                fontSize = 60.sp,
+                fontSize = textSize * 1.5,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 letterSpacing = (-1.5).sp
