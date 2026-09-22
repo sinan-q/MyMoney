@@ -86,8 +86,11 @@ fun OverviewScreen(
                     item {
                         OverviewHeader(
                             walletName = uiState.walletName,
-                            txCount = overviewData.transactionCount,
+                            overviewData = overviewData,
                             settings = uiState.settings,
+                            currencyCode = uiState.currencyCode,
+                            decimals = uiState.currencyDecimals,
+                            formattingSettings = uiState.formattingSettings,
                             selectedCategoryName = uiState.selectedCategoryName,
                             onConfigureClick = { viewModel.toggleSettingsSheet() }
                         )

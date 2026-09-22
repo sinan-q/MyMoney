@@ -145,15 +145,6 @@ private fun Header(
     amountColour: Color
 ) {
 
-    // Hero Net Amount
-    Text(
-        text = amountText,
-        style = MaterialTheme.typography.headlineLarge,
-        fontWeight = FontWeight.ExtraBold,
-        color = amountColour
-    )
-
-    Spacer(modifier = Modifier.height(14.dp))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
