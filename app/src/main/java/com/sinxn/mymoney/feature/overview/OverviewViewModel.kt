@@ -51,7 +51,8 @@ data class OverviewUiState(
     val selectedCategoryName: String? = null,
     val isLoading: Boolean = true,
     val showSettingsSheet: Boolean = false,
-    val showWalletPickerSheet: Boolean = false
+    val showWalletPickerSheet: Boolean = false,
+    val isDivergingChart: Boolean = false
 )
 
 @HiltViewModel
@@ -116,6 +117,10 @@ class OverviewViewModel @Inject constructor(
 
     fun dismissSettingsSheet() {
         _uiState.update { it.copy(showSettingsSheet = false) }
+    }
+
+    fun setDivergingChart(isDiverging: Boolean) {
+        _uiState.update { it.copy(isDivergingChart = isDiverging) }
     }
 
     fun toggleWalletPickerSheet() {

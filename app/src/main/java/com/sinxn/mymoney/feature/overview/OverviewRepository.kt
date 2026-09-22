@@ -79,6 +79,8 @@ data class PeriodMoney(
 data class ChartDataPoint(
     val index: Int,
     val value: Float,
+    val income: Float = 0f,
+    val expense: Float = 0f,
     val label: String
 )
 
@@ -208,7 +210,9 @@ class OverviewRepository @Inject constructor(
                     CashFlowFilter.NET_INCOMES -> pm.netIncomes.getMoney(currency)
                 }
                 val value = (money.toDouble() / divider).toFloat()
-                points.add(ChartDataPoint(i, value, "${i + 1}"))
+                val income = (pm.incomes.getMoney(currency).toDouble() / divider).toFloat()
+                val expense = (pm.expenses.getMoney(currency).toDouble() / divider).toFloat()
+                points.add(ChartDataPoint(i, value, income = income, expense = expense, label = "${i + 1}"))
             }
             chartData[currency] = points
         }

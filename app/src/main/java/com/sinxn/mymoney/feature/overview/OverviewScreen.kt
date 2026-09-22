@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,10 +22,12 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.compose.cartesian.data.columnModel
+import com.patrykandpatrick.vico.compose.cartesian.decoration.HorizontalLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.ColumnCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.common.Fill
+import com.patrykandpatrick.vico.compose.common.component.LineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.sinxn.mymoney.core.ui.components.CategoryIconExtended
 import com.sinxn.mymoney.core.ui.components.ListRow
@@ -107,7 +110,10 @@ fun OverviewScreen(
                     item {
                         OverviewBarChart(
                             overviewData = overviewData,
-                            currencyCode = uiState.currencyCode
+                            currencyCode = uiState.currencyCode,
+                            isNetIncomeMode = uiState.settings?.cashFlowFilter == CashFlowFilter.NET_INCOMES,
+                            isDiverging = uiState.isDivergingChart,
+                            onToggleDiverging = { viewModel.setDivergingChart(it) }
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                     }
@@ -177,61 +183,209 @@ fun OverviewScreen(
 @Composable
 private fun OverviewBarChart(
     overviewData: OverviewData,
-    currencyCode: String
+    currencyCode: String,
+    isNetIncomeMode: Boolean,
+    isDiverging: Boolean,
+    onToggleDiverging: (Boolean) -> Unit
 ) {
     val chartValues = overviewData.chartDataByCurrency[currencyCode]
         ?: overviewData.chartDataByCurrency.values.firstOrNull()
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(220.dp)
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        if (!chartValues.isNullOrEmpty()) {
-            BarChartView(chartValues)
-        } else {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+        if (isNetIncomeMode) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "No chart data",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                if (isDiverging) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF2E7D32))
+                            )
+                            Text(
+                                text = "Income",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFC62828))
+                            )
+                            Text(
+                                text = "Expense",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    Text(
+                        text = "Net Cash Flow",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                SingleChoiceSegmentedButtonRow {
+                    SegmentedButton(
+                        selected = !isDiverging,
+                        onClick = { onToggleDiverging(false) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                    ) {
+                        Text("Net", style = MaterialTheme.typography.labelSmall)
+                    }
+                    SegmentedButton(
+                        selected = isDiverging,
+                        onClick = { onToggleDiverging(true) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                    ) {
+                        Text("Split (±)", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(220.dp)
+        ) {
+            if (!chartValues.isNullOrEmpty()) {
+                BarChartView(
+                    dataPoints = chartValues,
+                    isDiverging = isNetIncomeMode && isDiverging
                 )
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No chart data",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun BarChartView(dataPoints: List<ChartDataPoint>) {
+private fun BarChartView(
+    dataPoints: List<ChartDataPoint>,
+    isDiverging: Boolean
+) {
     val modelProducer = remember { CartesianChartModelProducer() }
     val primaryColor = MaterialTheme.colorScheme.primary
+    val incomeColor = Color(0xFF2E7D32)
+    val expenseColor = Color(0xFFC62828)
 
-    LaunchedEffect(dataPoints) {
+    LaunchedEffect(dataPoints, isDiverging) {
         modelProducer.runTransaction {
-            columnModel { series(dataPoints.map { it.value }) }
+            columnModel {
+                if (isDiverging) {
+                    series(dataPoints.map { it.income })
+                    series(dataPoints.map { -it.expense })
+                } else {
+                    series(dataPoints.map { it.value })
+                }
+            }
         }
+    }
+
+    val columnLayer = if (isDiverging) {
+        rememberColumnCartesianLayer(
+            columnProvider = ColumnCartesianLayer.ColumnProvider.series(
+                rememberLineComponent(
+                    fill = Fill(incomeColor),
+                    thickness = 16.dp
+                ),
+                rememberLineComponent(
+                    fill = Fill(expenseColor),
+                    thickness = 16.dp
+                )
+            ),
+            columnCollectionSpacing = 4.dp,
+            mergeMode = { ColumnCartesianLayer.MergeMode.Stacked }
+        )
+    } else {
+        rememberColumnCartesianLayer(
+            columnProvider = ColumnCartesianLayer.ColumnProvider.series(
+                rememberLineComponent(
+                    fill = Fill(primaryColor),
+                    thickness = 16.dp
+                )
+            ),
+            columnCollectionSpacing = 4.dp
+        )
+    }
+
+    val startAxis = if (isDiverging) {
+        VerticalAxis.rememberStart(
+            valueFormatter = { _, value, _ ->
+                val absVal = kotlin.math.abs(value)
+                if (absVal >= 1_000_000) {
+                    String.format(java.util.Locale.US, "%.1fM", absVal / 1_000_000)
+                } else if (absVal >= 1000) {
+                    String.format(java.util.Locale.US, "%.0fk", absVal / 1000)
+                } else {
+                    String.format(java.util.Locale.US, "%.0f", absVal)
+                }
+            }
+        )
+    } else {
+        VerticalAxis.rememberStart()
+    }
+
+    val outlineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+    val decorations = if (isDiverging) {
+        listOf(
+            remember(outlineColor) {
+                HorizontalLine(
+                    y = { 0.0 },
+                    line = LineComponent(fill = Fill(outlineColor), thickness = 1.dp)
+                )
+            }
+        )
+    } else {
+        emptyList()
     }
 
     CartesianChartHost(
         chart = rememberCartesianChart(
-            rememberColumnCartesianLayer(
-                columnProvider = ColumnCartesianLayer.ColumnProvider.series(
-                    rememberLineComponent(
-                        fill = Fill(primaryColor),
-                        thickness = 12.dp
-                    )
-                )
-            ),
-            startAxis = VerticalAxis.rememberStart(),
+            columnLayer,
+            startAxis = startAxis,
             bottomAxis = HorizontalAxis.rememberBottom(
-                valueFormatter = { value, x, _ ->
+                valueFormatter = { _, x, _ ->
                     dataPoints.getOrNull(x.toInt())?.label ?: ""
                 }
-            )
+            ),
+            decorations = decorations
         ),
         modelProducer = modelProducer,
         modifier = Modifier.fillMaxSize()
