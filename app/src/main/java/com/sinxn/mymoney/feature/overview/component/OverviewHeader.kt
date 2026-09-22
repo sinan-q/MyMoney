@@ -26,6 +26,7 @@ import com.sinxn.mymoney.feature.overview.OverviewType
 @Composable
 fun OverviewHeader(
     walletName: String,
+    txCount: Int,
     settings: OverviewSettings?,
     selectedCategoryName: String?,
     onConfigureClick: () -> Unit,
@@ -165,6 +166,21 @@ fun OverviewHeader(
 
                                             )
                                     }
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant
+                                ) {
+                                    Text(
+                                        text = "$txCount Txns",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(
+                                            horizontal = 8.dp,
+                                            vertical = 3.dp
+                                        )
+                                    )
                                 }
                             }
                         }

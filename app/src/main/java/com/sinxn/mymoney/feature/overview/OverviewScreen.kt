@@ -67,9 +67,7 @@ fun OverviewScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Header: View-only active context status card + settings action
-            item {
 
-            }
 
             if (uiState.isLoading) {
                 item {
@@ -88,6 +86,7 @@ fun OverviewScreen(
                     item {
                         OverviewHeader(
                             walletName = uiState.walletName,
+                            txCount = overviewData.transactionCount,
                             settings = uiState.settings,
                             selectedCategoryName = uiState.selectedCategoryName,
                             onConfigureClick = { viewModel.toggleSettingsSheet() }

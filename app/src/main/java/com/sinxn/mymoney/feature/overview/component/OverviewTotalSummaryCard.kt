@@ -68,12 +68,7 @@ fun OverviewTotalSummaryCard(
         null -> "period"
     }
 
-    Card(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
-    ) {
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -139,7 +134,7 @@ fun OverviewTotalSummaryCard(
                 }
             }
         }
-    }
+
 }
 
 @Composable
@@ -149,36 +144,6 @@ private fun Header(
     amountText: String,
     amountColour: Color
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(
-            text = headerText,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            letterSpacing = 0.8.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant
-        ) {
-            Text(
-                text = "$txCount Txns",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-            )
-        }
-    }
-
-
-    Spacer(modifier = Modifier.height(6.dp))
 
     // Hero Net Amount
     Text(
