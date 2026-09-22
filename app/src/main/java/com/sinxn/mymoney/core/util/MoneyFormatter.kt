@@ -117,17 +117,15 @@ object MoneyFormatter {
         
         var formattedValue = format.format(value)
 
-        if (config.showCurrency) {
-            val symbol = getCurrencySymbol(currencyCode)
-            formattedValue = "$symbol $formattedValue"
-        }
         // Handle Plus/Minus
-        if (config.showPlusMinus ) {
-            val symbol = if (value > 0) "+" else if (value< 0) "-" else ""
-            formattedValue = "$symbol $formattedValue"
+        if (config.showPlusMinus && value > 0) {
+            formattedValue = "+$formattedValue"
         }
         
-
+        if (config.showCurrency) {
+            val symbol = getCurrencySymbol(currencyCode)
+            return "$symbol $formattedValue"
+        }
 
         return formattedValue
     }

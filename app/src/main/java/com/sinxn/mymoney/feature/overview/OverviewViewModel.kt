@@ -76,18 +76,19 @@ class OverviewViewModel @Inject constructor(
     private var currentWalletId: String = Constants.TOTAL_WALLET_ID
 
     init {
-        // Observe current wallet and formatting settings, reload on changes
+        // Observe current wallet, formatting settings, and wallets, reload on changes
         viewModelScope.launch {
             combine(
                 settingsRepository.currentWalletId,
-                settingsRepository.formattingSettings
-            ) { walletId, formatting -> Pair(walletId, formatting) }
-                .collect { (walletId, formatting) ->
+                settingsRepository.formattingSettings,
+                moneyDao.getWallets()
+            ) { walletId, formatting, wallets -> Triple(walletId, formatting, wallets) }
+                .collect { (walletId, formatting, wallets) ->
                     val effectiveWalletId = walletId.ifEmpty { Constants.TOTAL_WALLET_ID }
                     currentWalletId = effectiveWalletId
 
                     // Resolve wallet info
-                    val walletInfo = resolveWalletInfo(effectiveWalletId, formatting)
+                    val walletInfo = resolveWalletInfo(effectiveWalletId, formatting, wallets)
 
                     _uiState.update {
                         it.copy(
@@ -154,10 +155,29 @@ class OverviewViewModel @Inject constructor(
         try {
             val data = overviewRepository.loadOverviewData(walletId, settings)
             val currentState = _uiState.value
+
+            val effectiveCurrencyCode = if (walletId == Constants.TOTAL_WALLET_ID) {
+                val dataCurrencies = data.totalNetIncomes.getCurrencies()
+                if (dataCurrencies.size == 1) {
+                    dataCurrencies.first()
+                } else if (!dataCurrencies.contains(currentState.currencyCode) && dataCurrencies.isNotEmpty()) {
+                    dataCurrencies.first()
+                } else {
+                    currentState.currencyCode
+                }
+            } else {
+                currentState.currencyCode
+            }
+
+            val decimals = try {
+                java.util.Currency.getInstance(effectiveCurrencyCode).defaultFractionDigits
+            } catch (e: Exception) { currentState.currencyDecimals }
+            val symbol = MoneyFormatter.getCurrencySymbol(effectiveCurrencyCode)
+
             val periodsUi = buildPeriodUiModels(
                 periods = data.periods,
-                currencyCode = currentState.currencyCode,
-                decimals = currentState.currencyDecimals,
+                currencyCode = effectiveCurrencyCode,
+                decimals = decimals,
                 formattingSettings = currentState.formattingSettings
             )
             val categoryName = if (settings.overviewType == OverviewType.CATEGORY && !settings.categoryId.isNullOrEmpty()) {
@@ -171,6 +191,9 @@ class OverviewViewModel @Inject constructor(
                     periodsUi = periodsUi,
                     settings = settings,
                     selectedCategoryName = categoryName,
+                    currencyCode = effectiveCurrencyCode,
+                    currencySymbol = symbol,
+                    currencyDecimals = decimals,
                     isLoading = false
                 )
             }
@@ -233,24 +256,38 @@ class OverviewViewModel @Inject constructor(
         }.reversed()
     }
 
-    private suspend fun resolveWalletInfo(
+    private fun resolveWalletInfo(
         walletId: String,
-        formatting: FormattingSettings
+        formatting: FormattingSettings,
+        wallets: List<com.sinxn.mymoney.core.data.local.entity.WalletEntity>
     ): WalletInfo {
         return if (walletId == Constants.TOTAL_WALLET_ID) {
-            val currCode = formatting.globalCurrency
+            val walletsInTotal = wallets.filter {
+                it.countInTotal && (!formatting.excludeArchivedFromTotal || !it.isArchived)
+            }
+            val distinctCurrencies = walletsInTotal
+                .map { it.currency.trim() }
+                .filter { it.isNotEmpty() }
+                .distinct()
+            val currCode = if (distinctCurrencies.size == 1) {
+                distinctCurrencies.first()
+            } else {
+                formatting.globalCurrency.ifEmpty { "USD" }
+            }
             val currency = try {
                 java.util.Currency.getInstance(currCode)
             } catch (e: Exception) { null }
+            val symbol = MoneyFormatter.getCurrencySymbol(currCode)
+            val decimals = currency?.defaultFractionDigits ?: 2
             WalletInfo(
                 name = "Total",
                 icon = "sigma",
                 currencyCode = currCode,
-                currencySymbol = currency?.symbol ?: currCode,
-                decimals = currency?.defaultFractionDigits ?: 2
+                currencySymbol = symbol,
+                decimals = decimals
             )
         } else {
-            val wallet = moneyDao.getWalletById(walletId)
+            val wallet = wallets.find { it.id == walletId }
             if (wallet != null) {
                 val currSymbol = MoneyFormatter.getCurrencySymbol(wallet.currency)
                 val decimals = try {

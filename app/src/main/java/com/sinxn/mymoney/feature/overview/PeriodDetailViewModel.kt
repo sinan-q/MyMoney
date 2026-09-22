@@ -112,7 +112,23 @@ class PeriodDetailViewModel @Inject constructor(
         ) { txList, wallets, categories ->
             val currentWallet = if (walletId == Constants.TOTAL_WALLET_ID) null else wallets.find { it.id == walletId }
             val currCode = if (walletId == Constants.TOTAL_WALLET_ID) {
-                formatting.globalCurrency.ifEmpty { "USD" }
+                val walletsInTotal = wallets.filter {
+                    it.countInTotal && (!formatting.excludeArchivedFromTotal || !it.isArchived)
+                }
+                val distinctCurrencies = walletsInTotal
+                    .map { it.currency.trim() }
+                    .filter { it.isNotEmpty() }
+                    .distinct()
+                if (distinctCurrencies.size == 1) {
+                    distinctCurrencies.first()
+                } else {
+                    val txCurrencies = txList.mapNotNull { it.currencyCode?.trim() }.filter { it.isNotEmpty() }.distinct()
+                    if (txCurrencies.size == 1) {
+                        txCurrencies.first()
+                    } else {
+                        formatting.globalCurrency.ifEmpty { "USD" }
+                    }
+                }
             } else {
                 currentWallet?.currency ?: formatting.globalCurrency.ifEmpty { "USD" }
             }
