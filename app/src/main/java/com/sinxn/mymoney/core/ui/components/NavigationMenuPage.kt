@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Equalizer
+import androidx.compose.material.icons.filled.FactCheck
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.GridView
@@ -93,6 +94,7 @@ val navigationMenuItems = listOf(
     NavigationMenuItem("search_bank", "Search bank", Icons.Default.AccountBalance, 2),
 
     // Group 3: Settings & Info
+    NavigationMenuItem(Screen.NeedsReview.sidebarItemId, "Needs Review", Icons.Default.FactCheck, 3),
     NavigationMenuItem(Screen.Settings.sidebarItemId, "Settings", Icons.Default.Settings, 3),
     NavigationMenuItem(Screen.SupportDeveloper.sidebarItemId, "Support developer", Icons.Default.FavoriteBorder, 3),
     NavigationMenuItem(Screen.About.sidebarItemId, "About", Icons.Default.Info, 3)
@@ -312,6 +314,7 @@ fun handleSidebarNavigation(
         "search_atm" -> launchSearchIntent(context, "ATM")
         "search_bank" -> launchSearchIntent(context, "Bank")
         Screen.Menu.sidebarItemId -> navController.navigate(Screen.Menu.routePattern, navOptions)
+        Screen.NeedsReview.sidebarItemId -> navController.navigate(Screen.NeedsReview.routePattern, navOptions)
         Screen.Settings.sidebarItemId -> navController.navigate(Screen.Settings.routePattern, navOptions)
         Screen.SupportDeveloper.sidebarItemId -> navController.navigate(Screen.SupportDeveloper.routePattern, navOptions)
         Screen.About.sidebarItemId -> navController.navigate(Screen.About.routePattern, navOptions)

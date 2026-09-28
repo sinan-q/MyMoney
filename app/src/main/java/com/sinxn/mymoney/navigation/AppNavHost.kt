@@ -56,6 +56,7 @@ import com.sinxn.mymoney.feature.wallet.WalletAddEditScreen
 import com.sinxn.mymoney.feature.wallet.WalletDetailsScreen
 import com.sinxn.mymoney.feature.wallet.WalletInfoScreen
 import com.sinxn.mymoney.feature.wallet.WalletListScreen
+import com.sinxn.mymoney.feature.review.NeedsReviewScreen
 
 @Composable
 fun AppNavHost(
@@ -204,6 +205,14 @@ fun AppNavHost(
         composable(Screen.Backup.routePattern) {
             BackupScreen(
                 onNavigateUp = { navController.navigateUp() }
+            )
+        }
+        composable(Screen.NeedsReview.routePattern) {
+            NeedsReviewScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onTransactionClick = { id ->
+                    navController.navigate(Screen.TransactionDetails.createRoute(id))
+                }
             )
         }
         composable(Screen.Settings.routePattern) {

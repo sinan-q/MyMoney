@@ -25,6 +25,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "mymoney.db"
         )
+        .addMigrations(AppDatabase.MIGRATION_1_2)
         .addCallback(object : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)
@@ -78,5 +79,11 @@ object DatabaseModule {
     @Singleton
     fun provideMoneyDao(database: AppDatabase): MoneyDao {
         return database.moneyDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideCustomFieldDao(database: AppDatabase): com.sinxn.mymoney.core.data.local.dao.CustomFieldDao {
+        return database.customFieldDao()
     }
 }

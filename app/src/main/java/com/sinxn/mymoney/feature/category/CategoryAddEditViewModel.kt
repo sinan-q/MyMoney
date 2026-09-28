@@ -34,13 +34,17 @@ data class CategoryAddEditUiState(
     val tag: String? = null,
     val availableParentCategories: List<CategoryEntity> = emptyList(),
     val isLoading: Boolean = true,
-    val isEditMode: Boolean = false
+    val isEditMode: Boolean = false,
+    val customFields: List<com.sinxn.mymoney.core.data.local.entity.CustomFieldDefinitionEntity> = emptyList(),
+    val inheritedCustomFields: List<com.sinxn.mymoney.core.data.local.entity.CustomFieldDefinitionEntity> = emptyList(),
+    val extractionRules: List<com.sinxn.mymoney.core.data.local.entity.CustomFieldExtractionRuleEntity> = emptyList()
 )
 
 @HiltViewModel
 class CategoryAddEditViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val categoryRepository: CategoryRepository
+    private val categoryRepository: CategoryRepository,
+    private val customFieldRepository: com.sinxn.mymoney.core.data.repository.CustomFieldRepository
 ) : ViewModel() {
 
     val navCategoryId: String? = savedStateHandle.get<String>("categoryId")?.takeIf { it.isNotBlank() }
@@ -60,6 +64,21 @@ class CategoryAddEditViewModel @Inject constructor(
 
     init {
         loadData()
+        loadCustomFields()
+    }
+
+    private fun loadCustomFields() {
+        if (navCategoryId == null) return
+        viewModelScope.launch {
+            customFieldRepository.getFieldsForCategory(navCategoryId).collect { fields ->
+                val allEffective = customFieldRepository.getEffectiveFieldsForCategory(navCategoryId)
+                val inherited = allEffective.filter { it.categoryId != navCategoryId }
+                _uiState.value = _uiState.value.copy(
+                    customFields = fields.sortedBy { it.sortOrder },
+                    inheritedCustomFields = inherited
+                )
+            }
+        }
     }
 
     private fun loadData() {
@@ -248,6 +267,59 @@ class CategoryAddEditViewModel @Inject constructor(
         viewModelScope.launch {
             categoryRepository.deleteCategory(currentId)
             _eventFlow.emit(CategoryAddEditEvent.Deleted)
+        }
+    }
+
+    fun deleteCustomField(fieldId: String) {
+        viewModelScope.launch {
+            customFieldRepository.permanentlyDeleteDefinition(fieldId)
+            loadCustomFields()
+        }
+    }
+
+    fun saveCustomField(
+        id: String?,
+        label: String,
+        type: String,
+        isRequired: Boolean,
+        visibilityDependsOnFieldId: String?,
+        visibilityDependsOnValue: String?
+    ) {
+        val catId = _uiState.value.categoryId ?: return
+        viewModelScope.launch {
+            val sortOrder = if (id == null) _uiState.value.customFields.size else _uiState.value.customFields.find { it.id == id }?.sortOrder ?: 0
+            customFieldRepository.saveDefinition(
+                id = id,
+                categoryId = catId,
+                label = label,
+                type = type,
+                sortOrder = sortOrder,
+                isRequired = isRequired,
+                visibilityDependsOnFieldId = visibilityDependsOnFieldId,
+                visibilityDependsOnValue = visibilityDependsOnValue
+            )
+            loadCustomFields()
+        }
+    }
+
+    fun loadExtractionRules(fieldId: String) {
+        viewModelScope.launch {
+            val rules = customFieldRepository.getExtractionRulesForField(fieldId)
+            _uiState.value = _uiState.value.copy(extractionRules = rules)
+        }
+    }
+
+    fun saveExtractionRule(rule: com.sinxn.mymoney.core.data.local.entity.CustomFieldExtractionRuleEntity) {
+        viewModelScope.launch {
+            customFieldRepository.saveExtractionRule(rule)
+            loadExtractionRules(rule.fieldId)
+        }
+    }
+
+    fun deleteExtractionRule(rule: com.sinxn.mymoney.core.data.local.entity.CustomFieldExtractionRuleEntity) {
+        viewModelScope.launch {
+            customFieldRepository.deleteExtractionRule(rule)
+            loadExtractionRules(rule.fieldId)
         }
     }
 }

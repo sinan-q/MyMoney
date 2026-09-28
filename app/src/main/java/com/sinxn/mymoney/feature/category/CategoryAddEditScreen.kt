@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -80,6 +81,9 @@ fun CategoryAddEditScreen(
     var showIconPicker by remember { mutableStateOf(false) }
     var showParentPicker by remember { mutableStateOf(false) }
     var iconPreviewName by remember(uiState.isLoading) { mutableStateOf(uiState.name) }
+    var showCustomFieldDialog by remember { mutableStateOf(false) }
+    var showExtractionRulesDialog by remember { mutableStateOf(false) }
+    var editingCustomField by remember { mutableStateOf<com.sinxn.mymoney.core.data.local.entity.CustomFieldDefinitionEntity?>(null) }
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     val accentColor = remember(uiState.type) {
         if (uiState.type == CategoryType.INCOME) IncomeColor else ExpenseColor
@@ -144,6 +148,47 @@ fun CategoryAddEditScreen(
                 showParentPicker = false
             },
             onDismissRequest = { showParentPicker = false }
+        )
+    }
+
+    if (showCustomFieldDialog) {
+        com.sinxn.mymoney.feature.category.components.CustomFieldEditDialog(
+            field = editingCustomField,
+            availableFields = uiState.inheritedCustomFields + uiState.customFields,
+            onDismissRequest = { showCustomFieldDialog = false },
+            onSave = { label, type, isRequired, visibilityDependsOnFieldId, visibilityDependsOnValue ->
+                viewModel.saveCustomField(
+                    id = editingCustomField?.id,
+                    label = label,
+                    type = type,
+                    isRequired = isRequired,
+                    visibilityDependsOnFieldId = visibilityDependsOnFieldId,
+                    visibilityDependsOnValue = visibilityDependsOnValue
+                )
+                showCustomFieldDialog = false
+            },
+            onDelete = { fieldId ->
+                viewModel.deleteCustomField(fieldId)
+                showCustomFieldDialog = false
+            },
+            onManageExtractionRules = { fieldId ->
+                viewModel.loadExtractionRules(fieldId)
+                showExtractionRulesDialog = true
+            }
+        )
+    }
+
+    if (showExtractionRulesDialog && editingCustomField != null) {
+        com.sinxn.mymoney.feature.category.components.ExtractionRuleEditDialog(
+            fieldId = editingCustomField!!.id,
+            rules = uiState.extractionRules,
+            onDismissRequest = { showExtractionRulesDialog = false },
+            onSaveRule = { rule ->
+                viewModel.saveExtractionRule(rule)
+            },
+            onDeleteRule = { rule ->
+                viewModel.deleteExtractionRule(rule)
+            }
         )
     }
 
@@ -341,6 +386,59 @@ fun CategoryAddEditScreen(
                             accentColor = accentColor,
                             horizontalPadding = 16.dp,
                         )
+                    }
+                    
+                    if (uiState.isEditMode) {
+                        FormCardContainer {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = "Custom Fields",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                                Text(
+                                    text = "Define additional fields for transactions in this category.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                
+                                Spacer(modifier = Modifier.height(16.dp))
+                                
+                                uiState.inheritedCustomFields.forEach { field ->
+                                    com.sinxn.mymoney.core.ui.components.CleanListRow(
+                                        icon = { Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                        label = "Inherited (${field.type})",
+                                        value = field.label,
+                                        onClick = null
+                                    )
+                                }
+                                
+                                uiState.customFields.forEach { field ->
+                                    com.sinxn.mymoney.core.ui.components.CleanListRow(
+                                        icon = { Icon(Icons.Default.Edit, contentDescription = null, tint = accentColor) },
+                                        label = field.type,
+                                        value = field.label,
+                                        onClick = {
+                                            editingCustomField = field
+                                            showCustomFieldDialog = true
+                                        }
+                                    )
+                                }
+                                
+                                TextButton(
+                                    onClick = { 
+                                        editingCustomField = null
+                                        showCustomFieldDialog = true 
+                                    },
+                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Add Custom Field")
+                                }
+                            }
+                        }
                     }
                     // Bottom padding spacer for FAB
                     Spacer(modifier = Modifier.height(72.dp))

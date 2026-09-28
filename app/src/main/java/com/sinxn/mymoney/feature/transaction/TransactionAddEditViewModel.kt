@@ -30,6 +30,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Currency
@@ -63,7 +66,9 @@ data class TransactionAddEditUiState(
     val currencySymbol: String = "$",
     val currencyDecimals: Int = 2,
     val walletName: String = "",
-    val categoryColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Gray
+    val categoryColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Gray,
+    val availableCustomFields: List<com.sinxn.mymoney.core.data.local.entity.CustomFieldDefinitionEntity> = emptyList(),
+    val editCustomFieldValues: Map<String, String> = emptyMap()
 )
 
 @HiltViewModel
@@ -74,6 +79,7 @@ class TransactionAddEditViewModel @Inject constructor(
     private val savingRepository: SavingRepository,
     private val debtRepository: DebtRepository,
     private val templateRepository: TemplateRepository,
+    private val customFieldRepository: com.sinxn.mymoney.core.data.repository.CustomFieldRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -189,6 +195,7 @@ class TransactionAddEditViewModel @Inject constructor(
         viewModelScope.launch {
             val tx = transactionRepository.getTransactionById(txId)
             val people = transactionRepository.getPeopleForTransaction(txId).firstOrNull() ?: emptyList()
+            val customValues = customFieldRepository.getValuesForTransactionSync(txId).associate { it.fieldId to it.value }
 
             if (tx != null) {
                 val wallet = moneyDao.getWalletsList().find { it.id == tx.walletId }
@@ -210,12 +217,25 @@ class TransactionAddEditViewModel @Inject constructor(
                         direction = tx.direction,
                         walletId = tx.walletId,
                         debtId = tx.debtId,
-                        savingId = tx.savingId
+                        savingId = tx.savingId,
+                        customFieldValues = customValues
                     )
                 }
             }
         }
     }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val effectiveFieldsFlow = _formState
+        .map { it.categoryId }
+        .distinctUntilChanged()
+        .transformLatest { categoryId ->
+            if (categoryId != null) {
+                emit(customFieldRepository.getEffectiveFieldsForCategory(categoryId).filter { it.archivedAt == null })
+            } else {
+                emit(emptyList())
+            }
+        }
 
     private val listsFlow = combine(
         moneyDao.getWalletsWithBalance(DateUtils.getSQLDateTimeString(Date())),
@@ -229,8 +249,9 @@ class TransactionAddEditViewModel @Inject constructor(
         _isSaving,
         _formState,
         settingsRepository.currentWalletId,
-        listsFlow
-    ) { isSaving, form, currentWalletId, lists ->
+        listsFlow,
+        effectiveFieldsFlow
+    ) { isSaving, form, currentWalletId, lists, effectiveFields ->
         if (isNewTransaction && form.walletId.isEmpty() && lists.wallets.isNotEmpty()) {
             if (currentWalletId.isNotEmpty() && currentWalletId != "total" && currentWalletId != com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID) {
                 val preferredWallet = lists.wallets.find { it.wallet.id == currentWalletId && !it.wallet.isArchived }
@@ -293,7 +314,9 @@ class TransactionAddEditViewModel @Inject constructor(
             editDirection = form.direction,
             editPeopleIds = form.peopleIds,
             editConfirmed = form.confirmed,
-            editCountInTotal = form.countInTotal
+            editCountInTotal = form.countInTotal,
+            availableCustomFields = effectiveFields,
+            editCustomFieldValues = form.customFieldValues
         )
     }.stateIn(
         scope = viewModelScope,
@@ -350,6 +373,14 @@ class TransactionAddEditViewModel @Inject constructor(
                 }
             } ?: current.direction
             current.copy(categoryId = value, direction = newDir)
+        }
+    }
+
+    fun onCustomFieldValueChange(fieldId: String, value: String) {
+        _formState.update { current ->
+            val newMap = current.customFieldValues.toMutableMap()
+            newMap[fieldId] = value
+            current.copy(customFieldValues = newMap)
         }
     }
 
@@ -461,6 +492,30 @@ class TransactionAddEditViewModel @Inject constructor(
             peopleIds = form.peopleIds,
             previousTransfer = null
         )
+
+        // Save custom field values
+        val currentCategoryFields = form.categoryId?.let { customFieldRepository.getEffectiveFieldsForCategory(it) } ?: emptyList()
+        val effectiveFieldIds = currentCategoryFields.map { it.id }.toSet()
+        
+        for (fieldId in effectiveFieldIds) {
+            val value = form.customFieldValues[fieldId]
+            // We do a simple check for conditional visibility:
+            // If the field depends on another field, and that field doesn't have the required value, we treat it as blank.
+            val fieldDef = currentCategoryFields.find { it.id == fieldId }
+            var finalValue = value
+            if (fieldDef?.visibilityDependsOnFieldId != null) {
+                val controllingValue = form.customFieldValues[fieldDef.visibilityDependsOnFieldId]
+                if (controllingValue == null || controllingValue != fieldDef.visibilityDependsOnValue) {
+                    finalValue = null
+                }
+            }
+
+            if (finalValue.isNullOrBlank()) {
+                customFieldRepository.removeValue(targetId, fieldId)
+            } else {
+                customFieldRepository.saveValue(targetId, fieldId, finalValue)
+            }
+        }
     }
 
     private data class ListsWrapper(

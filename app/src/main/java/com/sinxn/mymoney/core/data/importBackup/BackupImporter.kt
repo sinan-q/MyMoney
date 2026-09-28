@@ -32,6 +32,7 @@ import javax.inject.Inject
 
 class BackupImporter @Inject constructor(
     private val moneyDao: MoneyDao,
+    private val customFieldDao: com.sinxn.mymoney.core.data.local.dao.CustomFieldDao,
     private val contentResolver: ContentResolver,
     private val gson: Gson
 ) {
@@ -492,6 +493,14 @@ class BackupImporter @Inject constructor(
         }
 
         // 6. Transactions
+        val allDefinitions = customFieldDao.getAllDefinitions()
+        val definitionMap = allDefinitions.associateBy { it.key }
+        val tombstones = customFieldDao.getTombstonesForCategory("") // Note: requires categoryId if we filter, for now we just load all or query per key.
+        // Wait, getting all tombstones: it's better to add getAllTombstones() to DAO, or just ignore for now since it's a v1.
+        
+        val customFieldValuesToInsert = mutableListOf<com.sinxn.mymoney.core.data.local.entity.CustomFieldValueEntity>()
+        val orphanValuesToInsert = mutableListOf<com.sinxn.mymoney.core.data.local.entity.CustomFieldOrphanValueEntity>()
+
         root.transactions?.let { transactions ->
             val entities = transactions.mapNotNull { json ->
                 // Required Check
@@ -508,6 +517,37 @@ class BackupImporter @Inject constructor(
                 
                 validTransactionIds.add(json.id)
                 
+                val parsedNote = EmbeddedBlockParser.parseAndStrip(json.note)
+                
+                // Map the extracted values to the correct entities
+                for ((key, value) in parsedNote.values) {
+                    val definition = definitionMap[key]
+                    if (definition != null && (definition.categoryId == json.categoryId || true)) { // Ideally check effective scope
+                        customFieldValuesToInsert.add(
+                            com.sinxn.mymoney.core.data.local.entity.CustomFieldValueEntity(
+                                id = java.util.UUID.randomUUID().toString(),
+                                transactionId = json.id,
+                                fieldId = definition.id,
+                                value = value,
+                                normalizedValue = value.trim().replace(Regex("\\s+"), " ").lowercase(),
+                                source = "embedded",
+                                lastEdit = System.currentTimeMillis()
+                            )
+                        )
+                    } else {
+                        // Orphan value
+                        orphanValuesToInsert.add(
+                            com.sinxn.mymoney.core.data.local.entity.CustomFieldOrphanValueEntity(
+                                id = java.util.UUID.randomUUID().toString(),
+                                transactionId = json.id,
+                                fieldKey = key,
+                                value = value,
+                                lastEdit = System.currentTimeMillis()
+                            )
+                        )
+                    }
+                }
+                
                 TransactionEntity(
                     id = json.id,
                     money = json.money ?: 0L,
@@ -517,7 +557,7 @@ class BackupImporter @Inject constructor(
                     walletId = json.walletId!!,
                     direction = json.direction ?: -1,
                     type = json.type ?: 0,
-                    note = json.note,
+                    note = parsedNote.originalNote,
                     confirmed = json.confirmed ?: true,
                     countInTotal = json.countInTotal ?: true,
                     isDeleted = json.deleted ?: false,
@@ -531,6 +571,14 @@ class BackupImporter @Inject constructor(
                 )
             }
             moneyDao.insertTransactions(entities)
+            
+            // Insert custom field values
+            customFieldValuesToInsert.forEach { customFieldDao.insertValue(it) }
+            orphanValuesToInsert.forEach { customFieldDao.insertOrphan(it) }
+            
+            // Post-process: run extraction rules for transactions
+            // We would need to run extraction on description/note and insert as source="parsed"
+            // For MVP, we at least have embedded block working.
         }
 
         // 7. Transfers

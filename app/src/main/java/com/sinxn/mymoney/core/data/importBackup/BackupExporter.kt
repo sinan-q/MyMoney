@@ -47,6 +47,7 @@ import javax.inject.Singleton
 @Singleton
 class BackupExporter @Inject constructor(
     private val moneyDao: MoneyDao,
+    private val customFieldDao: com.sinxn.mymoney.core.data.local.dao.CustomFieldDao,
     private val contentResolver: ContentResolver,
     private val gson: Gson,
     @ApplicationContext private val context: Context
@@ -274,7 +275,35 @@ class BackupExporter @Inject constructor(
             )
         }
 
+        // Preload custom fields for embedded blocks
+        val definitions = customFieldDao.getAllDefinitions().associateBy { it.id }
+        val allValues = customFieldDao.getAllValues()
+        val allOrphans = customFieldDao.getAllOrphans()
+        val tombstonedKeys = customFieldDao.getAllTombstones().map { it.fieldKey }.toSet()
+        
+        val valuesByTx = allValues.groupBy { it.transactionId }
+        val orphansByTx = allOrphans.groupBy { it.transactionId }
+
         val transactions = moneyDao.getAllTransactionsForExport().map {
+            val txId = it.id
+            val txValues = mutableMapOf<String, String>()
+            
+            // Add defined values
+            valuesByTx[txId]?.forEach { valueEntity ->
+                val def = definitions[valueEntity.fieldId]
+                if (def != null && !tombstonedKeys.contains(def.key)) {
+                    txValues[def.key] = valueEntity.value
+                }
+            }
+            // Add orphan values
+            orphansByTx[txId]?.forEach { orphan ->
+                if (!tombstonedKeys.contains(orphan.fieldKey)) {
+                    txValues[orphan.fieldKey] = orphan.value
+                }
+            }
+
+            val noteWithBlock = EmbeddedBlockWriter.appendBlock(it.note, txValues)
+
             JsonTransaction(
                 id = it.id,
                 money = it.money,
@@ -284,7 +313,7 @@ class BackupExporter @Inject constructor(
                 walletId = it.walletId,
                 direction = it.direction,
                 type = it.type,
-                note = it.note,
+                note = noteWithBlock,
                 confirmed = it.confirmed,
                 countInTotal = it.countInTotal,
                 deleted = it.isDeleted,

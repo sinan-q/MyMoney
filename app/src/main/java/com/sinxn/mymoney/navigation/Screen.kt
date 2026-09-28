@@ -31,6 +31,7 @@ sealed class Screen(
     object About : Screen("about", "about", "About", isTopLevel = true)
     object SupportDeveloper : Screen("support_developer", "support_developer", "Support Developer", isTopLevel = true)
     object Menu : Screen("menu", "menu", "Menu", isTopLevel = true)
+    object NeedsReview : Screen("needs_review", "needs_review", "Needs Review Queue", isTopLevel = true)
     object Settings : Screen("settings", "settings", "Settings", isTopLevel = false)
 
     // Sub-screens

@@ -2,6 +2,7 @@ package com.sinxn.mymoney.feature.wallet
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -159,7 +160,8 @@ fun WalletDetailsScreen(
                             listState = listState,
                             onTransactionClick = onTransactionClick,
                             onConfirmPending = { viewModel.confirmTransaction(it) },
-                            onDismissPending = { viewModel.dismissTransaction(it) }
+                            onDismissPending = { viewModel.dismissTransaction(it) },
+                            onPendingClick = onTransactionClick
                         )
                     }
                 }
@@ -180,7 +182,8 @@ fun TransactionList(
     listState: LazyListState,
     onTransactionClick: (String) -> Unit,
     onConfirmPending: (String) -> Unit = {},
-    onDismissPending: (String) -> Unit = {}
+    onDismissPending: (String) -> Unit = {},
+    onPendingClick: (String) -> Unit = {}
 ) {
     var collapsedGroups by remember { mutableStateOf(setOf<String>()) }
 
@@ -223,7 +226,8 @@ fun TransactionList(
                 PendingConfirmationItem(
                     item = item,
                     onConfirm = { onConfirmPending(item.transaction.id) },
-                    onDismiss = { onDismissPending(item.transaction.id) }
+                    onDismiss = { onDismissPending(item.transaction.id) },
+                    onClick = { onPendingClick(item.transaction.id) }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -307,12 +311,14 @@ fun TransactionList(
 fun PendingConfirmationItem(
     item: TransactionWithCategory,
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onClick: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 16.dp)
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)

@@ -209,6 +209,28 @@ fun EditTransactionContent(
                     label = "Note",
                     placeHolder = "Add a note..."
                 )
+                
+                // Custom Fields
+                uiState.availableCustomFields.forEach { field ->
+                    var isVisible = true
+                    if (field.visibilityDependsOnFieldId != null) {
+                        val controllingValue = uiState.editCustomFieldValues[field.visibilityDependsOnFieldId]
+                        if (controllingValue == null || controllingValue != field.visibilityDependsOnValue) {
+                            isVisible = false
+                        }
+                    }
+                    
+                    if (isVisible) {
+                        com.sinxn.mymoney.core.ui.components.CustomFieldInput(
+                            field = field,
+                            value = uiState.editCustomFieldValues[field.id],
+                            onValueChange = { newValue ->
+                                viewModel.onCustomFieldValueChange(field.id, newValue)
+                            },
+                            accentColor = accentColor
+                        )
+                    }
+                }
             }
             if (!settings.hideStatusAndImpact) {
                 FormCardContainer {

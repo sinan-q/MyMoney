@@ -78,7 +78,23 @@ fun TransactionAddEditScreen(
     val isTxCategorySelected = !uiState.editCategoryId.isNullOrBlank()
     val isTxWalletSelected = uiState.editWalletId.isNotBlank()
     val isTxAmountPositive = txAmountValue != null && txAmountValue > 0.0
-    val isTxSaveEnabled = !uiState.isSaving && isTxCategorySelected && isTxWalletSelected && isTxAmountPositive
+    val areCustomFieldsValid = remember(uiState.availableCustomFields, uiState.editCustomFieldValues) {
+        uiState.availableCustomFields.all { field ->
+            var isVisible = true
+            if (field.visibilityDependsOnFieldId != null) {
+                val controllingValue = uiState.editCustomFieldValues[field.visibilityDependsOnFieldId]
+                if (controllingValue == null || controllingValue != field.visibilityDependsOnValue) {
+                    isVisible = false
+                }
+            }
+            if (isVisible && field.isRequired) {
+                !uiState.editCustomFieldValues[field.id].isNullOrBlank()
+            } else {
+                true
+            }
+        }
+    }
+    val isTxSaveEnabled = !uiState.isSaving && isTxCategorySelected && isTxWalletSelected && isTxAmountPositive && areCustomFieldsValid
 
     val txFabText = if (uiState.isNewTransaction) {
         if (uiState.editDirection == Direction.INCOME) "Add Income" else "Add Expense"

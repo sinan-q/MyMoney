@@ -18,5 +18,6 @@ data class TransactionFormState(
     // Saving & Debt arguments
     val savingId: String? = null,
     val savingCompletedOnSave: Boolean = false,
-    val debtId: String? = null
+    val debtId: String? = null,
+    val customFieldValues: Map<String, String> = emptyMap()
 )
