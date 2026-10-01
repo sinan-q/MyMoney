@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.Flow
 interface CustomFieldDao {
 
     // --- Definitions ---
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertDefinition(definition: CustomFieldDefinitionEntity)
 
     @Update
@@ -41,10 +41,10 @@ interface CustomFieldDao {
     suspend fun getDefinitionById(id: String): CustomFieldDefinitionEntity?
 
     // --- Values ---
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertValue(value: CustomFieldValueEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertValues(values: List<CustomFieldValueEntity>)
 
     @Update
@@ -96,7 +96,7 @@ interface CustomFieldDao {
     fun getAutocompleteSuggestions(fieldId: String, prefix: String): Flow<List<String>>
 
     // --- Tombstones ---
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTombstone(tombstone: CustomFieldTombstoneEntity)
 
     @Query("SELECT * FROM custom_field_tombstones WHERE categoryId = :categoryId")
@@ -106,7 +106,7 @@ interface CustomFieldDao {
     suspend fun getAllTombstones(): List<CustomFieldTombstoneEntity>
 
     // --- Orphans ---
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertOrphan(orphan: CustomFieldOrphanValueEntity)
     
     @Query("SELECT * FROM custom_field_orphan_values")
@@ -116,7 +116,7 @@ interface CustomFieldDao {
     suspend fun deleteOrphansForCategoryAndKey(categoryId: String, fieldKey: String)
 
     // --- Extraction Rules ---
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertExtractionRule(rule: CustomFieldExtractionRuleEntity)
     
     @Query("SELECT * FROM custom_field_extraction_rules WHERE fieldId = :fieldId ORDER BY ruleOrder ASC")
@@ -126,7 +126,7 @@ interface CustomFieldDao {
     suspend fun deleteExtractionRule(rule: CustomFieldExtractionRuleEntity)
 
     // --- Snapshots ---
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertSnapshot(snapshot: CustomFieldSnapshotEntity)
     
     @Query("SELECT * FROM custom_field_snapshots WHERE operationId = :operationId")
@@ -136,7 +136,7 @@ interface CustomFieldDao {
     suspend fun cleanupExpiredSnapshots(currentTimeMillis: Long)
 
     // --- Sync Hashes ---
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertSyncHash(hash: TransactionSyncHashEntity)
 
     @Query("SELECT * FROM transaction_sync_hashes WHERE transactionId = :transactionId")

@@ -49,7 +49,11 @@ class PersonRepository @Inject constructor(
             tag = tag
         )
 
-        moneyDao.insertPerson(person)
+        if (id == null || moneyDao.getPersonById(id) == null) {
+            moneyDao.insertPerson(person)
+        } else {
+            moneyDao.updatePerson(person)
+        }
         return personId
     }
 

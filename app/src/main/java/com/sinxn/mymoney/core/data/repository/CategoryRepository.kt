@@ -47,21 +47,52 @@ class CategoryRepository @Inject constructor(
         val now = System.currentTimeMillis()
         val categoryId = id ?: UUID.randomUUID().toString()
 
-        val category = CategoryEntity(
-            id = categoryId,
-            name = name,
-            icon = icon,
-            type = type,
-            parentId = parentId,
-            showReport = showReport,
-            isArchived = isArchived,
-            index = index,
-            isDeleted = false,
-            lastEdit = now,
-            tag = tag
-        )
+        val category = if (id == null) {
+            CategoryEntity(
+                id = categoryId,
+                name = name,
+                icon = icon,
+                type = type,
+                parentId = parentId,
+                showReport = showReport,
+                isArchived = isArchived,
+                index = index,
+                isDeleted = false,
+                lastEdit = now,
+                tag = tag
+            )
+        } else {
+            val existing = moneyDao.getCategoryById(id)
+            if (existing != null) {
+                existing.copy(
+                    name = name,
+                    icon = icon,
+                    type = type,
+                    parentId = parentId,
+                    lastEdit = now
+                )
+            } else {
+                CategoryEntity(
+                    id = categoryId,
+                    name = name,
+                    icon = icon,
+                    type = type,
+                    parentId = parentId,
+                    showReport = showReport,
+                    isArchived = isArchived,
+                    index = index,
+                    isDeleted = false,
+                    lastEdit = now,
+                    tag = tag
+                )
+            }
+        }
 
-        moneyDao.insertCategory(category)
+        if (id == null || moneyDao.getCategoryById(id) == null) {
+            moneyDao.insertCategory(category)
+        } else {
+            moneyDao.updateCategory(category)
+        }
         return categoryId
     }
 

@@ -78,22 +78,58 @@ class WalletRepository @Inject constructor(
             moneyDao.getWalletById(id)?.index ?: 0
         }
 
-        val wallet = WalletEntity(
-            id = walletId,
-            name = name.trim(),
-            icon = icon,
-            currency = currency,
-            startMoney = startMoney,
-            isArchived = isArchived,
-            note = note?.trim()?.ifEmpty { null },
-            countInTotal = countInTotal,
-            index = currentIndex,
-            isDeleted = false,
-            lastEdit = now,
-            tag = tag
-        )
+        val wallet = if (id == null) {
+            WalletEntity(
+                id = walletId,
+                name = name.trim(),
+                icon = icon,
+                currency = currency,
+                startMoney = startMoney,
+                isArchived = isArchived,
+                note = note?.trim()?.ifEmpty { null },
+                countInTotal = countInTotal,
+                index = currentIndex,
+                isDeleted = false,
+                lastEdit = now,
+                tag = tag
+            )
+        } else {
+            val existing = moneyDao.getWalletById(id)
+            if (existing != null) {
+                existing.copy(
+                    name = name.trim(),
+                    icon = icon,
+                    currency = currency,
+                    startMoney = startMoney,
+                    isArchived = isArchived,
+                    note = note?.trim()?.ifEmpty { null },
+                    countInTotal = countInTotal,
+                    lastEdit = now,
+                    tag = tag ?: existing.tag
+                )
+            } else {
+                WalletEntity(
+                    id = walletId,
+                    name = name.trim(),
+                    icon = icon,
+                    currency = currency,
+                    startMoney = startMoney,
+                    isArchived = isArchived,
+                    note = note?.trim()?.ifEmpty { null },
+                    countInTotal = countInTotal,
+                    index = currentIndex,
+                    isDeleted = false,
+                    lastEdit = now,
+                    tag = tag
+                )
+            }
+        }
 
-        moneyDao.insertWallet(wallet)
+        if (id == null || moneyDao.getWalletById(id) == null) {
+            moneyDao.insertWallet(wallet)
+        } else {
+            moneyDao.updateWallet(wallet)
+        }
         return walletId
     }
 

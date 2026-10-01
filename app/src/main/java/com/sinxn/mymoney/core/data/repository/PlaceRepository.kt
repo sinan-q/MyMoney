@@ -54,7 +54,11 @@ class PlaceRepository @Inject constructor(
             tag = tag
         )
 
-        moneyDao.insertPlace(place)
+        if (id == null || moneyDao.getPlaceById(id) == null) {
+            moneyDao.insertPlace(place)
+        } else {
+            moneyDao.updatePlace(place)
+        }
         return placeId
     }
 

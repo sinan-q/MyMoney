@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface MoneyDao {
     // Wallets
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertWallet(wallet: WalletEntity)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -99,7 +99,7 @@ interface MoneyDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTransfers(transfers: List<com.sinxn.mymoney.core.data.local.entity.TransferEntity>)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTransfer(transfer: com.sinxn.mymoney.core.data.local.entity.TransferEntity)
 
     @Update
@@ -150,7 +150,7 @@ interface MoneyDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTransactionModels(items: List<com.sinxn.mymoney.core.data.local.entity.TransactionModelEntity>)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTransactionModel(item: com.sinxn.mymoney.core.data.local.entity.TransactionModelEntity)
 
     @Update
@@ -202,7 +202,7 @@ interface MoneyDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTransferModels(items: List<com.sinxn.mymoney.core.data.local.entity.TransferModelEntity>)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTransferModel(item: com.sinxn.mymoney.core.data.local.entity.TransferModelEntity)
 
     @Update
@@ -326,7 +326,7 @@ interface MoneyDao {
     fun getWalletWithBalance(walletId: String, maxDate: String): Flow<WalletWithBalance?>
 
     // Categories
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertCategory(category: CategoryEntity)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -657,7 +657,7 @@ interface MoneyDao {
     }
 
     // Places
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertPlace(place: com.sinxn.mymoney.core.data.local.entity.PlaceEntity)
 
     @Update
@@ -728,7 +728,7 @@ interface MoneyDao {
     fun getAllPlaceTransactions(): Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory>>
 
     // Events
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertEvent(event: com.sinxn.mymoney.core.data.local.entity.EventEntity)
 
     @Update
@@ -797,7 +797,7 @@ interface MoneyDao {
 
 
     // People
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertPerson(person: com.sinxn.mymoney.core.data.local.entity.PersonEntity)
 
     @Update
@@ -869,7 +869,7 @@ interface MoneyDao {
     fun getAttachmentsForTransaction(transactionId: String): Flow<List<com.sinxn.mymoney.core.data.local.entity.AttachmentEntity>>
 
     // Debts
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertDebt(debt: DebtEntity)
 
     @Update
@@ -999,7 +999,7 @@ interface MoneyDao {
     suspend fun softDeletePeopleForDebt(debtId: String, lastEdit: Long)
 
     // --- Budget Queries & Operations ---
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertBudget(budget: com.sinxn.mymoney.core.data.local.entity.BudgetEntity)
 
     @Update
@@ -1206,7 +1206,7 @@ interface MoneyDao {
 
 
     // --- Savings Queries & Operations ---
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertSaving(saving: com.sinxn.mymoney.core.data.local.entity.SavingEntity)
 
     @Update
@@ -1322,7 +1322,7 @@ interface MoneyDao {
     @Query("SELECT * FROM recurrent_transfers WHERE id = :id AND isDeleted = 0")
     fun getRecurrentTransferWithDetailsById(id: String): Flow<com.sinxn.mymoney.core.data.local.model.RecurrentTransferWithDetails?>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertRecurrentTransaction(entity: com.sinxn.mymoney.core.data.local.entity.RecurrentTransactionEntity)
 
     @Update
@@ -1331,7 +1331,7 @@ interface MoneyDao {
     @Query("UPDATE recurrent_transactions SET isDeleted = 1, lastEdit = :lastEdit WHERE id = :id")
     suspend fun deleteRecurrentTransaction(id: String, lastEdit: Long = System.currentTimeMillis())
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertRecurrentTransfer(entity: com.sinxn.mymoney.core.data.local.entity.RecurrentTransferEntity)
 
     @Update

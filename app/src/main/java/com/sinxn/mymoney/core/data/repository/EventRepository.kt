@@ -54,7 +54,11 @@ class EventRepository @Inject constructor(
             tag = tag
         )
 
-        moneyDao.insertEvent(event)
+        if (id == null || moneyDao.getEventById(id) == null) {
+            moneyDao.insertEvent(event)
+        } else {
+            moneyDao.updateEvent(event)
+        }
         return eventId
     }
 
