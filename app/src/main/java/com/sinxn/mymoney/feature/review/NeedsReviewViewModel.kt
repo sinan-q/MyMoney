@@ -61,15 +61,37 @@ class NeedsReviewViewModel @Inject constructor(
                     if (missing.isEmpty()) {
                         null
                     } else {
+                        // Run extraction rules to get rule-based suggestions
+                        val allRules = effectiveFields.flatMap { field ->
+                            customFieldRepository.getExtractionRulesForField(field.id)
+                        }
+                        val ruleExtracted = if (allRules.isNotEmpty()) {
+                            com.sinxn.mymoney.core.data.importBackup.ExtractionEngine.extract(
+                                tx.transaction.description,
+                                tx.transaction.note,
+                                allRules
+                            )
+                        } else emptyMap()
+
+                        val fieldsByKey = effectiveFields.associateBy { it.key }
+
                         val missingUiModels = missing.map { field ->
                             val knownValues = customFieldRepository.getDistinctValuesForField(field.id)
                             
                             val textToSearch = "${tx.transaction.description.orEmpty()} ${tx.transaction.note.orEmpty()}".lowercase()
-                            val suggestions = knownValues.filter { knownValue ->
+                            val textSuggestions = knownValues.filter { knownValue ->
                                 knownValue.isNotBlank() && textToSearch.contains(knownValue.lowercase())
                             }.distinct()
+
+                            // Add rule-extracted value as a suggestion if available
+                            val ruleValue = ruleExtracted[field.key]
+                            val allSuggestions = if (ruleValue != null && ruleValue !in textSuggestions) {
+                                listOf(ruleValue) + textSuggestions
+                            } else {
+                                textSuggestions
+                            }
                             
-                            MissingFieldUiModel(field, suggestions)
+                            MissingFieldUiModel(field, allSuggestions)
                         }
                         ReviewItemUiModel(tx, missingUiModels)
                     }

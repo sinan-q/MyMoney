@@ -417,6 +417,14 @@ interface MoneyDao {
     """)
     fun getTransactionsForCategory(categoryId: String): Flow<List<TransactionWithCategory>>
 
+    @Query("""
+        SELECT * FROM transactions 
+        WHERE (categoryId = :categoryId OR categoryId IN (SELECT id FROM categories WHERE parentId = :categoryId AND isDeleted = 0))
+          AND isDeleted = 0
+        ORDER BY date DESC
+    """)
+    suspend fun getTransactionEntitiesForCategory(categoryId: String): List<TransactionEntity>
+
     // --- Pending (Unconfirmed) Transactions for Recurrence Inbox (REG-03) ---
     @androidx.room.Transaction
     @Query("""

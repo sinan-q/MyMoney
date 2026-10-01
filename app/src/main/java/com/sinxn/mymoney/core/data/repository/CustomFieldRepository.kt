@@ -6,10 +6,31 @@ import com.sinxn.mymoney.core.data.local.entity.CustomFieldDefinitionEntity
 import com.sinxn.mymoney.core.data.local.entity.CustomFieldValueEntity
 import com.sinxn.mymoney.core.data.local.entity.CustomFieldTombstoneEntity
 import com.sinxn.mymoney.core.data.local.entity.CustomFieldExtractionRuleEntity
+import com.sinxn.mymoney.core.data.local.entity.CustomFieldSnapshotEntity
+import com.sinxn.mymoney.core.data.importBackup.ExtractionEngine
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+
+data class ExtractionPreviewResult(
+    val totalTransactions: Int,
+    val matchedCount: Int,
+    val unmatchedCount: Int,
+    val newValueCount: Int,
+    val updatedValueCount: Int,
+    val skippedManualCount: Int,
+    val sampleMatches: List<ExtractionPreviewMatch>
+)
+
+data class ExtractionPreviewMatch(
+    val transactionId: String,
+    val description: String?,
+    val note: String?,
+    val extractedValues: Map<String, String>,
+    val existingValues: Map<String, Pair<String, String>>, // fieldKey -> (value, source)
+    val action: String // "new", "update", "skip_manual"
+)
 
 @Singleton
 class CustomFieldRepository @Inject constructor(
@@ -178,6 +199,14 @@ class CustomFieldRepository @Inject constructor(
     suspend fun getExtractionRulesForField(fieldId: String): List<CustomFieldExtractionRuleEntity> {
         return customFieldDao.getExtractionRulesForField(fieldId)
     }
+
+    suspend fun getExtractionRulesForCategory(categoryId: String): List<CustomFieldExtractionRuleEntity> {
+        val effectiveFields = getEffectiveFieldsForCategory(categoryId)
+            .filter { it.archivedAt == null }
+        return effectiveFields.flatMap { field ->
+            customFieldDao.getExtractionRulesForField(field.id)
+        }.sortedBy { it.ruleOrder }
+    }
     
     suspend fun saveExtractionRule(rule: CustomFieldExtractionRuleEntity) {
         customFieldDao.insertExtractionRule(rule.copy(lastEdit = System.currentTimeMillis()))
@@ -185,5 +214,197 @@ class CustomFieldRepository @Inject constructor(
 
     suspend fun deleteExtractionRule(rule: CustomFieldExtractionRuleEntity) {
         customFieldDao.deleteExtractionRule(rule)
+    }
+
+    // --- Extraction Execution ---
+
+    /**
+     * Previews what extraction would produce for a given category without writing anything.
+     * Returns match rate, samples, and counts per §8.9 of the spec.
+     */
+    suspend fun previewExtraction(categoryId: String): ExtractionPreviewResult {
+        val effectiveFields = getEffectiveFieldsForCategory(categoryId)
+            .filter { it.archivedAt == null }
+        val allRules = effectiveFields.flatMap { field ->
+            customFieldDao.getExtractionRulesForField(field.id)
+        }
+
+        if (allRules.isEmpty()) {
+            return ExtractionPreviewResult(0, 0, 0, 0, 0, 0, emptyList())
+        }
+
+        val transactions = moneyDao.getTransactionEntitiesForCategory(categoryId)
+        val fieldsByKey = effectiveFields.associateBy { it.key }
+        val fieldsById = effectiveFields.associateBy { it.id }
+
+        var matchedCount = 0
+        var unmatchedCount = 0
+        var newValueCount = 0
+        var updatedValueCount = 0
+        var skippedManualCount = 0
+        val sampleMatches = mutableListOf<ExtractionPreviewMatch>()
+
+        val fieldKeyById = effectiveFields.associate { it.id to it.key }
+
+        for (tx in transactions) {
+            val extracted = ExtractionEngine.extract(tx.description, tx.note, allRules, fieldKeyById)
+            if (extracted.isEmpty()) {
+                unmatchedCount++
+                continue
+            }
+            matchedCount++
+
+            val existingValues = customFieldDao.getValuesForTransactionSync(tx.id)
+            val existingByFieldId = existingValues.associateBy { it.fieldId }
+
+            val resolvedExtracted = mutableMapOf<String, String>()
+            val existingMap = mutableMapOf<String, Pair<String, String>>()
+            var txAction = "new"
+
+            for ((fieldKey, value) in extracted) {
+                val fieldDef = fieldsByKey[fieldKey] ?: continue
+                val existing = existingByFieldId[fieldDef.id]
+
+                val effectiveValue = if (fieldDef.type.lowercase() == "boolean") {
+                    when (value.trim().lowercase()) {
+                        "true", "yes", "1", "online", "t", "y" -> "true"
+                        "false", "no", "0", "offline", "f", "n" -> "false"
+                        else -> if (value.isNotBlank()) "true" else "false"
+                    }
+                } else {
+                    value.trim()
+                }
+
+                if (existing != null) {
+                    existingMap[fieldKey] = existing.value to existing.source
+                    if (existing.source == "manual") {
+                        skippedManualCount++
+                        txAction = "skip_manual"
+                        continue
+                    }
+                    if (existing.value != effectiveValue) {
+                        updatedValueCount++
+                        txAction = "update"
+                    }
+                } else {
+                    newValueCount++
+                }
+                resolvedExtracted[fieldKey] = effectiveValue
+            }
+
+            if (sampleMatches.size < 10) {
+                sampleMatches.add(
+                    ExtractionPreviewMatch(
+                        transactionId = tx.id,
+                        description = tx.description,
+                        note = tx.note,
+                        extractedValues = resolvedExtracted,
+                        existingValues = existingMap,
+                        action = txAction
+                    )
+                )
+            }
+        }
+
+        return ExtractionPreviewResult(
+            totalTransactions = transactions.size,
+            matchedCount = matchedCount,
+            unmatchedCount = unmatchedCount,
+            newValueCount = newValueCount,
+            updatedValueCount = updatedValueCount,
+            skippedManualCount = skippedManualCount,
+            sampleMatches = sampleMatches
+        )
+    }
+
+    /**
+     * Applies extraction rules to all transactions in the category scope.
+     * Respects precedence: manual > embedded > parsed.
+     * Takes snapshots of affected values for undo (§9, §8.9).
+     * Returns the number of values written.
+     */
+    suspend fun applyExtraction(categoryId: String): Int {
+        val effectiveFields = getEffectiveFieldsForCategory(categoryId)
+            .filter { it.archivedAt == null }
+        val allRules = effectiveFields.flatMap { field ->
+            customFieldDao.getExtractionRulesForField(field.id)
+        }
+        if (allRules.isEmpty()) return 0
+
+        val transactions = moneyDao.getTransactionEntitiesForCategory(categoryId)
+        val fieldsByKey = effectiveFields.associateBy { it.key }
+
+        val operationId = UUID.randomUUID().toString()
+        val now = System.currentTimeMillis()
+        val undoWindowMs = 5 * 60 * 1000L // 5 minutes
+        var valuesWritten = 0
+        val fieldKeyById = effectiveFields.associate { it.id to it.key }
+
+        for (tx in transactions) {
+            val extracted = ExtractionEngine.extract(tx.description, tx.note, allRules, fieldKeyById)
+            if (extracted.isEmpty()) continue
+
+            val existingValues = customFieldDao.getValuesForTransactionSync(tx.id)
+            val existingByFieldId = existingValues.associateBy { it.fieldId }
+
+            for ((fieldKey, value) in extracted) {
+                val fieldDef = fieldsByKey[fieldKey] ?: continue
+                if (value.isBlank()) continue
+
+                val effectiveValue = if (fieldDef.type.lowercase() == "boolean") {
+                    when (value.trim().lowercase()) {
+                        "true", "yes", "1", "online", "t", "y" -> "true"
+                        "false", "no", "0", "offline", "f", "n" -> "false"
+                        else -> if (value.isNotBlank()) "true" else "false"
+                    }
+                } else {
+                    value.trim()
+                }
+
+                val existing = existingByFieldId[fieldDef.id]
+
+                // Manual values are never overwritten (§8.6)
+                if (existing?.source == "manual") continue
+                // Embedded values outrank parsed (§8.6)
+                if (existing?.source == "embedded") continue
+
+                // Snapshot the previous value before overwriting
+                if (existing != null) {
+                    customFieldDao.insertSnapshot(
+                        CustomFieldSnapshotEntity(
+                            id = UUID.randomUUID().toString(),
+                            operationId = operationId,
+                            transactionId = tx.id,
+                            fieldId = fieldDef.id,
+                            previousValue = existing.value,
+                            previousSource = existing.source,
+                            createdAt = now,
+                            expiresAt = now + undoWindowMs
+                        )
+                    )
+                }
+
+                val normalizedValue = if (fieldDef.type.lowercase() == "boolean") {
+                    effectiveValue
+                } else {
+                    effectiveValue.replace(Regex("\\s+"), " ").lowercase()
+                }
+
+                customFieldDao.insertValue(
+                    CustomFieldValueEntity(
+                        id = existing?.id ?: UUID.randomUUID().toString(),
+                        transactionId = tx.id,
+                        fieldId = fieldDef.id,
+                        value = effectiveValue,
+                        normalizedValue = normalizedValue,
+                        source = "parsed",
+                        lastEdit = now
+                    )
+                )
+                valuesWritten++
+            }
+        }
+
+        return valuesWritten
     }
 }

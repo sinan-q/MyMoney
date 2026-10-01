@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Settings
 import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -89,6 +90,8 @@ fun CategoryAddEditScreen(
         if (uiState.type == CategoryType.INCOME) IncomeColor else ExpenseColor
     }
     val scrollState = rememberScrollState()
+    val extractionPreview by viewModel.extractionPreview.collectAsState()
+    val isApplyingExtraction by viewModel.isApplyingExtraction.collectAsState()
 
 
     LaunchedEffect(Unit) {
@@ -178,17 +181,31 @@ fun CategoryAddEditScreen(
         )
     }
 
-    if (showExtractionRulesDialog && editingCustomField != null) {
+    if (showExtractionRulesDialog) {
+        val allFields = uiState.inheritedCustomFields + uiState.customFields
         com.sinxn.mymoney.feature.category.components.ExtractionRuleEditDialog(
-            fieldId = editingCustomField!!.id,
             rules = uiState.extractionRules,
-            onDismissRequest = { showExtractionRulesDialog = false },
+            availableFields = allFields,
+            fieldId = editingCustomField?.id,
+            onDismissRequest = { 
+                showExtractionRulesDialog = false 
+                editingCustomField = null
+            },
             onSaveRule = { rule ->
                 viewModel.saveExtractionRule(rule)
             },
             onDeleteRule = { rule ->
                 viewModel.deleteExtractionRule(rule)
             }
+        )
+    }
+
+    if (extractionPreview != null) {
+        com.sinxn.mymoney.core.ui.components.ExtractionPreviewDialog(
+            preview = extractionPreview!!,
+            isApplying = isApplyingExtraction,
+            onConfirm = { viewModel.confirmExtraction() },
+            onDismiss = { viewModel.dismissExtractionPreview() }
         )
     }
 
@@ -436,6 +453,30 @@ fun CategoryAddEditScreen(
                                     Icon(Icons.Default.Add, contentDescription = null)
                                     Spacer(Modifier.width(8.dp))
                                     Text("Add Custom Field")
+                                }
+
+                                if (uiState.customFields.isNotEmpty() || uiState.inheritedCustomFields.isNotEmpty()) {
+                                    TextButton(
+                                        onClick = { 
+                                            editingCustomField = null
+                                            viewModel.loadCategoryExtractionRules()
+                                            showExtractionRulesDialog = true
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Icon(Icons.Default.Settings, contentDescription = null)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Manage Extraction Rules")
+                                    }
+
+                                    TextButton(
+                                        onClick = { viewModel.runExtractionPreview() },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Icon(Icons.Default.Check, contentDescription = null)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Run Extraction Rules")
+                                    }
                                 }
                             }
                         }

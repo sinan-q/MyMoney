@@ -572,13 +572,14 @@ class BackupImporter @Inject constructor(
             }
             moneyDao.insertTransactions(entities)
             
-            // Insert custom field values
+            // Insert custom field values from embedded blocks
             customFieldValuesToInsert.forEach { customFieldDao.insertValue(it) }
             orphanValuesToInsert.forEach { customFieldDao.insertOrphan(it) }
             
-            // Post-process: run extraction rules for transactions
-            // We would need to run extraction on description/note and insert as source="parsed"
-            // For MVP, we at least have embedded block working.
+            // Note: Extraction rules are NOT run during import.
+            // Users trigger extraction manually from the category editor (§9),
+            // which shows a preview before applying. Embedded block values are
+            // handled above; parsed values come from user-initiated extraction.
         }
 
         // 7. Transfers

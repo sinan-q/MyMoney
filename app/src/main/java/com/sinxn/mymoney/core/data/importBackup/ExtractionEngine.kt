@@ -9,10 +9,15 @@ object ExtractionEngine {
      * Runs extraction rules against description and note.
      * Returns a map of fieldId to extracted value.
      */
+    /**
+     * Runs extraction rules against description and note.
+     * Returns a map of fieldId to extracted value.
+     */
     fun extract(
         description: String?,
         note: String?,
-        rules: List<CustomFieldExtractionRuleEntity>
+        rules: List<CustomFieldExtractionRuleEntity>,
+        fieldKeyById: Map<String, String> = emptyMap()
     ): Map<String, String> {
         val extractedValues = mutableMapOf<String, String>()
         
@@ -29,8 +34,15 @@ object ExtractionEngine {
                 }
                 
                 if (!textToMatch.isNullOrBlank()) {
-                    val result = applyRule(textToMatch, rule)
+                    val result = applyRule(textToMatch, rule).toMutableMap()
                     if (result.isNotEmpty()) {
+                        // If the rule is associated with a specific fieldId and the template didn't explicitly capture it,
+                        // map that field as matched ("true" for boolean/flag fields)
+                        val associatedKey = fieldKeyById[rule.fieldId]
+                        if (associatedKey != null && !result.containsKey(associatedKey)) {
+                            result[associatedKey] = "true"
+                        }
+
                         // Merge results without overwriting already matched higher priority rules
                         for ((fieldKey, value) in result) {
                             if (!extractedValues.containsKey(fieldKey)) {
@@ -60,36 +72,84 @@ object ExtractionEngine {
     }
 
     private fun applyTemplateRule(text: String, pattern: String): Map<String, String> {
-        // Example template: "Uber {amount} {date}"
-        // We will compile this into a regex pattern dynamically.
+        // Example template: "Uber {amount} {date}" or "{food} @ {restaurant} {online=false}"
         val placeholders = mutableListOf<String>()
-        val placeholderRegex = Regex("\\{([a-zA-Z0-9_]+)\\}")
+        val hardcodedValues = mutableMapOf<String, String>()
         
-        var regexString = Regex.escape(pattern)
+        // Matches {field} or {field=value}
+        val placeholderRegex = Regex("\\{([a-zA-Z0-9_]+)(?:=([^}]+))?\\}")
         
-        val matches = placeholderRegex.findAll(pattern)
-        for (match in matches) {
+        var regexString = ""
+        var lastMatchEnd = 0
+        
+        val matches = placeholderRegex.findAll(pattern).toList()
+        
+        // We need to keep track of whether we've added any capturing groups
+        var capturingGroupCount = 0
+        
+        for (i in matches.indices) {
+            val match = matches[i]
             val placeholder = match.groupValues[1]
-            placeholders.add(placeholder)
-            // Replace escaped \{placeholder\} in the escaped regexString with a capture group
-            regexString = regexString.replace("\\{${placeholder}\\}", "(.*?)")
+            val hardcodedValue = match.groupValues[2]
+            
+            if (hardcodedValue.isNotEmpty()) {
+                // It's a hardcoded value, e.g., {online=false}
+                hardcodedValues[placeholder] = hardcodedValue
+                
+                // If there's trailing space before a hardcoded value, we should trim it
+                // so we don't accidentally require that space in the actual text.
+                // We use \s* to make any spacing optional.
+                val staticPart = pattern.substring(lastMatchEnd, match.range.first).trimEnd()
+                regexString += Regex.escape(staticPart) + "\\s*"
+                
+            } else {
+                placeholders.add(placeholder)
+                capturingGroupCount++
+                
+                // Append escaped static text before the placeholder
+                val staticPart = pattern.substring(lastMatchEnd, match.range.first)
+                regexString += Regex.escape(staticPart)
+                
+                // If the placeholder is the last capturing one in the template and there's no trailing static text,
+                // use greedy (.*) so it doesn't match empty string.
+                val noMoreCapturing = matches.subList(i + 1, matches.size).all { it.groupValues[2].isNotEmpty() }
+                val remainingStatic = pattern.substring(match.range.last + 1).replace(placeholderRegex, "").trimEnd()
+                val isAtEnd = noMoreCapturing && remainingStatic.isEmpty()
+                val replacement = if (isAtEnd) "(.*)" else "(.*?)"
+                regexString += replacement
+            }
+            
+            lastMatchEnd = match.range.last + 1
         }
         
-        // Literal exact match (case-insensitive) but allow matching within string
-        // The spec says "Literal text is matched exactly (case-insensitive)"
-        val compiledRegex = Regex(regexString, RegexOption.IGNORE_CASE)
-        val matchResult = compiledRegex.find(text) ?: return emptyMap()
-
+        // Append any remaining escaped static text
+        if (lastMatchEnd < pattern.length) {
+            regexString += Regex.escape(pattern.substring(lastMatchEnd))
+        }
+        
         val results = mutableMapOf<String, String>()
-        // group 0 is full match, groups 1..N are captures
-        for (i in placeholders.indices) {
-            if (i + 1 <= matchResult.groupValues.lastIndex) {
-                val extracted = matchResult.groupValues[i + 1].trim()
-                if (extracted.isNotEmpty()) {
-                    results[placeholders[i]] = extracted
+        
+        // If there is no regex part (only hardcoded), we don't need to match against text
+        if (regexString.isNotBlank() && regexString != "\\s*") {
+            // Literal exact match (case-insensitive) but allow matching within string
+            val compiledRegex = Regex(regexString, RegexOption.IGNORE_CASE)
+            val matchResult = compiledRegex.find(text) ?: return emptyMap()
+    
+            // group 0 is full match, groups 1..N are captures
+            var captureIndex = 1
+            for (placeholder in placeholders) {
+                if (captureIndex <= matchResult.groupValues.lastIndex) {
+                    val extracted = matchResult.groupValues[captureIndex].trim()
+                    if (extracted.isNotEmpty()) {
+                        results[placeholder] = extracted
+                    }
                 }
+                captureIndex++
             }
         }
+        
+        // Add hardcoded values
+        results.putAll(hardcodedValues)
         
         return results
     }

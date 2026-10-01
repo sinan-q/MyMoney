@@ -6,7 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
 import com.sinxn.mymoney.core.data.repository.CategoryRepository
 import com.sinxn.mymoney.core.util.CategoryType
+import com.sinxn.mymoney.core.data.repository.ExtractionPreviewResult
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 sealed class CategoryAddEditEvent {
@@ -61,6 +64,12 @@ class CategoryAddEditViewModel @Inject constructor(
 
     private val _eventFlow = MutableSharedFlow<CategoryAddEditEvent>()
     val eventFlow: SharedFlow<CategoryAddEditEvent> = _eventFlow.asSharedFlow()
+
+    private val _extractionPreview = MutableStateFlow<ExtractionPreviewResult?>(null)
+    val extractionPreview: StateFlow<ExtractionPreviewResult?> = _extractionPreview.asStateFlow()
+
+    private val _isApplyingExtraction = MutableStateFlow(false)
+    val isApplyingExtraction: StateFlow<Boolean> = _isApplyingExtraction.asStateFlow()
 
     init {
         loadData()
@@ -309,17 +318,83 @@ class CategoryAddEditViewModel @Inject constructor(
         }
     }
 
+    fun loadCategoryExtractionRules() {
+        val catId = _uiState.value.categoryId ?: return
+        viewModelScope.launch {
+            val rules = customFieldRepository.getExtractionRulesForCategory(catId)
+            _uiState.value = _uiState.value.copy(extractionRules = rules)
+        }
+    }
+
     fun saveExtractionRule(rule: com.sinxn.mymoney.core.data.local.entity.CustomFieldExtractionRuleEntity) {
         viewModelScope.launch {
             customFieldRepository.saveExtractionRule(rule)
-            loadExtractionRules(rule.fieldId)
+            val catId = _uiState.value.categoryId
+            if (catId != null) {
+                val rules = customFieldRepository.getExtractionRulesForCategory(catId)
+                _uiState.value = _uiState.value.copy(extractionRules = rules)
+            } else {
+                loadExtractionRules(rule.fieldId)
+            }
+            // Trigger extraction preview after saving a rule (§8.9, §9)
+            triggerExtractionPreview()
         }
     }
 
     fun deleteExtractionRule(rule: com.sinxn.mymoney.core.data.local.entity.CustomFieldExtractionRuleEntity) {
         viewModelScope.launch {
             customFieldRepository.deleteExtractionRule(rule)
-            loadExtractionRules(rule.fieldId)
+            val catId = _uiState.value.categoryId
+            if (catId != null) {
+                val rules = customFieldRepository.getExtractionRulesForCategory(catId)
+                _uiState.value = _uiState.value.copy(extractionRules = rules)
+            } else {
+                loadExtractionRules(rule.fieldId)
+            }
         }
+    }
+
+    /**
+     * Generates a preview of what extraction rules would produce
+     * against all transactions in the current category's scope.
+     */
+    private fun triggerExtractionPreview() {
+        val catId = _uiState.value.categoryId ?: return
+        viewModelScope.launch {
+            val preview = withContext(Dispatchers.IO) {
+                customFieldRepository.previewExtraction(catId)
+            }
+            _extractionPreview.value = preview
+        }
+    }
+
+    /**
+     * Called from UI: user confirms the extraction preview → apply.
+     */
+    fun confirmExtraction() {
+        val catId = _uiState.value.categoryId ?: return
+        viewModelScope.launch {
+            _isApplyingExtraction.value = true
+            withContext(Dispatchers.IO) {
+                customFieldRepository.applyExtraction(catId)
+            }
+            _isApplyingExtraction.value = false
+            _extractionPreview.value = null
+            loadCustomFields()
+        }
+    }
+
+    /**
+     * Called from UI: user dismisses the preview without applying.
+     */
+    fun dismissExtractionPreview() {
+        _extractionPreview.value = null
+    }
+
+    /**
+     * Manually trigger a preview (e.g. from a "Run Extraction" button).
+     */
+    fun runExtractionPreview() {
+        triggerExtractionPreview()
     }
 }
