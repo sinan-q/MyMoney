@@ -205,6 +205,10 @@ class BackupImporter @Inject constructor(
     }
 
     private suspend fun insertData(root: BackupRoot) {
+        // Backup custom fields and extraction rules before clearing the database
+        val existingDefinitions = customFieldDao.getAllDefinitions()
+        val existingRules = customFieldDao.getAllExtractionRules()
+
         moneyDao.clearAll()
 
         val validWalletIds = mutableSetOf<String>()
@@ -809,5 +813,16 @@ class BackupImporter @Inject constructor(
              }
              moneyDao.insertDebtPeople(entities)
         }
+
+        // 15. Restore Custom Fields & Rules
+        val validDefinitionsToRestore = existingDefinitions.filter { validCategoryIds.contains(it.categoryId) }
+        val restoredFieldIds = validDefinitionsToRestore.map { it.id }.toSet()
+        val validRulesToRestore = existingRules.filter { restoredFieldIds.contains(it.fieldId) }
+        
+        // Sort definitions to handle visibilityDependsOnFieldId self-reference foreign key
+        val sortedDefinitions = validDefinitionsToRestore.sortedBy { if (it.visibilityDependsOnFieldId == null) 0 else 1 }
+        
+        sortedDefinitions.forEach { customFieldDao.insertDefinition(it) }
+        validRulesToRestore.forEach { customFieldDao.insertExtractionRule(it) }
     }
 }

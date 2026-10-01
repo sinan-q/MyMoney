@@ -279,6 +279,7 @@ class CustomFieldRepository @Inject constructor(
 
             for ((fieldKey, value) in extracted) {
                 val fieldDef = fieldsByKey[fieldKey] ?: continue
+                if (value.isBlank()) continue
                 val existing = existingByFieldId[fieldDef.id]
 
                 val effectiveValue = if (fieldDef.type.lowercase() == "boolean") {

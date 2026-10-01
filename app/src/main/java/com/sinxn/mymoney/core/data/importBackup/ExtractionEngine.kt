@@ -76,8 +76,8 @@ object ExtractionEngine {
         val placeholders = mutableListOf<String>()
         val hardcodedValues = mutableMapOf<String, String>()
         
-        // Matches {field} or {field=value}
-        val placeholderRegex = Regex("\\{([a-zA-Z0-9_]+)(?:=([^}]+))?\\}")
+        // Matches {field} or {field=value} or {field=}
+        val placeholderRegex = Regex("\\{([a-zA-Z0-9_]+)(?:=([^}]*))?\\}")
         
         var regexString = ""
         var lastMatchEnd = 0
@@ -90,10 +90,11 @@ object ExtractionEngine {
         for (i in matches.indices) {
             val match = matches[i]
             val placeholder = match.groupValues[1]
+            val hasHardcoded = match.groups[2] != null
             val hardcodedValue = match.groupValues[2]
             
-            if (hardcodedValue.isNotEmpty()) {
-                // It's a hardcoded value, e.g., {online=false}
+            if (hasHardcoded) {
+                // It's a hardcoded value, e.g., {online=false} or {restaurent=}
                 hardcodedValues[placeholder] = hardcodedValue
                 
                 // If there's trailing space before a hardcoded value, we should trim it
@@ -112,7 +113,7 @@ object ExtractionEngine {
                 
                 // If the placeholder is the last capturing one in the template and there's no trailing static text,
                 // use greedy (.*) so it doesn't match empty string.
-                val noMoreCapturing = matches.subList(i + 1, matches.size).all { it.groupValues[2].isNotEmpty() }
+                val noMoreCapturing = matches.subList(i + 1, matches.size).all { it.groups[2] != null }
                 val remainingStatic = pattern.substring(match.range.last + 1).replace(placeholderRegex, "").trimEnd()
                 val isAtEnd = noMoreCapturing && remainingStatic.isEmpty()
                 val replacement = if (isAtEnd) "(.*)" else "(.*?)"

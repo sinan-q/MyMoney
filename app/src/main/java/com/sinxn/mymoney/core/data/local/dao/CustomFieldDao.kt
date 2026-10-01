@@ -118,6 +118,9 @@ interface CustomFieldDao {
     // --- Extraction Rules ---
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertExtractionRule(rule: CustomFieldExtractionRuleEntity)
+
+    @Query("SELECT * FROM custom_field_extraction_rules")
+    suspend fun getAllExtractionRules(): List<CustomFieldExtractionRuleEntity>
     
     @Query("SELECT * FROM custom_field_extraction_rules WHERE fieldId = :fieldId ORDER BY ruleOrder ASC")
     suspend fun getExtractionRulesForField(fieldId: String): List<CustomFieldExtractionRuleEntity>
