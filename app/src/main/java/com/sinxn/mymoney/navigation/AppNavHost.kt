@@ -527,7 +527,10 @@ fun AppNavHost(
             )
         ) {
             CategoryAddEditScreen(
-                onNavigateBack = { navController.navigateUp() }
+                onNavigateBack = { navController.navigateUp() },
+                onTransactionClick = { transactionId ->
+                    navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
+                }
             )
         }
         composable(Screen.Wallets.routePattern) {

@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
@@ -21,129 +22,173 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import com.sinxn.mymoney.core.data.repository.ExtractionPreviewMatch
 import com.sinxn.mymoney.core.data.repository.ExtractionPreviewResult
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExtractionPreviewDialog(
     preview: ExtractionPreviewResult,
     isApplying: Boolean,
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onTransactionClick: (String) -> Unit = {}
 ) {
-    AlertDialog(
+    var showUnmatched by remember { mutableStateOf(false) }
+
+    Dialog(
         onDismissRequest = { if (!isApplying) onDismiss() },
-        title = {
-            Text("Extraction Preview", fontWeight = FontWeight.Bold)
-        },
-        text = {
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
             Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier.fillMaxSize()
             ) {
-                // Summary stats
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                // App Bar
+                TopAppBar(
+                    title = { Text("Extraction Preview") },
+                    navigationIcon = {
+                        IconButton(onClick = onDismiss, enabled = !isApplying) {
+                            Icon(Icons.Default.Close, contentDescription = "Close")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
                     )
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            "Summary",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
+                    // Summary stats
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
                         )
-                        StatRow("Total transactions scanned", preview.totalTransactions.toString())
-                        StatRow("Matched by rules", preview.matchedCount.toString(), MaterialTheme.colorScheme.primary)
-                        StatRow("Unmatched", preview.unmatchedCount.toString())
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                        StatRow("New values to create", preview.newValueCount.toString(), MaterialTheme.colorScheme.primary)
-                        StatRow("Values to update", preview.updatedValueCount.toString(), MaterialTheme.colorScheme.tertiary)
-                        if (preview.skippedManualCount > 0) {
-                            StatRow(
-                                "Skipped (manual)",
-                                preview.skippedManualCount.toString(),
-                                MaterialTheme.colorScheme.onSurfaceVariant
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                "Summary",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            StatRow("Total transactions scanned", preview.totalTransactions.toString())
+                            StatRow("Matched by rules", preview.matchedCount.toString(), MaterialTheme.colorScheme.primary)
+                            StatRow("Unmatched", preview.unmatchedCount.toString())
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            StatRow("New values to create", preview.newValueCount.toString(), MaterialTheme.colorScheme.primary)
+                            StatRow("Values to update", preview.updatedValueCount.toString(), MaterialTheme.colorScheme.tertiary)
+                            if (preview.skippedManualCount > 0) {
+                                StatRow(
+                                    "Skipped (manual)",
+                                    preview.skippedManualCount.toString(),
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    val totalChanges = preview.newValueCount + preview.updatedValueCount
+                    if (totalChanges == 0 && preview.matchedCount == 0) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.errorContainer)
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Text(
+                                "No transactions matched the extraction rules.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer
                             )
                         }
                     }
-                }
 
-                val totalChanges = preview.newValueCount + preview.updatedValueCount
-                if (totalChanges == 0 && preview.matchedCount == 0) {
+                    // Toggles
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.errorContainer)
-                            .padding(12.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Icon(
-                            Icons.Default.Info,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onErrorContainer
-                        )
                         Text(
-                            "No transactions matched the extraction rules.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer
+                            if (showUnmatched) "Unmatched Transactions (${preview.unmatchedTransactions.size})" 
+                            else "Matched Transactions (${preview.allMatches.size})",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Show Unmatched", style = MaterialTheme.typography.bodySmall)
+                            Spacer(Modifier.width(8.dp))
+                            Switch(
+                                checked = showUnmatched,
+                                onCheckedChange = { showUnmatched = it }
+                            )
+                        }
                     }
-                }
 
-                // Sample matches
-                if (preview.sampleMatches.isNotEmpty()) {
-                    Text(
-                        "Sample Matches (${preview.sampleMatches.size} of ${preview.matchedCount})",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
+                    // Matches list
+                    val listToShow = if (showUnmatched) preview.unmatchedTransactions else preview.allMatches
+                    
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 250.dp),
+                            .weight(1f),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(preview.sampleMatches) { match ->
-                            SampleMatchCard(match)
+                        items(listToShow) { match ->
+                            SampleMatchCard(
+                                match = match,
+                                onClick = { onTransactionClick(match.transactionId) }
+                            )
+                        }
+                    }
+
+                    // Bottom Action
+                    Button(
+                        onClick = onConfirm,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = totalChanges > 0 && !isApplying
+                    ) {
+                        if (isApplying) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Applying…")
+                        } else {
+                            Text("Apply ${totalChanges} change${if (totalChanges != 1) "s" else ""}")
                         }
                     }
                 }
             }
-        },
-        confirmButton = {
-            val totalChanges = preview.newValueCount + preview.updatedValueCount
-            TextButton(
-                onClick = onConfirm,
-                enabled = totalChanges > 0 && !isApplying
-            ) {
-                if (isApplying) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text("Applying…")
-                } else {
-                    Text("Apply ${totalChanges} change${if (totalChanges != 1) "s" else ""}")
-                }
-            }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                enabled = !isApplying
-            ) {
-                Text("Cancel")
-            }
         }
-    )
+    }
 }
 
 @Composable
@@ -171,24 +216,71 @@ private fun StatRow(
 }
 
 @Composable
-private fun SampleMatchCard(match: ExtractionPreviewMatch) {
+private fun SampleMatchCard(
+    match: ExtractionPreviewMatch,
+    onClick: () -> Unit
+) {
     Card(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(
-            modifier = Modifier.padding(10.dp),
+            modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            // Transaction text
-            if (!match.description.isNullOrBlank()) {
+            // Date and badges / chevron
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = match.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 2,
+                    text = match.date,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    if (match.action == "unmatched") {
+                        Text(
+                            text = "Unmatched",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = "View Transaction",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
+            }
+            
+            val primaryText = when {
+                !match.description.isNullOrBlank() -> match.description
+                !match.note.isNullOrBlank() -> match.note
+                else -> "(No description)"
+            }
+            Text(
+                text = primaryText,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            if (!match.description.isNullOrBlank() && !match.note.isNullOrBlank()) {
+                Text(
+                    text = match.note,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }

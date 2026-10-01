@@ -20,16 +20,18 @@ data class ExtractionPreviewResult(
     val newValueCount: Int,
     val updatedValueCount: Int,
     val skippedManualCount: Int,
-    val sampleMatches: List<ExtractionPreviewMatch>
+    val allMatches: List<ExtractionPreviewMatch>,
+    val unmatchedTransactions: List<ExtractionPreviewMatch>
 )
 
 data class ExtractionPreviewMatch(
     val transactionId: String,
+    val date: String,
     val description: String?,
     val note: String?,
     val extractedValues: Map<String, String>,
     val existingValues: Map<String, Pair<String, String>>, // fieldKey -> (value, source)
-    val action: String // "new", "update", "skip_manual"
+    val action: String // "new", "update", "skip_manual", "unmatched"
 )
 
 @Singleton
@@ -222,7 +224,7 @@ class CustomFieldRepository @Inject constructor(
      * Previews what extraction would produce for a given category without writing anything.
      * Returns match rate, samples, and counts per §8.9 of the spec.
      */
-    suspend fun previewExtraction(categoryId: String): ExtractionPreviewResult {
+    suspend fun previewExtraction(categoryId: String, startDate: String? = null): ExtractionPreviewResult {
         val effectiveFields = getEffectiveFieldsForCategory(categoryId)
             .filter { it.archivedAt == null }
         val allRules = effectiveFields.flatMap { field ->
@@ -230,10 +232,12 @@ class CustomFieldRepository @Inject constructor(
         }
 
         if (allRules.isEmpty()) {
-            return ExtractionPreviewResult(0, 0, 0, 0, 0, 0, emptyList())
+            return ExtractionPreviewResult(0, 0, 0, 0, 0, 0, emptyList(), emptyList())
         }
 
-        val transactions = moneyDao.getTransactionEntitiesForCategory(categoryId)
+        val transactions = moneyDao.getTransactionEntitiesForCategory(categoryId).filter {
+            if (startDate != null) it.date >= startDate else true
+        }
         val fieldsByKey = effectiveFields.associateBy { it.key }
         val fieldsById = effectiveFields.associateBy { it.id }
 
@@ -242,7 +246,8 @@ class CustomFieldRepository @Inject constructor(
         var newValueCount = 0
         var updatedValueCount = 0
         var skippedManualCount = 0
-        val sampleMatches = mutableListOf<ExtractionPreviewMatch>()
+        val allMatches = mutableListOf<ExtractionPreviewMatch>()
+        val unmatchedTransactions = mutableListOf<ExtractionPreviewMatch>()
 
         val fieldKeyById = effectiveFields.associate { it.id to it.key }
 
@@ -250,6 +255,17 @@ class CustomFieldRepository @Inject constructor(
             val extracted = ExtractionEngine.extract(tx.description, tx.note, allRules, fieldKeyById)
             if (extracted.isEmpty()) {
                 unmatchedCount++
+                unmatchedTransactions.add(
+                    ExtractionPreviewMatch(
+                        transactionId = tx.id,
+                        date = tx.date,
+                        description = tx.description,
+                        note = tx.note,
+                        extractedValues = emptyMap(),
+                        existingValues = emptyMap(),
+                        action = "unmatched"
+                    )
+                )
                 continue
             }
             matchedCount++
@@ -292,18 +308,17 @@ class CustomFieldRepository @Inject constructor(
                 resolvedExtracted[fieldKey] = effectiveValue
             }
 
-            if (sampleMatches.size < 10) {
-                sampleMatches.add(
-                    ExtractionPreviewMatch(
-                        transactionId = tx.id,
-                        description = tx.description,
-                        note = tx.note,
-                        extractedValues = resolvedExtracted,
-                        existingValues = existingMap,
-                        action = txAction
-                    )
+            allMatches.add(
+                ExtractionPreviewMatch(
+                    transactionId = tx.id,
+                    date = tx.date,
+                    description = tx.description,
+                    note = tx.note,
+                    extractedValues = resolvedExtracted,
+                    existingValues = existingMap,
+                    action = txAction
                 )
-            }
+            )
         }
 
         return ExtractionPreviewResult(
@@ -313,7 +328,8 @@ class CustomFieldRepository @Inject constructor(
             newValueCount = newValueCount,
             updatedValueCount = updatedValueCount,
             skippedManualCount = skippedManualCount,
-            sampleMatches = sampleMatches
+            allMatches = allMatches,
+            unmatchedTransactions = unmatchedTransactions
         )
     }
 
@@ -323,7 +339,7 @@ class CustomFieldRepository @Inject constructor(
      * Takes snapshots of affected values for undo (§9, §8.9).
      * Returns the number of values written.
      */
-    suspend fun applyExtraction(categoryId: String): Int {
+    suspend fun applyExtraction(categoryId: String, startDate: String? = null): Int {
         val effectiveFields = getEffectiveFieldsForCategory(categoryId)
             .filter { it.archivedAt == null }
         val allRules = effectiveFields.flatMap { field ->
@@ -331,7 +347,9 @@ class CustomFieldRepository @Inject constructor(
         }
         if (allRules.isEmpty()) return 0
 
-        val transactions = moneyDao.getTransactionEntitiesForCategory(categoryId)
+        val transactions = moneyDao.getTransactionEntitiesForCategory(categoryId).filter {
+            if (startDate != null) it.date >= startDate else true
+        }
         val fieldsByKey = effectiveFields.associateBy { it.key }
 
         val operationId = UUID.randomUUID().toString()

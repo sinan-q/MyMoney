@@ -75,6 +75,7 @@ import org.json.JSONObject
 @Composable
 fun CategoryAddEditScreen(
     onNavigateBack: () -> Unit,
+    onTransactionClick: (String) -> Unit = {},
     viewModel: CategoryAddEditViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -205,7 +206,8 @@ fun CategoryAddEditScreen(
             preview = extractionPreview!!,
             isApplying = isApplyingExtraction,
             onConfirm = { viewModel.confirmExtraction() },
-            onDismiss = { viewModel.dismissExtractionPreview() }
+            onDismiss = { viewModel.dismissExtractionPreview() },
+            onTransactionClick = onTransactionClick
         )
     }
 
@@ -469,8 +471,21 @@ fun CategoryAddEditScreen(
                                         Text("Manage Extraction Rules")
                                     }
 
+                                    var startDateFilter by remember { mutableStateOf("") }
+                                    
+                                    OutlinedTextField(
+                                        value = startDateFilter,
+                                        onValueChange = { startDateFilter = it },
+                                        label = { Text("Filter from Date (Optional, YYYY-MM-DD)") },
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                        singleLine = true
+                                    )
+
                                     TextButton(
-                                        onClick = { viewModel.runExtractionPreview() },
+                                        onClick = { 
+                                            viewModel.setExtractionStartDate(startDateFilter.takeIf { it.isNotBlank() })
+                                            viewModel.runExtractionPreview() 
+                                        },
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Icon(Icons.Default.Check, contentDescription = null)

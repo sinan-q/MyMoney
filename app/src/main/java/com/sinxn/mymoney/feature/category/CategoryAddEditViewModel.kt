@@ -71,6 +71,13 @@ class CategoryAddEditViewModel @Inject constructor(
     private val _isApplyingExtraction = MutableStateFlow(false)
     val isApplyingExtraction: StateFlow<Boolean> = _isApplyingExtraction.asStateFlow()
 
+    private val _extractionStartDate = MutableStateFlow<String?>(null)
+    val extractionStartDate: StateFlow<String?> = _extractionStartDate.asStateFlow()
+
+    fun setExtractionStartDate(date: String?) {
+        _extractionStartDate.value = date
+    }
+
     init {
         loadData()
         loadCustomFields()
@@ -360,9 +367,10 @@ class CategoryAddEditViewModel @Inject constructor(
      */
     private fun triggerExtractionPreview() {
         val catId = _uiState.value.categoryId ?: return
+        val startDate = _extractionStartDate.value
         viewModelScope.launch {
             val preview = withContext(Dispatchers.IO) {
-                customFieldRepository.previewExtraction(catId)
+                customFieldRepository.previewExtraction(catId, startDate)
             }
             _extractionPreview.value = preview
         }
@@ -373,10 +381,11 @@ class CategoryAddEditViewModel @Inject constructor(
      */
     fun confirmExtraction() {
         val catId = _uiState.value.categoryId ?: return
+        val startDate = _extractionStartDate.value
         viewModelScope.launch {
             _isApplyingExtraction.value = true
             withContext(Dispatchers.IO) {
-                customFieldRepository.applyExtraction(catId)
+                customFieldRepository.applyExtraction(catId, startDate)
             }
             _isApplyingExtraction.value = false
             _extractionPreview.value = null
