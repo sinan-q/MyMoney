@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -67,6 +68,7 @@ fun CategoryDetailsScreen(
     onSubcategoryClick: (String) -> Unit = {},
     onEditCategoryClick: (String) -> Unit = {},
     onAddSubcategoryClick: (String, Int) -> Unit = { _, _ -> },
+    onCustomFieldClick: (String) -> Unit = {},
     viewModel: CategoryDetailsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -325,6 +327,38 @@ fun CategoryDetailsScreen(
                                     }
                                 }
                             }
+                        }
+                    }
+
+                    val allCustomFields = uiState.customFields + uiState.inheritedCustomFields
+                    if (allCustomFields.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "Custom Fields",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        items(
+                            items = allCustomFields,
+                            key = { it.id },
+                            contentType = { "custom_field" }
+                        ) { field ->
+                            androidx.compose.material3.ListItem(
+                                headlineContent = { Text(field.label) },
+                                supportingContent = { Text(field.type.replaceFirstChar { it.uppercase() }) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onCustomFieldClick(field.id) },
+                                trailingContent = {
+                                    Icon(
+                                        imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        contentDescription = null
+                                    )
+                                }
+                            )
                         }
                     }
 

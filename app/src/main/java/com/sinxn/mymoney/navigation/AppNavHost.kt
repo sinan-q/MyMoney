@@ -515,6 +515,36 @@ fun AppNavHost(
                 },
                 onAddSubcategoryClick = { parentId, type ->
                     navController.navigate(Screen.CategoryAddEdit.createRoute(parentId = parentId, type = type))
+                },
+                onCustomFieldClick = { fieldId ->
+                    navController.navigate(Screen.CustomFieldDetail.createRoute(fieldId))
+                }
+            )
+        }
+        composable(
+            Screen.CustomFieldDetail.routePattern,
+            arguments = listOf(
+                navArgument("fieldId") { type = NavType.StringType }
+            )
+        ) {
+            com.sinxn.mymoney.feature.category.CustomFieldDetailScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onValueClick = { fieldId, value ->
+                    navController.navigate(Screen.CustomFieldValueTransactions.createRoute(fieldId, value))
+                }
+            )
+        }
+        composable(
+            Screen.CustomFieldValueTransactions.routePattern,
+            arguments = listOf(
+                navArgument("fieldId") { type = NavType.StringType },
+                navArgument("normalizedValue") { type = NavType.StringType }
+            )
+        ) {
+            com.sinxn.mymoney.feature.category.CustomFieldValueTransactionsScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onTransactionClick = { transactionId ->
+                    navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
                 }
             )
         }

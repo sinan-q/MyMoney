@@ -188,6 +188,14 @@ class CustomFieldRepository @Inject constructor(
     suspend fun getDistinctValuesForField(fieldId: String): List<String> {
         return customFieldDao.getDistinctValuesForField(fieldId)
     }
+
+    suspend fun getValueCountsForField(fieldId: String): List<com.sinxn.mymoney.core.data.local.model.ValueCount> {
+        return customFieldDao.getValueCountsForField(fieldId)
+    }
+
+    fun getTransactionsForCustomFieldValue(fieldId: String, normalizedValue: String): Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory>> {
+        return customFieldDao.getTransactionsForCustomFieldValue(fieldId, normalizedValue)
+    }
     
     // --- Autocomplete ---
 

@@ -62,8 +62,26 @@ interface CustomFieldDao {
     @Query("SELECT * FROM custom_field_values WHERE transactionId = :transactionId")
     suspend fun getValuesForTransactionSync(transactionId: String): List<CustomFieldValueEntity>
 
-    @Query("SELECT DISTINCT normalizedValue FROM custom_field_values WHERE fieldId = :fieldId")
+    @Query("SELECT DISTINCT normalizedValue FROM custom_field_values WHERE fieldId = :fieldId ORDER BY normalizedValue COLLATE NOCASE ASC")
     suspend fun getDistinctValuesForField(fieldId: String): List<String>
+
+    @Query("SELECT normalizedValue as value, COUNT(*) as count FROM custom_field_values WHERE fieldId = :fieldId GROUP BY normalizedValue ORDER BY normalizedValue COLLATE NOCASE ASC")
+    suspend fun getValueCountsForField(fieldId: String): List<com.sinxn.mymoney.core.data.local.model.ValueCount>
+
+    @androidx.room.Transaction
+    @Query("""
+        SELECT DISTINCT t.*, c.name as categoryName, c.icon as categoryIcon,
+               COALESCE(curr.decimals, 2) as decimals, curr.symbol as currencySymbol,
+               w.currency as currencyCode
+        FROM transactions t
+        LEFT JOIN categories c ON t.categoryId = c.id
+        INNER JOIN wallets w ON t.walletId = w.id
+        LEFT JOIN currencies curr ON w.currency = curr.iso
+        INNER JOIN custom_field_values cfv ON cfv.transactionId = t.id
+        WHERE cfv.fieldId = :fieldId AND cfv.normalizedValue = :normalizedValue AND t.isDeleted = 0
+        ORDER BY t.date DESC
+    """)
+    fun getTransactionsForCustomFieldValue(fieldId: String, normalizedValue: String): Flow<List<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory>>
 
     @Query("DELETE FROM custom_field_values WHERE fieldId = :fieldId")
     suspend fun deleteValuesForField(fieldId: String)

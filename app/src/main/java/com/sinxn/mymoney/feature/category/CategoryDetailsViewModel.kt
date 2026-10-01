@@ -43,6 +43,8 @@ data class CategoryDetailsUiState(
     val parentCategoryIconData: IconData? = null,
     val subcategories: List<CategoryEntity> = emptyList(),
     val subcategoriesUi: List<SubcategoryChipUi> = emptyList(),
+    val customFields: List<com.sinxn.mymoney.core.data.local.entity.CustomFieldDefinitionEntity> = emptyList(),
+    val inheritedCustomFields: List<com.sinxn.mymoney.core.data.local.entity.CustomFieldDefinitionEntity> = emptyList(),
     val allCategories: List<CategoryEntity> = emptyList(),
     val transactions: List<TransactionWithCategory> = emptyList(),
     val totalExpense: Long = 0L,
@@ -63,7 +65,8 @@ data class CategoryDetailsUiState(
 class CategoryDetailsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val categoryRepository: CategoryRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val customFieldRepository: com.sinxn.mymoney.core.data.repository.CustomFieldRepository
 ) : ViewModel() {
 
     val categoryId: String = checkNotNull(savedStateHandle["categoryId"])
@@ -92,6 +95,10 @@ class CategoryDetailsViewModel @Inject constructor(
                 val currentCatIcon = currentCat?.let { parseIconData(it.icon, it.name) }
                 val parentCatIcon = parentCat?.let { parseIconData(it.icon, it.name) }
                 val subCatsUi = subCats.map { SubcategoryChipUi(it.id, it.name, parseIconData(it.icon, it.name)) }
+
+                val allEffectiveFields = customFieldRepository.getEffectiveFieldsForCategory(categoryId)
+                val categoryCustomFields = allEffectiveFields.filter { it.categoryId == categoryId }
+                val inheritedFields = allEffectiveFields.filter { it.categoryId != categoryId }
 
                 var totalExpense = 0L
                 var totalIncome = 0L
@@ -122,6 +129,8 @@ class CategoryDetailsViewModel @Inject constructor(
                     parentCategoryIconData = parentCatIcon,
                     subcategories = subCats,
                     subcategoriesUi = subCatsUi,
+                    customFields = categoryCustomFields,
+                    inheritedCustomFields = inheritedFields,
                     allCategories = allCategories,
                     transactions = transactions,
                     totalExpense = totalExpense,

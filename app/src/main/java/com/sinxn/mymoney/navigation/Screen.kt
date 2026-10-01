@@ -138,6 +138,17 @@ sealed class Screen(
         fun createRoute(categoryId: String): String = "category_details/$categoryId"
     }
 
+    object CustomFieldDetail : Screen("custom_field_detail/{fieldId}", "categories", "Custom Field Detail", isTopLevel = false) {
+        fun createRoute(fieldId: String): String = "custom_field_detail/$fieldId"
+    }
+
+    object CustomFieldValueTransactions : Screen("custom_field_value_transactions/{fieldId}?normalizedValue={normalizedValue}", "categories", "Custom Field Value Transactions", isTopLevel = false) {
+        fun createRoute(fieldId: String, normalizedValue: String): String {
+            val encodedValue = android.net.Uri.encode(normalizedValue)
+            return "custom_field_value_transactions/$fieldId?normalizedValue=$encodedValue"
+        }
+    }
+
     object CategoryAddEdit : Screen("category_edit?categoryId={categoryId}&type={type}&parentId={parentId}", "categories", "Category Edit", isTopLevel = false) {
         fun createRoute(
             categoryId: String? = null,
@@ -219,7 +230,7 @@ sealed class Screen(
                 Events, Recurrences, Templates, Places, People,
                 Overview, About, SupportDeveloper, Menu, Settings,
                 Wallets, WalletInfo, WalletAddEdit,
-                DebtDetails, DebtAddEdit, CategoryDetails, PersonDetails, PersonAddEdit, EventDetails, EventAddEdit,
+                DebtDetails, DebtAddEdit, CategoryDetails, CustomFieldDetail, CustomFieldValueTransactions, PersonDetails, PersonAddEdit, EventDetails, EventAddEdit,
                 PlaceDetails, PlaceAddEdit,
                 BudgetDetails, BudgetAddEdit, BudgetOverview, SavingDetails, SavingAddEdit,
                 RecurrentTransactionDetails, RecurrentTransactionAddEdit, RecurrentTransferDetails, RecurrentTransferAddEdit, TransactionDetails, TransactionAddEdit, TransferAddEdit,
