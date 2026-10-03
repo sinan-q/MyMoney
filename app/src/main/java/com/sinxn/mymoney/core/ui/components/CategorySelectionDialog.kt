@@ -9,6 +9,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -50,6 +51,16 @@ private sealed class CategoryRow {
     ) : CategoryRow()
 }
 
+/**
+ * Category selection bottom sheet.
+ *
+ * **Single-select mode** (default): pass [selectedCategoryId] and [onCategorySelected].
+ * Selecting a category closes the sheet immediately.
+ *
+ * **Multi-select mode**: pass [multiSelectIds] (non-null) and [onMultiSelectConfirmed].
+ * Items are toggled with checkmarks; an Apply button confirms the selection.
+ * An empty [multiSelectIds] means "All categories selected".
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategorySelectionDialog(
@@ -60,10 +71,20 @@ fun CategorySelectionDialog(
     showIncome: Boolean? = null,
     showNoneOption: Boolean = false,
     noneOptionLabel: String = "None (Top Level Category)",
-    title: String = "Category"
+    title: String = "Category",
+    // ── Multi-select params (null = single-select mode) ──────────────────
+    multiSelectIds: Set<String>? = null,
+    onMultiSelectConfirmed: ((Set<String>) -> Unit)? = null
 ) {
+    val isMultiSelect = multiSelectIds != null
+
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Multi-select local state (only used when multiSelectIds != null)
+    var localSelected by remember(multiSelectIds) {
+        mutableStateOf(multiSelectIds ?: emptySet())
+    }
 
     val incomeCategories = remember(categories) {
         categories.filter { it.type == CategoryType.INCOME }
@@ -172,15 +193,30 @@ fun CategorySelectionDialog(
                 .fillMaxWidth()
                 .fillMaxHeight(0.9f)
         ) {
-            Text(
+            // Header row — title + optional "Select All / Clear" toggle in multi-select mode
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 20.dp, end = 12.dp, bottom = 12.dp),
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (isMultiSelect) {
+                    if (localSelected.isEmpty()) {
+                        TextButton(onClick = {
+                            localSelected = categories.map { it.id }.toSet()
+                        }) { Text("Select All") }
+                    } else {
+                        TextButton(onClick = { localSelected = emptySet() }) { Text("Clear") }
+                    }
+                }
+            }
 
             TabPill(
                 activeTab = pagerState.currentPage,
@@ -248,13 +284,23 @@ fun CategorySelectionDialog(
                         ) { _, row ->
                             when (row) {
                                 is CategoryRow.Parent -> {
+                                    val isSelected = if (isMultiSelect) {
+                                        row.category.id in localSelected
+                                    } else {
+                                        row.category.id == selectedCategoryId
+                                    }
                                     FinanceListItem(
                                         trailingContent = {
-                                            if (row.subcategoryCount > 0) {
+                                            if (isMultiSelect && isSelected) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = "Selected",
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            } else if (!isMultiSelect && row.subcategoryCount > 0) {
                                                 IconButton(
-                                                    onClick = {
-                                                        toggleParentExpanded(row.category.id)
-                                                    },
+                                                    onClick = { toggleParentExpanded(row.category.id) },
                                                     modifier = Modifier.size(32.dp)
                                                 ) {
                                                     Icon(
@@ -266,30 +312,62 @@ fun CategorySelectionDialog(
                                                 }
                                             }
                                         },
-                                        icon = { CategoryIcon(iconData =  row.iconData,)},
+                                        icon = { CategoryIcon(iconData = row.iconData) },
                                         title = row.cleanName,
-                                        onClick =  {
-                                            onCategorySelected(row.category)
-                                            scope.launch {
-                                                sheetState.hide()
-                                                onDismissRequest()
+                                        onClick = {
+                                            if (isMultiSelect) {
+                                                localSelected = if (isSelected) {
+                                                    localSelected - row.category.id
+                                                } else {
+                                                    localSelected + row.category.id
+                                                }
+                                            } else {
+                                                onCategorySelected(row.category)
+                                                scope.launch {
+                                                    sheetState.hide()
+                                                    onDismissRequest()
+                                                }
                                             }
                                         },
-                                        isSelected = row.category.id == selectedCategoryId
+                                        isSelected = isSelected
                                     )
                                 }
                                 is CategoryRow.Sub -> {
+                                    val isSelected = if (isMultiSelect) {
+                                        row.category.id in localSelected
+                                    } else {
+                                        row.category.id == selectedCategoryId
+                                    }
                                     FinanceListItem(
                                         modifier = Modifier.padding(start = 32.dp),
-                                        icon = { CategoryIcon(iconData = row.iconData,)},
+                                        icon = { CategoryIcon(iconData = row.iconData) },
                                         title = row.cleanName,
+                                        trailingContent = if (isMultiSelect && isSelected) {
+                                            {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = "Selected",
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
+                                        } else null,
                                         onClick = {
-                                            onCategorySelected(row.category)
-                                            scope.launch {
-                                                sheetState.hide()
-                                                onDismissRequest()
-                                            } },
-                                        isSelected = row.category.id == selectedCategoryId,
+                                            if (isMultiSelect) {
+                                                localSelected = if (isSelected) {
+                                                    localSelected - row.category.id
+                                                } else {
+                                                    localSelected + row.category.id
+                                                }
+                                            } else {
+                                                onCategorySelected(row.category)
+                                                scope.launch {
+                                                    sheetState.hide()
+                                                    onDismissRequest()
+                                                }
+                                            }
+                                        },
+                                        isSelected = isSelected,
                                     )
                                 }
                             }
@@ -297,9 +375,34 @@ fun CategorySelectionDialog(
                     }
                 }
             }
+
+            // ── Apply button (multi-select only) ──────────────────────────
+            if (isMultiSelect) {
+                val applyLabel = when {
+                    localSelected.isEmpty() -> "Apply — All categories"
+                    localSelected.size == 1 -> "Apply — 1 category"
+                    else -> "Apply — ${localSelected.size} categories"
+                }
+                Button(
+                    onClick = {
+                        onMultiSelectConfirmed?.invoke(localSelected)
+                        scope.launch {
+                            sheetState.hide()
+                            onDismissRequest()
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                ) {
+                    Text(applyLabel, fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }
+
 @Composable
 private fun EmptyState() {
     Box(

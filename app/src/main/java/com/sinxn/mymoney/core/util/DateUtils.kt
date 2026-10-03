@@ -280,4 +280,35 @@ object DateUtils {
         cal.add(Calendar.MONTH, months)
         return cal.time
     }
+
+    /** Returns midnight (00:00:00) on the same calendar day as [date]. */
+    fun getStartOfDay(date: Date): Date {
+        return Calendar.getInstance().apply {
+            time = date
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        }.time
+    }
+
+    /** Returns midnight on Monday of the ISO week containing [date]. */
+    fun getStartOfWeek(date: Date): Date {
+        return Calendar.getInstance().apply {
+            time = date
+            firstDayOfWeek = Calendar.MONDAY
+            set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        }.time
+    }
+
+    /** Returns Jan 1 00:00:00 of the year containing [date]. */
+    fun getStartOfYear(date: Date): Date {
+        return Calendar.getInstance().apply {
+            time = date
+            set(Calendar.DAY_OF_YEAR, 1)
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        }.time
+    }
 }
+

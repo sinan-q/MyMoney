@@ -1,7 +1,11 @@
 package com.sinxn.mymoney.feature.transaction.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,6 +20,7 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -24,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -37,62 +43,69 @@ import com.sinxn.mymoney.core.ui.components.TransactionFormRowItem
 import com.sinxn.mymoney.core.ui.components.parseIconData
 import com.sinxn.mymoney.core.util.Constants
 import com.sinxn.mymoney.core.util.DateUtils
-import com.sinxn.mymoney.feature.overview.CashFlowFilter
 import com.sinxn.mymoney.feature.overview.GroupType
-import com.sinxn.mymoney.feature.overview.OverviewSettings
-import com.sinxn.mymoney.feature.overview.OverviewType
 import com.sinxn.mymoney.feature.overview.component.OverviewWalletPickerSheet
+import com.sinxn.mymoney.feature.transaction.TransactionFilter
 
 /**
- * Bottom sheet for configuring overview settings.
- * Includes Account/Wallet selection, Date Range, Group By, View Type (Cash Flow / Category),
- * and Category selection.
+ * Bottom sheet for filtering the transaction list on the Wallet Details screen.
+ *
+ * Filters:
+ *  - Wallet selection
+ *  - Date range (off by default, toggled by a Switch)
+ *  - Group by (Daily / Weekly / Monthly / Yearly — Monthly default)
+ *  - Categories (multi-select via [CategorySelectionDialog]; empty = All)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionFilterSheet(
-    settings: TransactionFilter,
+    filter: TransactionFilter,
     currentWalletId: String,
     wallets: List<WalletWithBalance>,
     categories: List<CategoryEntity>,
     formattingSettings: FormattingSettings,
     onDismiss: () -> Unit,
-    onApply: (TransactionFilter, String) -> Unit
+    onApply: (TransactionFilter) -> Unit
 ) {
+    // ── Local state ──────────────────────────────────────────────────────────
     var selectedWalletId by remember(currentWalletId) { mutableStateOf(currentWalletId) }
     var showWalletPicker by remember { mutableStateOf(false) }
 
-    val selectedWallet = remember(selectedWalletId, wallets) {
-        if (selectedWalletId == Constants.TOTAL_WALLET_ID) {
-            null
-        } else {
-            wallets.find { it.wallet.id == selectedWalletId }
-        }
-    }
-    val selectedWalletName = if (selectedWalletId == Constants.TOTAL_WALLET_ID) "Total (All Accounts)" else (selectedWallet?.wallet?.name ?: "Total")
-    val selectedWalletIcon = if (selectedWalletId == Constants.TOTAL_WALLET_ID) "sigma" else selectedWallet?.wallet?.icon
-
-    var groupType by remember(settings) { mutableStateOf(settings.groupType) }
-    var overviewType by remember(settings) { mutableStateOf(settings.overviewType) }
-    var cashFlowFilter by remember(settings) { mutableStateOf(settings.cashFlowFilter) }
-    var selectedCategoryId by remember(settings.categoryId) { mutableStateOf(settings.categoryId) }
-    var showCategoryPicker by remember { mutableStateOf(false) }
-
-    val selectedCategory = remember(selectedCategoryId, categories) {
-        categories.find { it.id == selectedCategoryId }
-    }
-
-    var startDate by remember(settings) { mutableStateOf(settings.startDate) }
-    var endDate by remember(settings) { mutableStateOf(settings.endDate) }
-
+    var dateRangeEnabled by remember(filter) { mutableStateOf(filter.dateRangeEnabled) }
+    var startDate by remember(filter) { mutableStateOf(filter.startDate) }
+    var endDate by remember(filter) { mutableStateOf(filter.endDate) }
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
 
+    var groupType by remember(filter) { mutableStateOf(filter.groupType) }
+
+    // Multi-select category IDs; empty = All
+    var selectedCategoryIds by remember(filter) { mutableStateOf(filter.categoryIds) }
+    var showCategoryPicker by remember { mutableStateOf(false) }
+
+    // ── Derived display helpers ──────────────────────────────────────────────
+    val selectedWallet = remember(selectedWalletId, wallets) {
+        if (selectedWalletId == Constants.TOTAL_WALLET_ID) null
+        else wallets.find { it.wallet.id == selectedWalletId }
+    }
+    val selectedWalletName =
+        if (selectedWalletId == Constants.TOTAL_WALLET_ID) "Total (All Accounts)"
+        else selectedWallet?.wallet?.name ?: "Total"
+    val selectedWalletIcon =
+        if (selectedWalletId == Constants.TOTAL_WALLET_ID) "sigma"
+        else selectedWallet?.wallet?.icon
     val walletIconData = remember(selectedWalletIcon, selectedWalletName) {
         parseIconData(selectedWalletIcon, selectedWalletName)
     }
 
+    val categorySummary = when {
+        selectedCategoryIds.isEmpty() -> "All categories"
+        selectedCategoryIds.size == 1 ->
+            categories.find { it.id == selectedCategoryIds.first() }?.name ?: "1 category"
+        else -> "${selectedCategoryIds.size} categories"
+    }
 
+    // ── Sheet ────────────────────────────────────────────────────────────────
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
@@ -108,14 +121,14 @@ fun TransactionFilterSheet(
         ) {
             Text(
                 modifier = Modifier.padding(start = 16.dp),
-                text = "Overview Settings",
+                text = "Filter Transactions",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            // ── Account / Wallet Selection ──
-            CustomText("Wallet")
+            // ── Wallet ──
+            FilterLabel("Wallet")
             FormCardContainer {
                 TransactionFormRowItem(
                     icon = Icons.Default.AccountBalanceWallet,
@@ -128,101 +141,82 @@ fun TransactionFilterSheet(
                 )
             }
 
-            // ── Date Range Section ──
-            CustomText("Date Range")
-            FormCardContainer {
-                TransactionFormRowItem(
-                    icon = Icons.Default.CalendarMonth,
-                    active = true,
-                    accentColor = MaterialTheme.colorScheme.primary,
-                    label = "From",
-                    value = DateUtils.formatMonthDayYear(startDate),
-                    onClick = { showStartDatePicker = true }
-
-                )
-                TransactionFormRowItem(
-                    icon = Icons.Default.CalendarMonth,
-                    active = true,
-                    accentColor = MaterialTheme.colorScheme.primary,
-                    label = "To",
-                    value = DateUtils.formatMonthDayYear(endDate),
-                    onClick = { showEndDatePicker = true }
+            // ── Date Range (with toggle) ──
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                FilterLabel("Date Range")
+                Switch(
+                    checked = dateRangeEnabled,
+                    onCheckedChange = { dateRangeEnabled = it }
                 )
             }
 
-            // ── Group Type — Daily, Weekly, Monthly, Yearly ──
-            CustomText("Group By")
+            AnimatedVisibility(
+                visible = dateRangeEnabled,
+                enter = expandVertically(),
+                exit = shrinkVertically()
+            ) {
+                FormCardContainer {
+                    TransactionFormRowItem(
+                        icon = Icons.Default.CalendarMonth,
+                        active = true,
+                        accentColor = MaterialTheme.colorScheme.primary,
+                        label = "From",
+                        value = DateUtils.formatMonthDayYear(startDate),
+                        onClick = { showStartDatePicker = true }
+                    )
+                    TransactionFormRowItem(
+                        icon = Icons.Default.CalendarMonth,
+                        active = true,
+                        accentColor = MaterialTheme.colorScheme.primary,
+                        label = "To",
+                        value = DateUtils.formatMonthDayYear(endDate),
+                        onClick = { showEndDatePicker = true }
+                    )
+                }
+            }
+
+            // ── Group By ──
+            FilterLabel("Group By")
             TabPill(
-                tabs = GroupType.entries.map { it.name.lowercase()
-                    .replaceFirstChar { it.uppercase() } to MaterialTheme.colorScheme.primary },
+                tabs = GroupType.entries.map {
+                    it.name.lowercase().replaceFirstChar { c -> c.uppercase() } to MaterialTheme.colorScheme.primary
+                },
                 activeTab = groupType.ordinal
             ) { groupType = GroupType.entries[it] }
 
-
-            // ── Overview Type — Cash Flow / Category ──
-            CustomText("View Type")
-            TabPill(
-                tabs = listOf("Cash flow" to MaterialTheme.colorScheme.primary, "Category" to MaterialTheme.colorScheme.primary),
-                activeTab = overviewType.ordinal
-            ) {
-                overviewType = OverviewType.entries[it]
-                if (overviewType == OverviewType.CATEGORY) showCategoryPicker = true
-
+            // ── Categories (multi-select) ──
+            FilterLabel("Categories")
+            FormCardContainer {
+                TransactionFormRowItem(
+                    icon = Icons.Default.Category,
+                    active = true,
+                    accentColor = MaterialTheme.colorScheme.primary,
+                    label = "Categories",
+                    value = categorySummary,
+                    onClick = { showCategoryPicker = true }
+                )
             }
 
-
-            // ── Cash Flow Sub-filter — Incomes, Expenses, Net Incomes ──
-            if (overviewType == OverviewType.CASH_FLOW) {
-                CustomText("Cash Flow Filter")
-                TabPill(
-                    tabs = CashFlowFilter.entries.map { when (it) {
-                        CashFlowFilter.INCOMES -> "Incomes"
-                        CashFlowFilter.EXPENSES -> "Expenses"
-                        CashFlowFilter.NET_INCOMES -> "Net"
-                    } to MaterialTheme.colorScheme.primary} ,
-                    activeTab = cashFlowFilter.ordinal
-                ) {
-                    cashFlowFilter = CashFlowFilter.entries[it]
-                }
-
-            }
-
-            // ── Category Selector — when overviewType is CATEGORY ──
-            if (overviewType == OverviewType.CATEGORY) {
-                val categoryIconData = remember(selectedCategory) {
-                    parseIconData(selectedCategory?.icon, selectedCategory?.name?: "Category")
-                }
-                CustomText("Category Filter")
-                FormCardContainer {
-                    TransactionFormRowItem(
-                        icon = Icons.Default.Category,
-                        accentColor = MaterialTheme.colorScheme.primary,
-                        label = "Category",
-                        value = selectedCategory?.name ?: "Select Category",
-                        trailingIconData = if (selectedCategory!= null) categoryIconData else null,
-                        onClick = { showCategoryPicker = true }
-
-                    )
-                }
-            }
-
-            // ── Apply button ──
-            val isApplyEnabled = overviewType != OverviewType.CATEGORY || selectedCategoryId != null
+            // ── Apply ──
             Button(
                 onClick = {
                     onApply(
-                        OverviewSettings(
+                        TransactionFilter(
+                            walletId = selectedWalletId,
+                            dateRangeEnabled = dateRangeEnabled,
                             startDate = startDate,
                             endDate = endDate,
                             groupType = groupType,
-                            overviewType = overviewType,
-                            cashFlowFilter = cashFlowFilter,
-                            categoryId = if (overviewType == OverviewType.CATEGORY) selectedCategoryId else null
-                        ),
-                        selectedWalletId
+                            categoryIds = selectedCategoryIds
+                        )
                     )
                 },
-                enabled = isApplyEnabled,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp),
@@ -233,7 +227,7 @@ fun TransactionFilterSheet(
         }
     }
 
-    // ── Wallet Picker Sub-Sheet ──
+    // ── Wallet Picker Sub-Sheet ──────────────────────────────────────────────
     if (showWalletPicker) {
         OverviewWalletPickerSheet(
             wallets = wallets,
@@ -247,24 +241,23 @@ fun TransactionFilterSheet(
         )
     }
 
-    // ── Category Picker Dialog ──
+    // ── Multi-Category Picker (reuses CategorySelectionDialog in multi-select mode) ──
     if (showCategoryPicker) {
         CategorySelectionDialog(
             categories = categories,
-            selectedCategoryId = selectedCategoryId,
-            showNoneOption = false,
-            title = "Select Category",
-            onCategorySelected = { cat ->
-                if (cat != null) {
-                    selectedCategoryId = cat.id
-                }
+            selectedCategoryId = null,
+            onCategorySelected = {},
+            onDismissRequest = { showCategoryPicker = false },
+            title = "Select Categories",
+            multiSelectIds = selectedCategoryIds,
+            onMultiSelectConfirmed = { ids ->
+                selectedCategoryIds = ids
                 showCategoryPicker = false
-            },
-            onDismissRequest = { showCategoryPicker = false }
+            }
         )
     }
 
-    // ── Date Pickers ──
+    // ── Start Date Picker ────────────────────────────────────────────────────
     if (showStartDatePicker) {
         val datePickerState = rememberDatePickerState(
             initialSelectedDateMillis = DateUtils.dateToDatePickerMillis(startDate)
@@ -272,27 +265,20 @@ fun TransactionFilterSheet(
         DatePickerDialog(
             onDismissRequest = { showStartDatePicker = false },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            startDate = DateUtils.datePickerMillisToDate(millis, endOfDay = false)
-                        }
-                        showStartDatePicker = false
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        startDate = DateUtils.datePickerMillisToDate(millis, endOfDay = false)
                     }
-                ) {
-                    Text("OK")
-                }
+                    showStartDatePicker = false
+                }) { Text("OK") }
             },
             dismissButton = {
-                TextButton(onClick = { showStartDatePicker = false }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showStartDatePicker = false }) { Text("Cancel") }
             }
-        ) {
-            DatePicker(state = datePickerState)
-        }
+        ) { DatePicker(state = datePickerState) }
     }
 
+    // ── End Date Picker ──────────────────────────────────────────────────────
     if (showEndDatePicker) {
         val datePickerState = rememberDatePickerState(
             initialSelectedDateMillis = DateUtils.dateToDatePickerMillis(endDate)
@@ -300,30 +286,24 @@ fun TransactionFilterSheet(
         DatePickerDialog(
             onDismissRequest = { showEndDatePicker = false },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            endDate = DateUtils.datePickerMillisToDate(millis, endOfDay = true)
-                        }
-                        showEndDatePicker = false
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        endDate = DateUtils.datePickerMillisToDate(millis, endOfDay = true)
                     }
-                ) {
-                    Text("OK")
-                }
+                    showEndDatePicker = false
+                }) { Text("OK") }
             },
             dismissButton = {
-                TextButton(onClick = { showEndDatePicker = false }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showEndDatePicker = false }) { Text("Cancel") }
             }
-        ) {
-            DatePicker(state = datePickerState)
-        }
+        ) { DatePicker(state = datePickerState) }
     }
 }
 
+// ── Helper label ─────────────────────────────────────────────────────────────
+
 @Composable
-private fun CustomText(text: String) {
+private fun FilterLabel(text: String) {
     Text(
         modifier = Modifier.padding(start = 16.dp),
         text = text,

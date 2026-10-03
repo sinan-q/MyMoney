@@ -26,6 +26,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -60,6 +62,8 @@ import com.sinxn.mymoney.core.ui.components.WalletDropdownList
 import com.sinxn.mymoney.core.ui.components.WalletHeader
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
+import com.sinxn.mymoney.feature.transaction.TransactionFilter
+import com.sinxn.mymoney.feature.transaction.components.TransactionFilterSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,6 +79,10 @@ fun WalletDetailsScreen(
     val transactions by viewModel.transactions.collectAsState()
     val pendingTransactions by viewModel.pendingTransactions.collectAsState()
     val settings by viewModel.formattingSettings.collectAsState()
+    val filter by viewModel.filter.collectAsState()
+    val showFilterSheet by viewModel.showFilterSheet.collectAsState()
+    val allWallets by viewModel.allWallets.collectAsState()
+    val allCategories by viewModel.allCategories.collectAsState()
 
     val listState = rememberLazyListState()
     val isHeaderReduced by remember {
@@ -99,6 +107,9 @@ fun WalletDetailsScreen(
             isWalletListExpanded = false
         }
     }
+
+    // Whether any filter is actively applied (badge indicator)
+    val isFilterActive = filter.dateRangeEnabled || filter.categoryIds.isNotEmpty()
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -165,12 +176,27 @@ fun WalletDetailsScreen(
                             onTransactionClick = onTransactionClick,
                             onConfirmPending = { viewModel.confirmTransaction(it) },
                             onDismissPending = { viewModel.dismissTransaction(it) },
-                            onPendingClick = onTransactionClick
+                            onPendingClick = onTransactionClick,
+                            isFilterActive = isFilterActive,
+                            onFilterClick = { viewModel.showFilterSheet() }
                         )
                     }
                 }
             }
         }
+    }
+
+    // ── Filter Sheet ─────────────────────────────────────────────────────────
+    if (showFilterSheet) {
+        TransactionFilterSheet(
+            filter = filter,
+            currentWalletId = filter.walletId.ifEmpty { viewModel.walletId },
+            wallets = allWallets,
+            categories = allCategories,
+            formattingSettings = settings,
+            onDismiss = { viewModel.dismissFilterSheet() },
+            onApply = { newFilter -> viewModel.applyFilter(newFilter) }
+        )
     }
 }
 
@@ -187,7 +213,9 @@ fun TransactionList(
     onTransactionClick: (String) -> Unit,
     onConfirmPending: (String) -> Unit = {},
     onDismissPending: (String) -> Unit = {},
-    onPendingClick: (String) -> Unit = {}
+    onPendingClick: (String) -> Unit = {},
+    isFilterActive: Boolean = false,
+    onFilterClick: () -> Unit = {}
 ) {
     var collapsedGroups by remember { mutableStateOf(setOf<String>()) }
 
@@ -253,35 +281,56 @@ fun TransactionList(
                 }
             }
         }
+
+        // ── Toolbar row with filter button ────────────────────────────────
         item {
-            Row (modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
                     text = "Transactions",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    // Settings Action to open OverviewSettingsSheet
-                    FilledTonalIconButton(
-                        onClick = {  },
-                        colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        ),
-                        modifier = Modifier.size(40.dp)
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    BadgedBox(
+                        badge = {
+                            if (isFilterActive) {
+                                Badge()
+                            }
+                        }
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.FilterList,
-                            contentDescription = "Overview Settings",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        FilledTonalIconButton(
+                            onClick = onFilterClick,
+                            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                containerColor = if (isFilterActive)
+                                    MaterialTheme.colorScheme.primaryContainer
+                                else
+                                    MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FilterList,
+                                contentDescription = "Filter Transactions",
+                                tint = if (isFilterActive)
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
             }
         }
-
 
         customGrouped.forEach { (header, groupItems) ->
             val headerKey = DateUtils.formatMonthHeader(header.date)
