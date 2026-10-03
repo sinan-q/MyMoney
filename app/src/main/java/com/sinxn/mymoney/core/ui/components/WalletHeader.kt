@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -44,6 +45,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
@@ -52,6 +54,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
+import com.sinxn.mymoney.core.util.Constants
 import com.sinxn.mymoney.core.util.MoneyFormatter
 
 @Composable
@@ -95,9 +98,9 @@ fun WalletHeader(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
+            //.padding(horizontal = 16.dp, vertical = 4.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(color = baseColor)
+            //.background(color = baseColor)
             .animateContentSize(
                 animationSpec = spring(
                     dampingRatio = Spring.DampingRatioNoBouncy,
@@ -110,76 +113,65 @@ fun WalletHeader(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = animatedInnerPadding),
-            horizontalAlignment = Alignment.Start,
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
+            Row (modifier = Modifier.weight(1f, fill = false), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    CategoryIcon(
+                        iconString = effectiveWallet.wallet.icon,
+                        categoryName = effectiveWallet.wallet.name
+                    )
                     Text(
                         text = effectiveWallet.wallet.name,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    if (!isReduced) {
-                        Text(
-                            text = "Current Balance",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.White.copy(alpha = 0.7f)
-                        )
-                    }
-                }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.End,
-                    modifier = Modifier.weight(1f, fill = false)
-                ) {
-                    if (isReduced) {
+                }
+                if (isReduced) {
+                    Row(Modifier.fillMaxWidth().weight(1f, fill =false), horizontalArrangement = Arrangement.End) {
                         Text(
-                            text = if (effectiveWallet.isTotalValid) formattedBalanceAnnotated else AnnotatedString("Multi-Currency"),
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                shadow = Shadow(
-                                    color = Color.Black.copy(alpha = 0.15f),
-                                    offset = Offset(1f, 2f),
-                                    blurRadius = 4f
-                                )
+                            text = if (effectiveWallet.isTotalValid) formattedBalanceAnnotated else AnnotatedString(
+                                "Multi-Currency"
                             ),
-                            color = Color.White,
+                            style = MaterialTheme.typography.titleLarge,
                             maxLines = 1
                         )
                     }
 
-                    // Dropdown Pill
-                    Surface(
-                        onClick = onToggleExpand,
-                        shape = RoundedCornerShape(16.dp),
-                        color = Color.White.copy(alpha = 0.2f)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (isExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-                                contentDescription = "Toggle wallet list",
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
                 }
+            }
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+//
+//                    // Dropdown Pill
+//                    Surface(
+//                        onClick = onToggleExpand,
+//                        shape = RoundedCornerShape(16.dp),
+//                    ) {
+//                        Row(
+//                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+//                            verticalAlignment = Alignment.CenterVertically,
+//                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+//                        ) {
+//                            Icon(
+//                                imageVector = if (isExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+//                                contentDescription = "Toggle wallet list",
+//                                modifier = Modifier.size(16.dp)
+//                            )
+//                        }
+//                    }
+//                }
             }
 
             if (!isReduced) {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+
                 Text(
                     text = if (effectiveWallet.isTotalValid) formattedBalanceAnnotated else AnnotatedString("Multi-Currency"),
                     style = if (effectiveWallet.isTotalValid) {
@@ -195,8 +187,7 @@ fun WalletHeader(
                             fontWeight = FontWeight.Black,
                             color = Color.White.copy(alpha = 0.9f)
                         )
-                    },
-                    color = Color.White
+                    }
                 )
             }
 
@@ -404,7 +395,7 @@ fun WalletProfileRow(
                 modifier = Modifier.weight(1f)
             )
 
-            val formattedBalance = if (!wallet.isTotalValid && wallet.wallet.id == com.sinxn.mymoney.core.util.Constants.TOTAL_WALLET_ID) {
+            val formattedBalance = if (!wallet.isTotalValid && wallet.wallet.id == Constants.TOTAL_WALLET_ID) {
                 wallet.balanceBreakdown ?: "Multi-Currency"
             } else {
                 MoneyFormatter.format(
@@ -428,7 +419,7 @@ fun WalletProfileRow(
 @Composable
 fun ActionProfileRow(
     title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     onClick: () -> Unit
 ) {
     Surface(
