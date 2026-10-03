@@ -1,10 +1,11 @@
 package com.sinxn.mymoney.feature.overview
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -17,23 +18,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
-import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
-import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
-import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.compose.cartesian.data.columnModel
-import com.patrykandpatrick.vico.compose.cartesian.decoration.HorizontalLine
-import com.patrykandpatrick.vico.compose.cartesian.layer.ColumnCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
-import com.patrykandpatrick.vico.compose.common.Fill
-import com.patrykandpatrick.vico.compose.common.component.LineComponent
-import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.sinxn.mymoney.core.ui.components.CategoryIconExtended
 import com.sinxn.mymoney.core.ui.components.ListRow
+import com.sinxn.mymoney.core.util.MoneyFormatter
+import com.sinxn.mymoney.feature.overview.component.CategoryDetailChart
+import com.sinxn.mymoney.feature.overview.component.OverviewChart
 import com.sinxn.mymoney.feature.overview.component.OverviewHeader
 import com.sinxn.mymoney.feature.overview.component.OverviewSettingsSheet
-import com.sinxn.mymoney.feature.overview.component.OverviewTotalSummaryCard
+import com.sinxn.mymoney.feature.overview.component.OverviewTreemap
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,6 +36,25 @@ fun OverviewScreen(
     val uiState by viewModel.uiState.collectAsState()
     val allWallets by viewModel.allWallets.collectAsState()
     val allCategories by viewModel.allCategories.collectAsState()
+    var selectedCategoryId by remember { mutableStateOf<String?>(null) }
+    val mainChartScrollState = rememberScrollState()
+    val detailChartScrollState = rememberScrollState()
+
+    LaunchedEffect(mainChartScrollState.value) {
+        if (detailChartScrollState.value != mainChartScrollState.value) {
+            detailChartScrollState.scrollTo(mainChartScrollState.value)
+        }
+    }
+    LaunchedEffect(detailChartScrollState.value) {
+        if (mainChartScrollState.value != detailChartScrollState.value) {
+            mainChartScrollState.scrollTo(detailChartScrollState.value)
+        }
+    }
+    LaunchedEffect(uiState.showTreemap) {
+        if (!uiState.showTreemap) {
+            selectedCategoryId = null
+        }
+    }
 
     if (uiState.showSettingsSheet && uiState.settings != null) {
         OverviewSettingsSheet(
@@ -58,16 +69,14 @@ fun OverviewScreen(
             }
         )
     }
+
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { paddingValues ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
             contentPadding = paddingValues,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Header: View-only active context status card + settings action
-
 
             if (uiState.isLoading) {
                 item {
@@ -81,66 +90,192 @@ fun OverviewScreen(
                     }
                 }
             } else {
-                val overviewData = uiState.overviewData
-                if (overviewData != null) {
+                val data = uiState.overviewData
+                if (data != null) {
                     item {
                         OverviewHeader(
                             walletName = uiState.walletName,
-                            totalNetIncomes = overviewData.totalNetIncomes,
+                            totalNetIncomes = data.totalNetIncomes,
                             settings = uiState.settings,
                             currencyCode = uiState.currencyCode,
                             decimals = uiState.currencyDecimals,
+                            comparisonIsPostivie = uiState.comparisonIsPositive,
+                            comparisonText = uiState.comparisonText,
                             formattingSettings = uiState.formattingSettings,
                             selectedCategoryName = uiState.selectedCategoryName,
+                            insightsText = uiState.insightsText,
                             onConfigureClick = { viewModel.toggleSettingsSheet() }
                         )
                     }
 
-                    item {
-                        OverviewTotalSummaryCard(
-                            overviewData = overviewData,
-                            settings = uiState.settings,
-                            currencyCode = uiState.currencyCode,
-                            decimals = uiState.currencyDecimals,
-                            formattingSettings = uiState.formattingSettings,
-                            selectedCategoryName = uiState.selectedCategoryName
-                        )
-                    }
+                    if (uiState.showTreemap) {
+                        item {
+                            // Where it went (Treemap)
+                            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp)) {
+                                Text("Where it went", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
+                                Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f / 0.86f)) {
+                                    OverviewTreemap(
+                                        nodes = uiState.treemapNodes,
+                                        selectedCategoryId = selectedCategoryId,
+                                        onNodeClick = { id ->
+                                            selectedCategoryId = if (selectedCategoryId == id) null else id
+                                        },
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                                
+                                if (selectedCategoryId != null) {
+                                    val selectedNode = uiState.treemapNodes.find { it.categoryId == selectedCategoryId }
+                                    if (selectedNode != null) {
+                                        Surface(
+                                            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                        ) {
+                                            Column(modifier = Modifier.padding(16.dp)) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Box(modifier = Modifier.size(16.dp).clip(CircleShape).background(selectedNode.color))
+                                                    Spacer(modifier = Modifier.width(12.dp))
+                                                    Column(modifier = Modifier.weight(1f)) {
+                                                        Text(selectedNode.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                                        Text("${selectedNode.percent} of activity", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                    }
+                                                    Text(selectedNode.formattedAmount, style = MaterialTheme.typography.titleLarge)
+                                                }
 
-                    // Chart Section — Bar chart
-
-                    item {
-                        OverviewBarChart(
-                            overviewData = overviewData,
-                            currencyCode = uiState.currencyCode,
-                            isNetIncomeMode = uiState.settings?.cashFlowFilter == CashFlowFilter.NET_INCOMES,
-                            isDiverging = uiState.isDivergingChart,
-                            onToggleDiverging = { viewModel.setDivergingChart(it) }
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-
-                    // Period List — matching legacy OverviewItemAdapter
-                    item {
-                        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Period Breakdown",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onBackground,
-                            )
-
-                            Text(
-                                text = "${uiState.overviewData?.transactionCount} txns • ${uiState.periodsUi.size} " + "periods",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
+                                                if (selectedNode.subNodes.size > 1) {
+                                                    Spacer(modifier = Modifier.height(12.dp))
+                                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                                    Spacer(modifier = Modifier.height(8.dp))
+                                                    Text(
+                                                        text = "Subcategories",
+                                                        style = MaterialTheme.typography.labelMedium,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                    Spacer(modifier = Modifier.height(6.dp))
+                                                    selectedNode.subNodes.forEach { sub ->
+                                                        Row(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .padding(vertical = 4.dp),
+                                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            Text(
+                                                                text = "• ${sub.name}",
+                                                                style = MaterialTheme.typography.bodyMedium,
+                                                                color = MaterialTheme.colorScheme.onSurface
+                                                            )
+                                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                                Text(
+                                                                    text = sub.percent,
+                                                                    style = MaterialTheme.typography.bodySmall,
+                                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                    modifier = Modifier.padding(end = 8.dp)
+                                                                )
+                                                                Text(
+                                                                    text = sub.formattedAmount,
+                                                                    style = MaterialTheme.typography.bodyMedium,
+                                                                    fontWeight = FontWeight.SemiBold
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
-
                     }
 
+                    item {
+                        // When it went (Chart)
+                        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp)) {
+                            val selectedNode = uiState.treemapNodes.find { it.categoryId == selectedCategoryId }
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("When it went", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                if (selectedNode != null) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(selectedNode.color.copy(alpha = 0.15f))
+                                            .clickable { selectedCategoryId = null }
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(selectedNode.color))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "${selectedNode.name} ✕",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            }
+                            
+                            Box(modifier = Modifier.fillMaxWidth().height(200.dp)) {
+                                OverviewChart(
+                                    periods = uiState.chartPeriods,
+                                    maxValue = uiState.chartMaxValue,
+                                    yAxisFormatter = { value -> 
+                                        when {
+                                            value >= 1000f -> "${(value / 1000f).toInt()}k"
+                                            value >= 10f -> value.toInt().toString()
+                                            value > 0f -> String.format(java.util.Locale.US, "%.1f", value)
+                                            else -> "0"
+                                        }
+                                    },
+                                    selectedCategoryId = selectedCategoryId,
+                                    onCategoryClick = { id ->
+                                        selectedCategoryId = if (selectedCategoryId == id) null else id
+                                    },
+                                    scrollState = mainChartScrollState,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+
+                            val categoryDetailData = if (selectedCategoryId != null) {
+                                uiState.categoryCharts[selectedCategoryId]
+                            } else null
+
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = categoryDetailData != null,
+                                enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(),
+                                exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically()
+                            ) {
+                                if (categoryDetailData != null) {
+                                    Column(modifier = Modifier.padding(top = 16.dp)) {
+                                        CategoryDetailChart(
+                                            categoryChartData = categoryDetailData,
+                                            yAxisFormatter = { value ->
+                                                when {
+                                                    value >= 1000f -> "${(value / 1000f).toInt()}k"
+                                                    value >= 10f -> value.toInt().toString()
+                                                    value > 0f -> String.format(java.util.Locale.US, "%.1f", value)
+                                                    else -> "0"
+                                                }
+                                            },
+                                            onClose = { selectedCategoryId = null },
+                                            scrollState = detailChartScrollState,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                     items(
                         items = uiState.periodsUi,
                         key = { it.id },
@@ -151,250 +286,58 @@ fun OverviewScreen(
                             onClick = { onPeriodClick(item.startDateTimeSql, item.endDateTimeSql) }
                         )
                     }
+
                 } else {
                     item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                            )
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(48.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(48.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "No data for the selected period",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
+                            Text(
+                                text = "No data for the selected period",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
                         }
                     }
                 }
             }
         }
     }
-
-
 }
 
 @Composable
-private fun OverviewBarChart(
-    overviewData: OverviewData,
-    currencyCode: String,
-    isNetIncomeMode: Boolean,
-    isDiverging: Boolean,
-    onToggleDiverging: (Boolean) -> Unit
+fun FilterPill(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    text: String,
+    onClick: () -> Unit
 ) {
-    val chartValues = overviewData.chartDataByCurrency[currencyCode]
-        ?: overviewData.chartDataByCurrency.values.firstOrNull()
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        modifier = Modifier.clip(CircleShape).clickable { onClick() }
     ) {
-        if (isNetIncomeMode) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (isDiverging) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF2E7D32))
-                            )
-                            Text(
-                                text = "Income",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFFC62828))
-                            )
-                            Text(
-                                text = "Expense",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                } else {
-                    Text(
-                        text = "Net Cash Flow",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                SingleChoiceSegmentedButtonRow {
-                    SegmentedButton(
-                        selected = !isDiverging,
-                        onClick = { onToggleDiverging(false) },
-                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
-                    ) {
-                        Text("Net", style = MaterialTheme.typography.labelSmall)
-                    }
-                    SegmentedButton(
-                        selected = isDiverging,
-                        onClick = { onToggleDiverging(true) },
-                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
-                    ) {
-                        Text("Split (±)", style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-            }
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(220.dp)
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            if (!chartValues.isNullOrEmpty()) {
-                BarChartView(
-                    dataPoints = chartValues,
-                    isDiverging = isNetIncomeMode && isDiverging
-                )
-            } else {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No chart data",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }
-
-@Composable
-private fun BarChartView(
-    dataPoints: List<ChartDataPoint>,
-    isDiverging: Boolean
-) {
-    val modelProducer = remember { CartesianChartModelProducer() }
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val incomeColor = Color(0xFF2E7D32)
-    val expenseColor = Color(0xFFC62828)
-
-    LaunchedEffect(dataPoints, isDiverging) {
-        modelProducer.runTransaction {
-            columnModel {
-                if (isDiverging) {
-                    series(dataPoints.map { it.income })
-                    series(dataPoints.map { -it.expense })
-                } else {
-                    series(dataPoints.map { it.value })
-                }
-            }
-        }
-    }
-
-    val columnLayer = if (isDiverging) {
-        rememberColumnCartesianLayer(
-            columnProvider = ColumnCartesianLayer.ColumnProvider.series(
-                rememberLineComponent(
-                    fill = Fill(incomeColor),
-                    thickness = 16.dp
-                ),
-                rememberLineComponent(
-                    fill = Fill(expenseColor),
-                    thickness = 16.dp
-                )
-            ),
-            columnCollectionSpacing = 4.dp,
-            mergeMode = { ColumnCartesianLayer.MergeMode.Stacked }
-        )
-    } else {
-        rememberColumnCartesianLayer(
-            columnProvider = ColumnCartesianLayer.ColumnProvider.series(
-                rememberLineComponent(
-                    fill = Fill(primaryColor),
-                    thickness = 16.dp
-                )
-            ),
-            columnCollectionSpacing = 4.dp
-        )
-    }
-
-    val startAxis = if (isDiverging) {
-        VerticalAxis.rememberStart(
-            valueFormatter = { _, value, _ ->
-                val absVal = kotlin.math.abs(value)
-                if (absVal >= 1_000_000) {
-                    String.format(java.util.Locale.US, "%.1fM", absVal / 1_000_000)
-                } else if (absVal >= 1000) {
-                    String.format(java.util.Locale.US, "%.0fk", absVal / 1000)
-                } else {
-                    String.format(java.util.Locale.US, "%.0f", absVal)
-                }
-            }
-        )
-    } else {
-        VerticalAxis.rememberStart()
-    }
-
-    val outlineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-    val decorations = if (isDiverging) {
-        listOf(
-            remember(outlineColor) {
-                HorizontalLine(
-                    y = { 0.0 },
-                    line = LineComponent(fill = Fill(outlineColor), thickness = 1.dp)
-                )
-            }
-        )
-    } else {
-        emptyList()
-    }
-
-    CartesianChartHost(
-        chart = rememberCartesianChart(
-            columnLayer,
-            startAxis = startAxis,
-            bottomAxis = HorizontalAxis.rememberBottom(
-                valueFormatter = { _, x, _ ->
-                    dataPoints.getOrNull(x.toInt())?.label ?: ""
-                }
-            ),
-            decorations = decorations
-        ),
-        modelProducer = modelProducer,
-        modifier = Modifier.fillMaxSize()
-    )
-}
-
 
 @Composable
 private fun PeriodRow(

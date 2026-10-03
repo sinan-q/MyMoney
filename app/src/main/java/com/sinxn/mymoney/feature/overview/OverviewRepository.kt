@@ -60,16 +60,26 @@ data class PeriodMoney(
     val endDate: Date,
     val incomes: MultiCurrencyMoney = MultiCurrencyMoney(),
     val expenses: MultiCurrencyMoney = MultiCurrencyMoney(),
-    val netIncomes: MultiCurrencyMoney = MultiCurrencyMoney()
+    val netIncomes: MultiCurrencyMoney = MultiCurrencyMoney(),
+    val categoryIncomes: MutableMap<String, MultiCurrencyMoney> = mutableMapOf(),
+    val categoryExpenses: MutableMap<String, MultiCurrencyMoney> = mutableMapOf()
 ) {
-    fun addIncome(currency: String, money: Long) {
+    fun addIncome(currency: String, money: Long, categoryId: String? = null) {
         incomes.addMoney(currency, money)
         netIncomes.addMoney(currency, money)
+        if (categoryId != null) {
+            val catIncomes = categoryIncomes.getOrPut(categoryId) { MultiCurrencyMoney() }
+            catIncomes.addMoney(currency, money)
+        }
     }
 
-    fun addExpense(currency: String, money: Long) {
+    fun addExpense(currency: String, money: Long, categoryId: String? = null) {
         expenses.addMoney(currency, money)
         netIncomes.removeMoney(currency, money)
+        if (categoryId != null) {
+            val catExpenses = categoryExpenses.getOrPut(categoryId) { MultiCurrencyMoney() }
+            catExpenses.addMoney(currency, money)
+        }
     }
 }
 
@@ -94,7 +104,14 @@ data class OverviewData(
     val totalIncomes: MultiCurrencyMoney = MultiCurrencyMoney(),
     val totalExpenses: MultiCurrencyMoney = MultiCurrencyMoney(),
     val transactionCount: Int = 0,
-    val globalTotalExpenses: Long = 0L
+    val globalTotalExpenses: Long = 0L,
+    val previousTotalNetIncomes: MultiCurrencyMoney = MultiCurrencyMoney(),
+    val previousTotalIncomes: MultiCurrencyMoney = MultiCurrencyMoney(),
+    val previousTotalExpenses: MultiCurrencyMoney = MultiCurrencyMoney(),
+    val previousTransactionCount: Int = 0,
+    val totalCategoryIncomes: Map<String, MultiCurrencyMoney> = emptyMap(),
+    val totalCategoryExpenses: Map<String, MultiCurrencyMoney> = emptyMap(),
+    val daysCount: Int = 0
 )
 
 @Singleton
@@ -165,6 +182,9 @@ class OverviewRepository @Inject constructor(
         val totalExpenses = MultiCurrencyMoney()
         val periods = mutableListOf<PeriodMoney>()
 
+        val totalCategoryIncomes = mutableMapOf<String, MultiCurrencyMoney>()
+        val totalCategoryExpenses = mutableMapOf<String, MultiCurrencyMoney>()
+
         var transactionIndex = 0
         var currentPeriod: PeriodMoney? = null
 
@@ -176,14 +196,17 @@ class OverviewRepository @Inject constructor(
                 val txDate = DateUtils.parseDate(t.date) ?: break
 
                 if (belongsToPeriod(currentPeriod, txDate)) {
+                    val categoryId = t.categoryId ?: t.categoryParentId ?: "unknown"
                     if (t.direction == 1) { // INCOME
-                        currentPeriod.addIncome(t.walletCurrency, t.money)
+                        currentPeriod.addIncome(t.walletCurrency, t.money, categoryId)
                         totalNetIncomes.addMoney(t.walletCurrency, t.money)
                         totalIncomes.addMoney(t.walletCurrency, t.money)
+                        totalCategoryIncomes.getOrPut(categoryId) { MultiCurrencyMoney() }.addMoney(t.walletCurrency, t.money)
                     } else { // EXPENSE
-                        currentPeriod.addExpense(t.walletCurrency, t.money)
+                        currentPeriod.addExpense(t.walletCurrency, t.money, categoryId)
                         totalNetIncomes.removeMoney(t.walletCurrency, t.money)
                         totalExpenses.addMoney(t.walletCurrency, t.money)
+                        totalCategoryExpenses.getOrPut(categoryId) { MultiCurrencyMoney() }.addMoney(t.walletCurrency, t.money)
                     }
                     transactionIndex++
                 } else {
@@ -192,6 +215,41 @@ class OverviewRepository @Inject constructor(
             }
 
             periods.add(currentPeriod)
+        }
+
+        // Previous period calculation
+        val daysCount = ((normalizedSettings.endDate.time - normalizedSettings.startDate.time) / (1000 * 60 * 60 * 24)).toInt() + 1
+        val cPrev = Calendar.getInstance()
+        cPrev.time = normalizedSettings.startDate
+        cPrev.add(Calendar.DAY_OF_YEAR, -daysCount)
+        val prevStartDate = setTimeStart(cPrev.time)
+        val cPrevEnd = Calendar.getInstance()
+        cPrevEnd.time = normalizedSettings.startDate
+        cPrevEnd.add(Calendar.DAY_OF_YEAR, -1)
+        val prevEndDate = setTimeEnd(cPrevEnd.time)
+
+        val prevStartDateStr = DateUtils.getSQLDateTimeString(prevStartDate)
+        val prevEndDateStr = DateUtils.getSQLDateTimeString(prevEndDate)
+
+        val prevTransactionsRaw = if (walletId == Constants.TOTAL_WALLET_ID || walletId.isEmpty()) {
+            moneyDao.getOverviewTransactionsForTotal(prevStartDateStr, prevEndDateStr, maxDateStr)
+        } else {
+            moneyDao.getOverviewTransactionsForWallet(walletId, prevStartDateStr, prevEndDateStr, maxDateStr)
+        }
+        val prevTransactions = filterTransactions(prevTransactionsRaw, normalizedSettings)
+
+        val previousTotalNetIncomes = MultiCurrencyMoney()
+        val previousTotalIncomes = MultiCurrencyMoney()
+        val previousTotalExpenses = MultiCurrencyMoney()
+
+        for (t in prevTransactions) {
+            if (t.direction == 1) {
+                previousTotalNetIncomes.addMoney(t.walletCurrency, t.money)
+                previousTotalIncomes.addMoney(t.walletCurrency, t.money)
+            } else {
+                previousTotalNetIncomes.removeMoney(t.walletCurrency, t.money)
+                previousTotalExpenses.addMoney(t.walletCurrency, t.money)
+            }
         }
 
         // Calculate global unfiltered total expenses for category share
@@ -228,7 +286,14 @@ class OverviewRepository @Inject constructor(
             totalIncomes = totalIncomes,
             totalExpenses = totalExpenses,
             transactionCount = filtered.size,
-            globalTotalExpenses = globalTotalExpenses
+            globalTotalExpenses = globalTotalExpenses,
+            previousTotalNetIncomes = previousTotalNetIncomes,
+            previousTotalIncomes = previousTotalIncomes,
+            previousTotalExpenses = previousTotalExpenses,
+            previousTransactionCount = prevTransactions.size,
+            totalCategoryIncomes = totalCategoryIncomes,
+            totalCategoryExpenses = totalCategoryExpenses,
+            daysCount = daysCount
         )
     }
 

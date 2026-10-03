@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.colorspace.ColorSpaces
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -27,6 +28,9 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
 import org.json.JSONObject
 import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.min
+import kotlin.math.sin
 
 @Composable
 fun CategoryIcon(
@@ -137,14 +141,35 @@ fun parseIconData(iconString: String?, categoryName: String): IconData {
 }
 
 fun generateColor(name: String): Color {
-    val hash = name.hashCode()
-    colorCache[hash]?.let { return it }
-    val hue = abs(hash % 360).toFloat()
-    val color = Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, 0.6f, 0.8f)))
-    colorCache[hash] = color
+    val hash = (fnv1a(name.trim().lowercase()) % 360u)
+    colorCache[hash.toInt()]?.let { return it }
+    val hue = hash.toFloat()
+    val color = categoryColor(hue, false)
+    colorCache[hash.toInt()] = color
     return color
 }
+fun categoryColor(hueDeg: Float, dark: Boolean): Color {
+    val l = if (dark) 0.78f else 0.58f     // adapts to the theme
+    val c = 0.13f
+    val h = Math.toRadians(hueDeg.toDouble())
+    return Color(l, (c * cos(h)).toFloat(), (c * sin(h)).toFloat(), 1f, ColorSpaces.Oklab)
+        .convert(ColorSpaces.Srgb)
+}
+private fun fnv1a(s: String): UInt {
+    var h = 2166136261u
+    for (b in s.toByteArray()) h = (h xor (b.toInt() and 0xFF).toUInt()) * 16777619u
+    return h
+}
 
+fun pickHue(used: List<Float>): Float =
+    (0 until 360 step 5).map { it.toFloat() }.maxByOrNull { h ->
+        used.minOfOrNull { hueDistance(h, it) } ?: 360f
+    }!!
+
+private fun hueDistance(a: Float, b: Float): Float {
+    val d = abs(a - b) % 360
+    return min(d, 360 - d)
+}
 @Composable
 fun CategoryIcon(
     iconString: String?,

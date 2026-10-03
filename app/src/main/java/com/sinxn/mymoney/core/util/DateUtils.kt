@@ -249,6 +249,11 @@ object DateUtils {
         return result
     }
 
+    fun formatShortMonth(date: Date): String {
+        val format = SimpleDateFormat("MMM", Locale.getDefault())
+        return format.format(date).replace(".", "").take(3)
+    }
+
     fun isSameMonth(date1: Date, date2: Date): Boolean {
         val cal1 = Calendar.getInstance().apply { time = date1 }
         val cal2 = Calendar.getInstance().apply { time = date2 }
