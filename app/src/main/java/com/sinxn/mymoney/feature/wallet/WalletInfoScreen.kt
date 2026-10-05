@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,6 +26,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.core.ui.LocalFormatterConfig
+import com.sinxn.mymoney.core.ui.components.AppDestructiveConfirmDialog
+import com.sinxn.mymoney.core.ui.components.AppInfoDialog
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.groupTransactionsIntoMonthGroups
 import com.sinxn.mymoney.core.ui.components.monthGroupedTransactionItems
@@ -40,8 +43,8 @@ fun WalletInfoScreen(
     viewModel: WalletInfoViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
-    var showTransferInUseDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by rememberSaveable { mutableStateOf(false) }
+    var showTransferInUseDialog by rememberSaveable { mutableStateOf(false) }
     var collapsedMonthGroups by remember { mutableStateOf(setOf<String>()) }
 
     val formatterConfig = LocalFormatterConfig.current.copy(showPlusMinus = false)
@@ -77,44 +80,22 @@ fun WalletInfoScreen(
     }
 
     if (showDeleteConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirmDialog = false },
-            title = { Text("Delete Wallet", fontWeight = FontWeight.Bold) },
-            text = {
-                Text(
-                    "Are you sure you want to delete '${uiState.wallet?.wallet?.name ?: "this wallet"}'? All associated transactions, debts, savings, models, and recurrent items will also be removed."
-                )
+        AppDestructiveConfirmDialog(
+            title = "Delete Wallet",
+            message = "Are you sure you want to delete '${uiState.wallet?.wallet?.name ?: "this wallet"}'? All associated transactions, debts, savings, models, and recurrent items will also be removed.",
+            onConfirmDelete = {
+                showDeleteConfirmDialog = false
+                viewModel.deleteWallet()
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteConfirmDialog = false
-                        viewModel.deleteWallet()
-                    }
-                ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirmDialog = false }) {
-                    Text("Cancel")
-                }
-            }
+            onDismiss = { showDeleteConfirmDialog = false }
         )
     }
 
     if (showTransferInUseDialog) {
-        AlertDialog(
-            onDismissRequest = { showTransferInUseDialog = false },
-            title = { Text("Cannot Delete Wallet", fontWeight = FontWeight.Bold) },
-            text = {
-                Text("This wallet cannot be deleted because it is in use in a transfer. Please remove or update the transfer first.")
-            },
-            confirmButton = {
-                TextButton(onClick = { showTransferInUseDialog = false }) {
-                    Text("OK", fontWeight = FontWeight.Bold)
-                }
-            }
+        AppInfoDialog(
+            title = "Cannot Delete Wallet",
+            message = "This wallet cannot be deleted because it is in use in a transfer. Please remove or update the transfer first.",
+            onDismiss = { showTransferInUseDialog = false }
         )
     }
 

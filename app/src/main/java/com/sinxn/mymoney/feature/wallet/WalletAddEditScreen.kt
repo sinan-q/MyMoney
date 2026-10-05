@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,7 +36,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.sinxn.mymoney.core.ui.components.AppDestructiveConfirmDialog
 import com.sinxn.mymoney.core.ui.components.AppExtendedFab
+import com.sinxn.mymoney.core.ui.components.AppInfoDialog
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CleanListRow
 import com.sinxn.mymoney.core.ui.components.CurrencySelectionDialog
@@ -55,10 +58,10 @@ fun WalletAddEditScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    var showCurrencyDialog by remember { mutableStateOf(false) }
-    var showIconPickerDialog by remember { mutableStateOf(false) }
-    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
-    var showTransferInUseDialog by remember { mutableStateOf(false) }
+    var showCurrencyDialog by rememberSaveable { mutableStateOf(false) }
+    var showIconPickerDialog by rememberSaveable { mutableStateOf(false) }
+    var showDeleteConfirmDialog by rememberSaveable { mutableStateOf(false) }
+    var showTransferInUseDialog by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
@@ -73,44 +76,22 @@ fun WalletAddEditScreen(
     }
 
     if (showDeleteConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirmDialog = false },
-            title = { Text("Delete Wallet", fontWeight = FontWeight.Bold) },
-            text = {
-                Text(
-                    "Are you sure you want to delete '${uiState.name}'? All related transactions, debts, savings, models, and recurrent items will also be removed."
-                )
+        AppDestructiveConfirmDialog(
+            title = "Delete Wallet",
+            message = "Are you sure you want to delete '${uiState.name}'? All related transactions, debts, savings, models, and recurrent items will also be removed.",
+            onConfirmDelete = {
+                showDeleteConfirmDialog = false
+                viewModel.deleteWallet()
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteConfirmDialog = false
-                        viewModel.deleteWallet()
-                    }
-                ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirmDialog = false }) {
-                    Text("Cancel")
-                }
-            }
+            onDismiss = { showDeleteConfirmDialog = false }
         )
     }
 
     if (showTransferInUseDialog) {
-        AlertDialog(
-            onDismissRequest = { showTransferInUseDialog = false },
-            title = { Text("Cannot Delete Wallet", fontWeight = FontWeight.Bold) },
-            text = {
-                Text("This wallet cannot be deleted because it is currently in use in one or more transfers. Please remove or update the transfers first.")
-            },
-            confirmButton = {
-                TextButton(onClick = { showTransferInUseDialog = false }) {
-                    Text("OK", fontWeight = FontWeight.Bold)
-                }
-            }
+        AppInfoDialog(
+            title = "Cannot Delete Wallet",
+            message = "This wallet cannot be deleted because it is currently in use in one or more transfers. Please remove or update the transfers first.",
+            onDismiss = { showTransferInUseDialog = false }
         )
     }
 

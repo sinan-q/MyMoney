@@ -58,19 +58,20 @@ import com.sinxn.mymoney.core.ui.LocalFormatterConfig
 import com.sinxn.mymoney.core.util.Constants
 import com.sinxn.mymoney.core.util.MoneyFormatter
 
+/**
+ * Pure, stateless WalletHeader component.
+ * Decoupled from ViewModels and Hilt for testability, previews, and clean architecture.
+ */
 @Composable
 fun WalletHeader(
+    wallet: WalletWithBalance,
     modifier: Modifier = Modifier,
-    wallet: WalletWithBalance? = null,
     formatterConfig: MoneyFormatter.Config = LocalFormatterConfig.current,
     isExpanded: Boolean = false,
     onToggleExpand: () -> Unit = {},
-    isReduced: Boolean = false,
-    viewModel: WalletHeaderViewModel = hiltViewModel()
+    isReduced: Boolean = false
 ) {
-    val currentWalletState by viewModel.currentWallet.collectAsState()
-
-    val effectiveWallet = wallet ?: currentWalletState ?: return
+    val effectiveWallet = wallet
     val effectiveConfig = formatterConfig
 
     val baseColor = remember(effectiveWallet.wallet.icon, effectiveWallet.wallet.name) {
@@ -222,6 +223,66 @@ fun WalletHeader(
                 }
             }
         }
+    }
+}
+
+/**
+ * Connected stateful wrapper for [WalletHeader], observing the current active wallet from [WalletHeaderViewModel].
+ */
+@Composable
+fun ConnectedWalletHeader(
+    modifier: Modifier = Modifier,
+    formatterConfig: MoneyFormatter.Config = LocalFormatterConfig.current,
+    isExpanded: Boolean = false,
+    onToggleExpand: () -> Unit = {},
+    isReduced: Boolean = false,
+    viewModel: WalletHeaderViewModel = hiltViewModel()
+) {
+    val currentWalletState by viewModel.currentWallet.collectAsState()
+    currentWalletState?.let { currentWallet ->
+        WalletHeader(
+            wallet = currentWallet,
+            modifier = modifier,
+            formatterConfig = formatterConfig,
+            isExpanded = isExpanded,
+            onToggleExpand = onToggleExpand,
+            isReduced = isReduced
+        )
+    }
+}
+
+/**
+ * Stateful overload for [WalletHeader] maintaining backwards compatibility with screens
+ * that do not pass an explicit [wallet].
+ */
+@Composable
+fun WalletHeader(
+    modifier: Modifier = Modifier,
+    wallet: WalletWithBalance? = null,
+    formatterConfig: MoneyFormatter.Config = LocalFormatterConfig.current,
+    isExpanded: Boolean = false,
+    onToggleExpand: () -> Unit = {},
+    isReduced: Boolean = false,
+    viewModel: WalletHeaderViewModel = hiltViewModel()
+) {
+    if (wallet != null) {
+        WalletHeader(
+            wallet = wallet,
+            modifier = modifier,
+            formatterConfig = formatterConfig,
+            isExpanded = isExpanded,
+            onToggleExpand = onToggleExpand,
+            isReduced = isReduced
+        )
+    } else {
+        ConnectedWalletHeader(
+            modifier = modifier,
+            formatterConfig = formatterConfig,
+            isExpanded = isExpanded,
+            onToggleExpand = onToggleExpand,
+            isReduced = isReduced,
+            viewModel = viewModel
+        )
     }
 }
 

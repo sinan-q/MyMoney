@@ -10,6 +10,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.R
 import com.sinxn.mymoney.core.data.preferences.toFormatterConfig
+import com.sinxn.mymoney.core.ui.components.AppDestructiveConfirmDialog
 import com.sinxn.mymoney.core.ui.components.CleanListRow
 import com.sinxn.mymoney.core.ui.components.FormCardContainer
 import com.sinxn.mymoney.core.util.DateUtils
@@ -40,7 +42,7 @@ fun RecurrentTransferDetailsScreen(
     val settings by viewModel.formattingSettings.collectAsState()
     val context = LocalContext.current
     val scrollState = rememberScrollState()
-    var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var showDeleteConfirmation by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -368,26 +370,14 @@ fun RecurrentTransferDetailsScreen(
         }
 
         if (showDeleteConfirmation) {
-            AlertDialog(
-                onDismissRequest = { showDeleteConfirmation = false },
-                title = { Text("Delete Recurrent Transfer?") },
-                text = { Text("Historical transactions will be preserved without recurrence link.") },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            showDeleteConfirmation = false
-                            viewModel.delete { onNavigateBack() }
-                        },
-                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                    ) {
-                        Text("Delete")
-                    }
+            AppDestructiveConfirmDialog(
+                title = "Delete Recurrent Transfer?",
+                message = "Historical transactions will be preserved without recurrence link.",
+                onConfirmDelete = {
+                    showDeleteConfirmation = false
+                    viewModel.delete { onNavigateBack() }
                 },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteConfirmation = false }) {
-                        Text("Cancel")
-                    }
-                }
+                onDismiss = { showDeleteConfirmation = false }
             )
         }
     }

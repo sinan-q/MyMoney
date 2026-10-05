@@ -29,10 +29,11 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun ListRow(
     onClick: (() -> Unit)?,
+    modifier: Modifier = Modifier,
     content: (@Composable () -> Unit)
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -44,6 +45,7 @@ fun ListRow(
 }
 @Composable
 fun CleanListRow(
+    modifier: Modifier = Modifier,
     icon: (@Composable () -> Unit)? = null,
     label: String? = null,
     active: Boolean = true,
@@ -53,6 +55,7 @@ fun CleanListRow(
 ) {
     ListRow(
         onClick = onClick,
+        modifier = modifier
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

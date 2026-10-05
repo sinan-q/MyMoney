@@ -98,16 +98,7 @@ fun <T> SelectionDialog(
                 // List
                 if (filteredOptions.isEmpty()) {
                     Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                Icons.Default.Block, 
-                                contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.outlineVariant
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("No results found", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
+                        EmptyListItem(isSearching = searchQuery.isNotEmpty(), text = "results")
                     }
                 } else {
                     LazyColumn(
