@@ -231,7 +231,7 @@ fun AppNavHost(
                 onNavigateUp = { navController.navigateUp() }
             )
         }
-        composable("wallet_details/{walletId}") {
+        composable(Screen.Transactions.routePattern) {
             WalletDetailsScreen(
                 onTransactionClick = { transactionId ->
                     navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
