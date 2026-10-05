@@ -54,8 +54,18 @@ class WalletDetailsViewModel @Inject constructor(
     fun dismissFilterSheet() { _showFilterSheet.update { false } }
 
     fun applyFilter(newFilter: TransactionFilter) {
+        val effectiveWalletId = if (newFilter.walletId.isNotEmpty()) newFilter.walletId else walletId
         _filter.update { newFilter }
         _showFilterSheet.update { false }
+        viewModelScope.launch {
+            try {
+                if (effectiveWalletId.isNotEmpty()) {
+                    settingsRepository.setCurrentWalletId(effectiveWalletId)
+                }
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
     }
 
     // ── Categories for the filter sheet ──────────────────────────────────────
@@ -63,16 +73,19 @@ class WalletDetailsViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // ── Pending transactions ─────────────────────────────────────────────────
-    val pendingTransactions: StateFlow<List<TransactionWithCategory>> =
-        if (walletId == Constants.TOTAL_WALLET_ID) {
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val pendingTransactions: StateFlow<List<TransactionWithCategory>> = _filter.flatMapLatest { txFilter ->
+        val effectiveWalletId = if (txFilter.walletId.isNotEmpty()) txFilter.walletId else walletId
+        if (effectiveWalletId == Constants.TOTAL_WALLET_ID) {
             moneyDao.getPendingUnconfirmedTransactions()
         } else {
-            moneyDao.getPendingUnconfirmedTransactionsForWallet(walletId)
-        }.stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+            moneyDao.getPendingUnconfirmedTransactionsForWallet(effectiveWalletId)
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     init {
         // Save as current wallet accessible on launch
@@ -103,9 +116,11 @@ class WalletDetailsViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val wallet: StateFlow<WalletWithBalance?> = combine(
         settingsRepository.formattingSettings,
-        moneyDao.getWalletsWithBalance(DateUtils.getSQLDateTimeString(java.util.Date()))
-    ) { settings, allWallets ->
-        if (walletId == Constants.TOTAL_WALLET_ID) {
+        moneyDao.getWalletsWithBalance(DateUtils.getSQLDateTimeString(java.util.Date())),
+        _filter
+    ) { settings, allWallets, txFilter ->
+        val effectiveWalletId = if (txFilter.walletId.isNotEmpty()) txFilter.walletId else walletId
+        if (effectiveWalletId == Constants.TOTAL_WALLET_ID) {
             val walletsInTotal = allWallets.filter {
                 it.wallet.countInTotal && (!settings.excludeArchivedFromTotal || !it.wallet.isArchived)
             }
@@ -172,7 +187,7 @@ class WalletDetailsViewModel @Inject constructor(
                 balanceBreakdown = breakdown
             )
         } else {
-            allWallets.find { it.wallet.id == walletId }
+            allWallets.find { it.wallet.id == effectiveWalletId }
         }
     }
         .stateIn(
@@ -300,11 +315,12 @@ class WalletDetailsViewModel @Inject constructor(
         )
 
     fun toggleCountInTotal() {
-        if (walletId == Constants.TOTAL_WALLET_ID) return
+        val effectiveWalletId = _filter.value.walletId.ifEmpty { walletId }
+        if (effectiveWalletId == Constants.TOTAL_WALLET_ID) return
         viewModelScope.launch {
-            moneyDao.getWalletById(walletId)?.let { current ->
+            moneyDao.getWalletById(effectiveWalletId)?.let { current ->
                 moneyDao.updateWalletCountInTotal(
-                    walletId = walletId,
+                    walletId = effectiveWalletId,
                     countInTotal = !current.countInTotal,
                     lastEdit = System.currentTimeMillis()
                 )
@@ -313,11 +329,12 @@ class WalletDetailsViewModel @Inject constructor(
     }
 
     fun toggleArchived() {
-        if (walletId == Constants.TOTAL_WALLET_ID) return
+        val effectiveWalletId = _filter.value.walletId.ifEmpty { walletId }
+        if (effectiveWalletId == Constants.TOTAL_WALLET_ID) return
         viewModelScope.launch {
-            moneyDao.getWalletById(walletId)?.let { current ->
+            moneyDao.getWalletById(effectiveWalletId)?.let { current ->
                 moneyDao.updateWalletArchived(
-                    walletId = walletId,
+                    walletId = effectiveWalletId,
                     isArchived = !current.isArchived,
                     lastEdit = System.currentTimeMillis()
                 )

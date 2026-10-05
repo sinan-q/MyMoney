@@ -109,7 +109,7 @@ fun WalletDetailsScreen(
     }
 
     // Whether any filter is actively applied (badge indicator)
-    val isFilterActive = filter.dateRangeEnabled || filter.categoryIds.isNotEmpty()
+    val isFilterActive = filter.dateRangeEnabled || filter.categoryIds.isNotEmpty() || (filter.walletId.isNotEmpty() && filter.walletId != viewModel.walletId)
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -431,7 +431,7 @@ fun PendingConfirmationItem(
                 val formattedMoney = MoneyFormatter.formatColored(
                     amount = item.transaction.money,
                     currencyCode = item.currencyCode ?: "USD",
-                    decimals = item.decimals ?: 2,
+                    decimals = item.decimals,
                     tintMode = if (item.transaction.direction == 1) MoneyFormatter.TintMode.INCOME else MoneyFormatter.TintMode.EXPENSE,
                     config = MoneyFormatter.Config()
                 )
