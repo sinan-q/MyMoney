@@ -7,6 +7,7 @@ import com.sinxn.mymoney.core.data.local.dao.MoneyDao
 import com.sinxn.mymoney.core.data.local.model.BudgetWithDetails
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
+import com.sinxn.mymoney.core.data.preferences.toFormatterConfig
 import com.sinxn.mymoney.core.data.repository.BudgetRepository
 import com.sinxn.mymoney.core.ui.components.IconData
 import com.sinxn.mymoney.core.ui.components.parseIconData
@@ -75,12 +76,7 @@ class BudgetListViewModel @Inject constructor(
         settingsRepository.formattingSettings
     ) { wId, list, formatting ->
         val actualWId = if (wId == "total") null else wId
-        val formatterConfig = MoneyFormatter.Config(
-            showCurrency = formatting.showCurrency,
-            groupDigits = formatting.groupDigits,
-            roundDecimals = formatting.roundDecimals,
-            showPlusMinus = formatting.showPlusMinus
-        )
+        val formatterConfig = formatting.toFormatterConfig()
 
         val uiModels = list.map { it.toUiModel(formatterConfig, formatting.dateFormat) }
 

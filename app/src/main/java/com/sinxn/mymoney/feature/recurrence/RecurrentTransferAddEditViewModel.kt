@@ -151,35 +151,20 @@ class RecurrentTransferAddEditViewModel @Inject constructor(
                         amount = entity.moneyFrom,
                         currencyCode = matchingFromWallet?.currency ?: "",
                         decimals = fromDecimals,
-                        config = MoneyFormatter.Config(
-                            showCurrency = false,
-                            groupDigits = false,
-                            roundDecimals = false,
-                            showPlusMinus = false
-                        )
+                        config = MoneyFormatter.Config.PLAIN
                     )
                     val toFormatted = MoneyFormatter.format(
                         amount = entity.moneyTo,
                         currencyCode = matchingToWallet?.currency ?: "",
                         decimals = toDecimals,
-                        config = MoneyFormatter.Config(
-                            showCurrency = false,
-                            groupDigits = false,
-                            roundDecimals = false,
-                            showPlusMinus = false
-                        )
+                        config = MoneyFormatter.Config.PLAIN
                     )
                     val taxFormatted = entity.moneyTax?.let { tax ->
                         MoneyFormatter.format(
                             amount = tax,
                             currencyCode = matchingFromWallet?.currency ?: "",
                             decimals = fromDecimals,
-                            config = MoneyFormatter.Config(
-                                showCurrency = false,
-                                groupDigits = false,
-                                roundDecimals = false,
-                                showPlusMinus = false
-                            )
+                            config = MoneyFormatter.Config.PLAIN
                         )
                     } ?: ""
 

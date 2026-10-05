@@ -10,6 +10,7 @@ import com.sinxn.mymoney.core.data.local.entity.WalletEntity
 import com.sinxn.mymoney.core.data.local.model.DebtWithDetails
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
+import com.sinxn.mymoney.core.data.preferences.toFormatterConfig
 import com.sinxn.mymoney.core.data.repository.DebtRepository
 import com.sinxn.mymoney.core.util.Constants
 import com.sinxn.mymoney.core.util.DateUtils
@@ -182,12 +183,7 @@ class DebtAddEditViewModel @Inject constructor(
         val displayCurrency = selectedWallet?.currency ?: existingDebt?.walletCurrency ?: selectors.formatting.globalCurrency
         val displayDecimals = existingDebt?.walletDecimals ?: 2
 
-        val formatterConfig = MoneyFormatter.Config(
-            showCurrency = selectors.formatting.showCurrency,
-            groupDigits = selectors.formatting.groupDigits,
-            roundDecimals = selectors.formatting.roundDecimals,
-            showPlusMinus = selectors.formatting.showPlusMinus
-        )
+        val formatterConfig = selectors.formatting.toFormatterConfig()
 
         DebtAddEditUiState(
             debtId = debtIdArg,

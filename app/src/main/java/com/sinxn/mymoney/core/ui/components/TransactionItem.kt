@@ -8,6 +8,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
+import com.sinxn.mymoney.core.ui.LocalFormatterConfig
+import com.sinxn.mymoney.core.ui.LocalFormattingSettings
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.ui.theme.ExpenseColor
@@ -110,8 +112,8 @@ fun TransactionItem(
     item: TransactionWithCategory,
     decimals: Int = item.decimals,
     currencyCode: String = item.currencySymbol ?: item.currencyCode ?: "$",
-    formatterConfig: MoneyFormatter.Config = MoneyFormatter.Config(),
-    dateFormat: Int = 0,
+    formatterConfig: MoneyFormatter.Config = LocalFormatterConfig.current,
+    dateFormat: Int = LocalFormattingSettings.current.dateFormat,
     isLastItem: Boolean = false,
     showDate: Boolean = true,
     onClick: () -> Unit = {}

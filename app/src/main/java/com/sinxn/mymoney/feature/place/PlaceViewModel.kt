@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
+import com.sinxn.mymoney.core.data.preferences.toFormatterConfig
 import com.sinxn.mymoney.core.data.repository.PlaceRepository
 import com.sinxn.mymoney.core.ui.components.IconData
 import com.sinxn.mymoney.core.ui.components.SortOption
@@ -70,12 +71,7 @@ class PlaceViewModel @Inject constructor(
 
         val txGrouped = allTransactions.groupBy { it.transaction.placeId }
 
-        val formatterConfig = MoneyFormatter.Config(
-            showCurrency = formattingSettings.showCurrency,
-            groupDigits = formattingSettings.groupDigits,
-            roundDecimals = formattingSettings.roundDecimals,
-            showPlusMinus = formattingSettings.showPlusMinus
-        )
+        val formatterConfig = formattingSettings.toFormatterConfig()
 
         val placeItems = places.map { place ->
             val txs = txGrouped[place.id] ?: emptyList()

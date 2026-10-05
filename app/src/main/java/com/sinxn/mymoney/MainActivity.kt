@@ -37,6 +37,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -52,7 +53,10 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.sinxn.mymoney.core.data.preferences.toFormatterConfig
 import com.sinxn.mymoney.core.data.repository.RecurrenceRepository
+import com.sinxn.mymoney.core.ui.LocalFormatterConfig
+import com.sinxn.mymoney.core.ui.LocalFormattingSettings
 import com.sinxn.mymoney.core.ui.components.handleSidebarNavigation
 import com.sinxn.mymoney.core.ui.components.navigationMenuItems
 import com.sinxn.mymoney.core.util.Constants
@@ -78,14 +82,21 @@ class MainActivity : ComponentActivity() {
             recurrenceRepository.processPendingRecurrences()
         }
         setContent {
-            MyMoneyTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    val navController = rememberNavController()
-                    val viewModel: MainViewModel = hiltViewModel()
-                    val startDest by viewModel.startDestination.collectAsState()
+            val viewModel: MainViewModel = hiltViewModel()
+            val formattingSettings by viewModel.formattingSettings.collectAsState()
+            val formatterConfig = remember(formattingSettings) { formattingSettings.toFormatterConfig() }
+
+            CompositionLocalProvider(
+                LocalFormatterConfig provides formatterConfig,
+                LocalFormattingSettings provides formattingSettings
+            ) {
+                MyMoneyTheme {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        val navController = rememberNavController()
+                        val startDest by viewModel.startDestination.collectAsState()
                     
                     if (startDest != "loading") {
                         var dynamicModuleItemId by remember { mutableStateOf(Screen.Overview.sidebarItemId) }
@@ -260,6 +271,7 @@ class MainActivity : ComponentActivity() {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator()
                         }
+                    }
                     }
                 }
             }

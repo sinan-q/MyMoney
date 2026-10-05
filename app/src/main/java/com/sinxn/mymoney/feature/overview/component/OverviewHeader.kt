@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
+import com.sinxn.mymoney.core.ui.LocalFormatterConfig
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.CategoryIconExtended
 import com.sinxn.mymoney.core.util.DateUtils
@@ -50,14 +51,7 @@ fun OverviewHeader(
     comparisonIsPostivie: Boolean,
     insightsText: String
 ) {
-    val configWithSign = remember(formattingSettings) {
-        MoneyFormatter.Config(
-            showCurrency = formattingSettings.showCurrency,
-            groupDigits = formattingSettings.groupDigits,
-            roundDecimals = formattingSettings.roundDecimals,
-            showPlusMinus = true
-        )
-    }
+    val configWithSign = LocalFormatterConfig.current.copy(showPlusMinus = true)
 
     val netAmount = totalNetIncomes.getMoney(currencyCode)
     val formattedDateRange = remember(settings?.startDate, settings?.endDate) {

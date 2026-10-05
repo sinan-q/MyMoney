@@ -43,6 +43,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import com.sinxn.mymoney.core.ui.LocalFormatterConfig
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -93,14 +94,7 @@ fun PeriodDetailScreen(
     val expenseListState = rememberLazyListState()
     val transactionsListState = rememberLazyListState()
 
-    val config = remember(uiState.formattingSettings) {
-        MoneyFormatter.Config(
-            showCurrency = uiState.formattingSettings.showCurrency,
-            groupDigits = uiState.formattingSettings.groupDigits,
-            roundDecimals = uiState.formattingSettings.roundDecimals,
-            showPlusMinus = false
-        )
-    }
+    val config = LocalFormatterConfig.current.copy(showPlusMinus = false)
 
     val headerDateString = remember(uiState.startDate, uiState.endDate, uiState.formattingSettings.dateFormat) {
         val startParsed = DateUtils.parseDate(uiState.startDate)

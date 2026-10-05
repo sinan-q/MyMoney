@@ -19,7 +19,16 @@ object MoneyFormatter {
         val groupDigits: Boolean = true,
         val roundDecimals: Boolean = false,
         val showPlusMinus: Boolean = false
-    )
+    ) {
+        companion object {
+            val PLAIN = Config(
+                showCurrency = false,
+                groupDigits = false,
+                roundDecimals = false,
+                showPlusMinus = false
+            )
+        }
+    }
 
     /**
      * Flow mode controls the sign display.

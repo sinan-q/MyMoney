@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.entity.EventEntity
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
+import com.sinxn.mymoney.core.data.preferences.toFormatterConfig
 import com.sinxn.mymoney.core.data.repository.EventRepository
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -79,12 +80,7 @@ class EventDetailsViewModel @Inject constructor(
                 val displayCurrency = if (transactionCurrencies.size == 1) transactionCurrencies.first() else settings.globalCurrency
                 val displayDecimals = transactions.firstOrNull()?.decimals ?: 2
 
-                val formatterConfig = MoneyFormatter.Config(
-                    showCurrency = settings.showCurrency,
-                    groupDigits = settings.groupDigits,
-                    roundDecimals = settings.roundDecimals,
-                    showPlusMinus = settings.showPlusMinus
-                )
+                val formatterConfig = settings.toFormatterConfig()
 
                 _uiState.value = _uiState.value.copy(
                     event = currentEvent,

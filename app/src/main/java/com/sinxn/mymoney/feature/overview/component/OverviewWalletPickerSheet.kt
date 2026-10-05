@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
+import com.sinxn.mymoney.core.ui.LocalFormatterConfig
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.util.Constants
 import com.sinxn.mymoney.core.util.MoneyFormatter
@@ -34,14 +35,7 @@ fun OverviewWalletPickerSheet(
     onSelectWallet: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val formatterConfig = remember(formattingSettings) {
-        MoneyFormatter.Config(
-            showCurrency = formattingSettings.showCurrency,
-            groupDigits = formattingSettings.groupDigits,
-            roundDecimals = formattingSettings.roundDecimals,
-            showPlusMinus = false
-        )
-    }
+    val formatterConfig = LocalFormatterConfig.current.copy(showPlusMinus = false)
 
     val (activeWallets, archivedWallets) = remember(wallets) {
         wallets.partition { !it.wallet.isArchived }

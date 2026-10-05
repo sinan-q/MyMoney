@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.model.BudgetWithDetails
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
+import com.sinxn.mymoney.core.data.preferences.toFormatterConfig
 import com.sinxn.mymoney.core.data.repository.BudgetRepository
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
@@ -101,12 +102,7 @@ class BudgetDetailsViewModel @Inject constructor(
                     }
                     val displayDecimals = transactions.firstOrNull()?.decimals ?: 2
 
-                    val formatterConfig = MoneyFormatter.Config(
-                        showCurrency = formatting.showCurrency,
-                        groupDigits = formatting.groupDigits,
-                        roundDecimals = formatting.roundDecimals,
-                        showPlusMinus = formatting.showPlusMinus
-                    )
+                    val formatterConfig = formatting.toFormatterConfig()
 
                     _uiState.update { state ->
                         state.copy(

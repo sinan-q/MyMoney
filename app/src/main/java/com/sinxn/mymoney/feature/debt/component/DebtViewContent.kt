@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sinxn.mymoney.core.data.local.model.DebtWithDetails
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
+import com.sinxn.mymoney.core.ui.LocalFormatterConfig
 import com.sinxn.mymoney.core.ui.components.CleanListRow
 import com.sinxn.mymoney.core.ui.components.FormCardContainer
 import com.sinxn.mymoney.core.ui.components.groupTransactionsIntoMonthGroups
@@ -62,7 +63,7 @@ import kotlin.math.abs
 fun DebtViewContent(
     debtDetails: DebtWithDetails,
     transactions: List<TransactionWithCategory>,
-    formatterConfig: MoneyFormatter.Config,
+    formatterConfig: MoneyFormatter.Config = LocalFormatterConfig.current,
     currencyCode: String,
     currencyDecimals: Int,
     dateFormat: Int,

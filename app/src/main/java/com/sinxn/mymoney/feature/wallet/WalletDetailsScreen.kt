@@ -38,6 +38,7 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import com.sinxn.mymoney.core.ui.LocalFormatterConfig
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -91,14 +92,7 @@ fun WalletDetailsScreen(
         }
     }
 
-    val formatterConfig = remember(viewModel.formattingSettings) {
-        MoneyFormatter.Config(
-            showCurrency = settings.showCurrency,
-            groupDigits = settings.groupDigits,
-            roundDecimals = settings.roundDecimals,
-            showPlusMinus = settings.showPlusMinus
-        )
-    }
+    val formatterConfig = LocalFormatterConfig.current
 
     var isWalletListExpanded by remember { mutableStateOf(false) }
 
@@ -207,7 +201,7 @@ fun TransactionList(
     pendingTransactions: List<TransactionWithCategory> = emptyList(),
     decimals: Int,
     currencyCode: String,
-    formatterConfig: MoneyFormatter.Config,
+    formatterConfig: MoneyFormatter.Config = LocalFormatterConfig.current,
     dateFormat: Int,
     listState: LazyListState,
     onTransactionClick: (String) -> Unit,
@@ -433,7 +427,7 @@ fun PendingConfirmationItem(
                     currencyCode = item.currencyCode ?: "USD",
                     decimals = item.decimals,
                     tintMode = if (item.transaction.direction == 1) MoneyFormatter.TintMode.INCOME else MoneyFormatter.TintMode.EXPENSE,
-                    config = MoneyFormatter.Config()
+                    config = LocalFormatterConfig.current
                 )
                 Text(
                     text = formattedMoney,

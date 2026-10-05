@@ -80,15 +80,7 @@ class WalletHeaderViewModel @Inject constructor(
         initialValue = createDefaultTotalWallet()
     )
 
-    val formatterConfig: StateFlow<MoneyFormatter.Config> = settingsRepository.formattingSettings
-        .map { settings ->
-            MoneyFormatter.Config(
-                showCurrency = settings.showCurrency,
-                groupDigits = settings.groupDigits,
-                roundDecimals = settings.roundDecimals,
-                showPlusMinus = settings.showPlusMinus
-            )
-        }
+    val formatterConfig: StateFlow<MoneyFormatter.Config> = settingsRepository.formatterConfig
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),

@@ -12,6 +12,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
+import com.sinxn.mymoney.core.util.MoneyFormatter
 import javax.inject.Singleton
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -30,6 +31,15 @@ data class FormattingSettings(
     val hideStatusAndImpact: Boolean = false,
     val globalCurrency: String = "USD",
     val dailyReminderHour: Int = -1 // -1 = disabled, 0-23 = hour of day (matching legacy DAILY_REMINDER_DISABLED)
+)
+
+fun FormattingSettings.toFormatterConfig(
+    showPlusMinus: Boolean = this.showPlusMinus
+): MoneyFormatter.Config = MoneyFormatter.Config(
+    showCurrency = showCurrency,
+    groupDigits = groupDigits,
+    roundDecimals = roundDecimals,
+    showPlusMinus = showPlusMinus
 )
 
 @Singleton
@@ -109,6 +119,9 @@ class SettingsRepository @Inject constructor(
                 dailyReminderHour = preferences[DAILY_REMINDER_HOUR] ?: -1
             )
         }
+
+    val formatterConfig: Flow<MoneyFormatter.Config> = formattingSettings
+        .map { it.toFormatterConfig() }
 
     suspend fun setCurrentWalletId(id: String) {
         dataStore.edit { preferences ->

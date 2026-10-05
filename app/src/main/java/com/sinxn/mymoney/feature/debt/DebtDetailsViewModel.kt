@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.model.DebtWithDetails
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
+import com.sinxn.mymoney.core.data.preferences.toFormatterConfig
 import com.sinxn.mymoney.core.data.repository.DebtRepository
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -52,12 +53,7 @@ class DebtDetailsViewModel @Inject constructor(
             ?: if (transactionCurrencies.size == 1) transactionCurrencies.first() else formatting.globalCurrency
         val displayDecimals = debtDetails?.walletDecimals ?: txList.firstOrNull()?.decimals ?: 2
 
-        val formatterConfig = MoneyFormatter.Config(
-            showCurrency = formatting.showCurrency,
-            groupDigits = formatting.groupDigits,
-            roundDecimals = formatting.roundDecimals,
-            showPlusMinus = formatting.showPlusMinus
-        )
+        val formatterConfig = formatting.toFormatterConfig()
 
         DebtDetailsUiState(
             debtDetails = debtDetails,

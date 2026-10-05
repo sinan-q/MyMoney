@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.sinxn.mymoney.core.data.local.model.TransactionListItem
+import com.sinxn.mymoney.core.ui.LocalFormatterConfig
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
 
@@ -35,7 +36,7 @@ fun TransactionHeader(
     header: TransactionListItem.Header,
     decimals: Int = 2,
     currencyCode: String = "USD",
-    formatterConfig: MoneyFormatter.Config = MoneyFormatter.Config(),
+    formatterConfig: MoneyFormatter.Config = LocalFormatterConfig.current,
     isCollapsed: Boolean = false,
     onToggle: () -> Unit = {}
 ) {

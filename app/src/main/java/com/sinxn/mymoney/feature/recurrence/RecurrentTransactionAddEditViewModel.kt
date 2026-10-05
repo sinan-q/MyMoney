@@ -147,12 +147,7 @@ class RecurrentTransactionAddEditViewModel @Inject constructor(
                         amount = entity.money,
                         currencyCode = matchingWallet?.currency ?: "",
                         decimals = entityDecimals,
-                        config = MoneyFormatter.Config(
-                            showCurrency = false,
-                            groupDigits = false,
-                            roundDecimals = false,
-                            showPlusMinus = false
-                        )
+                        config = MoneyFormatter.Config.PLAIN
                     )
 
                     val editWallets = wallets.filter { w -> !w.isArchived || w.id == entity.walletId }

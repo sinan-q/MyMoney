@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sinxn.mymoney.core.data.local.model.DebtWithDetails
+import com.sinxn.mymoney.core.ui.LocalFormatterConfig
 import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import com.sinxn.mymoney.core.ui.components.TabPill
 import com.sinxn.mymoney.core.util.DateUtils
@@ -110,14 +111,7 @@ fun DebtListBodyContent(
 ) {
     val coroutineScope = rememberCoroutineScope()
 
-    val formatterConfig = remember(uiState.formattingSettings) {
-        MoneyFormatter.Config(
-            showCurrency = uiState.formattingSettings.showCurrency,
-            groupDigits = uiState.formattingSettings.groupDigits,
-            roundDecimals = uiState.formattingSettings.roundDecimals,
-            showPlusMinus = false
-        )
-    }
+    val formatterConfig = LocalFormatterConfig.current.copy(showPlusMinus = false)
 
     Column(
         modifier = modifier.fillMaxSize()

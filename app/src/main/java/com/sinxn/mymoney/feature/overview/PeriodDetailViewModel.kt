@@ -10,6 +10,7 @@ import com.sinxn.mymoney.core.data.local.model.TransactionMonthGroup
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
+import com.sinxn.mymoney.core.data.preferences.toFormatterConfig
 import com.sinxn.mymoney.core.data.repository.CategoryRepository
 import com.sinxn.mymoney.core.ui.components.IconData
 import com.sinxn.mymoney.core.ui.components.groupTransactionsIntoMonthGroups
@@ -152,12 +153,7 @@ class PeriodDetailViewModel @Inject constructor(
                 }
             }
 
-            val config = MoneyFormatter.Config(
-                showCurrency = formatting.showCurrency,
-                groupDigits = formatting.groupDigits,
-                roundDecimals = formatting.roundDecimals,
-                showPlusMinus = false
-            )
+            val config = formatting.toFormatterConfig(showPlusMinus = false)
 
             val incomeBreakdown = buildCategoryBreakdowns(
                 txList = txList,

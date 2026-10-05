@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.model.SavingWithDetails
 import com.sinxn.mymoney.core.data.local.model.TransactionWithCategory
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
+import com.sinxn.mymoney.core.data.preferences.toFormatterConfig
 import com.sinxn.mymoney.core.data.repository.SavingRepository
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -64,12 +65,7 @@ class SavingDetailsViewModel @Inject constructor(
                 savingRepository.getTransactionsForSaving(savingId),
                 settingsRepository.formattingSettings
             ) { savingDetails, transactions, formatting ->
-                val formatterConfig = MoneyFormatter.Config(
-                    showCurrency = formatting.showCurrency,
-                    groupDigits = formatting.groupDigits,
-                    roundDecimals = formatting.roundDecimals,
-                    showPlusMinus = formatting.showPlusMinus
-                )
+                val formatterConfig = formatting.toFormatterConfig()
 
                 _uiState.update { state ->
                     state.copy(

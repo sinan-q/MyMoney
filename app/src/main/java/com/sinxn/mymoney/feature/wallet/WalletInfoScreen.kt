@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.sinxn.mymoney.core.ui.LocalFormatterConfig
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.groupTransactionsIntoMonthGroups
 import com.sinxn.mymoney.core.ui.components.monthGroupedTransactionItems
@@ -43,14 +44,7 @@ fun WalletInfoScreen(
     var showTransferInUseDialog by remember { mutableStateOf(false) }
     var collapsedMonthGroups by remember { mutableStateOf(setOf<String>()) }
 
-    val formatterConfig = remember(uiState.formattingSettings) {
-        MoneyFormatter.Config(
-            showCurrency = uiState.formattingSettings.showCurrency,
-            groupDigits = uiState.formattingSettings.groupDigits,
-            roundDecimals = uiState.formattingSettings.roundDecimals,
-            showPlusMinus = false
-        )
-    }
+    val formatterConfig = LocalFormatterConfig.current.copy(showPlusMinus = false)
 
     val effectiveCurrencyCode = uiState.wallet?.let { it.currencySymbol ?: it.wallet.currency } ?: "USD"
     val decimals = uiState.wallet?.decimals ?: 2

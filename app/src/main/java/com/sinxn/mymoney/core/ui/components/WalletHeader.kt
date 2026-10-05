@@ -54,6 +54,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
+import com.sinxn.mymoney.core.ui.LocalFormatterConfig
 import com.sinxn.mymoney.core.util.Constants
 import com.sinxn.mymoney.core.util.MoneyFormatter
 
@@ -61,17 +62,16 @@ import com.sinxn.mymoney.core.util.MoneyFormatter
 fun WalletHeader(
     modifier: Modifier = Modifier,
     wallet: WalletWithBalance? = null,
-    formatterConfig: MoneyFormatter.Config? = null,
+    formatterConfig: MoneyFormatter.Config = LocalFormatterConfig.current,
     isExpanded: Boolean = false,
     onToggleExpand: () -> Unit = {},
     isReduced: Boolean = false,
     viewModel: WalletHeaderViewModel = hiltViewModel()
 ) {
     val currentWalletState by viewModel.currentWallet.collectAsState()
-    val defaultFormatterConfig by viewModel.formatterConfig.collectAsState()
 
     val effectiveWallet = wallet ?: currentWalletState ?: return
-    val effectiveConfig = formatterConfig ?: defaultFormatterConfig
+    val effectiveConfig = formatterConfig
 
     val baseColor = remember(effectiveWallet.wallet.icon, effectiveWallet.wallet.name) {
         parseIconData(effectiveWallet.wallet.icon, effectiveWallet.wallet.name).color
@@ -365,7 +365,7 @@ fun ArchivedDropdownHeaderRow(
 fun WalletProfileRow(
     wallet: WalletWithBalance,
     isSelected: Boolean,
-    formatterConfig: MoneyFormatter.Config? = null,
+    formatterConfig: MoneyFormatter.Config = LocalFormatterConfig.current,
     onClick: () -> Unit
 ) {
     Surface(
@@ -402,7 +402,7 @@ fun WalletProfileRow(
                     amount = wallet.currentBalance,
                     currencyCode = wallet.wallet.currency,
                     decimals = wallet.decimals,
-                    config = formatterConfig ?: MoneyFormatter.Config()
+                    config = formatterConfig
                 )
             }
 

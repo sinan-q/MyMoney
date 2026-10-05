@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.model.RecurrentTransactionWithDetails
 import com.sinxn.mymoney.core.data.local.model.RecurrentTransferWithDetails
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
+import com.sinxn.mymoney.core.data.preferences.toFormatterConfig
 import com.sinxn.mymoney.core.data.repository.RecurrenceRepository
 import com.sinxn.mymoney.core.ui.components.IconData
 import com.sinxn.mymoney.core.ui.components.parseIconData
@@ -67,12 +68,7 @@ class RecurrenceViewModel @Inject constructor(
         recurrencesFlow,
         settingsRepository.formattingSettings
     ) { (transactions, transfers), formatting ->
-        val formatterConfig = MoneyFormatter.Config(
-            showCurrency = formatting.showCurrency,
-            groupDigits = formatting.groupDigits,
-            roundDecimals = formatting.roundDecimals,
-            showPlusMinus = formatting.showPlusMinus
-        )
+        val formatterConfig = formatting.toFormatterConfig()
 
         val txUiModels = transactions.map { it.toUiModel(formatterConfig, formatting.dateFormat) }
         val trUiModels = transfers.map { it.toUiModel(formatterConfig, formatting.dateFormat) }

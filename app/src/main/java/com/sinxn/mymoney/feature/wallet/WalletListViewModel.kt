@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
+import com.sinxn.mymoney.core.data.preferences.toFormatterConfig
 import com.sinxn.mymoney.core.data.repository.WalletRepository
 import com.sinxn.mymoney.core.ui.components.IconData
 import com.sinxn.mymoney.core.ui.components.SortOption
@@ -126,12 +127,7 @@ class WalletListViewModel @Inject constructor(
                 }.joinToString(", ")
         } else null
 
-        val formatterConfig = MoneyFormatter.Config(
-            showCurrency = settings.showCurrency,
-            groupDigits = settings.groupDigits,
-            roundDecimals = settings.roundDecimals,
-            showPlusMinus = settings.showPlusMinus
-        )
+        val formatterConfig = settings.toFormatterConfig()
 
         fun WalletWithBalance.toUi(): WalletUiModel {
             val currencyCode = currencySymbol ?: wallet.currency

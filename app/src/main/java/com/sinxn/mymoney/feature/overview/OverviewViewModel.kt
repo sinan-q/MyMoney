@@ -8,6 +8,7 @@ import com.sinxn.mymoney.core.data.local.entity.CategoryEntity
 import com.sinxn.mymoney.core.data.local.model.WalletWithBalance
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
+import com.sinxn.mymoney.core.data.preferences.toFormatterConfig
 import com.sinxn.mymoney.core.util.Constants
 import com.sinxn.mymoney.core.util.DateUtils
 import com.sinxn.mymoney.core.util.MoneyFormatter
@@ -269,12 +270,7 @@ class OverviewViewModel @Inject constructor(
         val allCategories = moneyDao.getCategories().first()
         val catMap = allCategories.associateBy { it.id }
 
-        val noSignConfig = MoneyFormatter.Config(
-            showCurrency = formattingSettings.showCurrency,
-            groupDigits = formattingSettings.groupDigits,
-            roundDecimals = formattingSettings.roundDecimals,
-            showPlusMinus = false
-        )
+        val noSignConfig = formattingSettings.toFormatterConfig(showPlusMinus = false)
 
         val categoryAmounts = mutableMapOf<String, Long>()
         val categoryNetSigns = mutableMapOf<String, Boolean>()
@@ -655,12 +651,7 @@ class OverviewViewModel @Inject constructor(
         decimals: Int,
         formattingSettings: FormattingSettings
     ): List<OverviewPeriodUiModel> {
-        val config = MoneyFormatter.Config(
-            showCurrency = formattingSettings.showCurrency,
-            groupDigits = formattingSettings.groupDigits,
-            roundDecimals = formattingSettings.roundDecimals,
-            showPlusMinus = true
-        )
+        val config = formattingSettings.toFormatterConfig(showPlusMinus = true)
         val noSignConfig = config.copy(showPlusMinus = false)
 
         return periods.mapIndexed { index, period ->

@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sinxn.mymoney.core.ui.LocalFormatterConfig
 import com.sinxn.mymoney.core.ui.components.AppExtendedFab
 import com.sinxn.mymoney.core.ui.components.CategoryIcon
 import com.sinxn.mymoney.core.ui.components.EmptyListItem
@@ -49,14 +50,7 @@ fun WalletListScreen(
     val currentWallets = if (isArchivedTab) uiState.archivedWallets else uiState.activeWallets
     val currentListState = if (isArchivedTab) archivedListState else activeListState
 
-    val formatterConfig = remember(uiState.formattingSettings) {
-        MoneyFormatter.Config(
-            showCurrency = uiState.formattingSettings.showCurrency,
-            groupDigits = uiState.formattingSettings.groupDigits,
-            roundDecimals = uiState.formattingSettings.roundDecimals,
-            showPlusMinus = false
-        )
-    }
+    val formatterConfig = LocalFormatterConfig.current.copy(showPlusMinus = false)
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),

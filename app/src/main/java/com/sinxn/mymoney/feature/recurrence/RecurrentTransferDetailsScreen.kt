@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sinxn.mymoney.R
+import com.sinxn.mymoney.core.data.preferences.toFormatterConfig
 import com.sinxn.mymoney.core.ui.components.CleanListRow
 import com.sinxn.mymoney.core.ui.components.FormCardContainer
 import com.sinxn.mymoney.core.util.DateUtils
@@ -126,12 +127,7 @@ fun RecurrentTransferDetailsScreen(
                             amount = rtf.moneyFrom,
                             currencyCode = item.walletFrom.currency,
                             decimals = decimals,
-                            config = MoneyFormatter.Config(
-                                showCurrency = false,
-                                groupDigits = settings.groupDigits,
-                                roundDecimals = settings.roundDecimals,
-                                showPlusMinus = false
-                            )
+                            config = settings.toFormatterConfig().copy(showCurrency = false, showPlusMinus = false)
                         )
                     }
 

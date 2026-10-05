@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.sinxn.mymoney.core.ui.LocalFormatterConfig
 import com.sinxn.mymoney.core.ui.components.TransactionItem
 import com.sinxn.mymoney.core.util.MoneyFormatter
 
@@ -29,12 +30,7 @@ fun NeedsReviewScreen(
 
     var showBulkActionDialog by remember { mutableStateOf(false) }
 
-    val formatterConfig = MoneyFormatter.Config(
-        showCurrency = settings.showCurrency,
-        groupDigits = settings.groupDigits,
-        roundDecimals = settings.roundDecimals,
-        showPlusMinus = settings.showPlusMinus
-    )
+    val formatterConfig = LocalFormatterConfig.current
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -111,7 +107,7 @@ fun NeedsReviewScreen(
 @Composable
 fun ReviewItemView(
     item: ReviewItemUiModel,
-    formatterConfig: MoneyFormatter.Config,
+    formatterConfig: MoneyFormatter.Config = LocalFormatterConfig.current,
     dateFormat: Int,
     onClick: () -> Unit,
     onAcceptSuggestion: (fieldId: String, value: String) -> Unit

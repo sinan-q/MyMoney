@@ -3,6 +3,7 @@ package com.sinxn.mymoney.feature.event
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
+import com.sinxn.mymoney.core.data.preferences.toFormatterConfig
 import com.sinxn.mymoney.core.data.repository.EventRepository
 import com.sinxn.mymoney.core.ui.components.IconData
 import com.sinxn.mymoney.core.ui.components.SortOption
@@ -69,12 +70,7 @@ class EventViewModel @Inject constructor(
 
         val txGrouped = allTransactions.groupBy { it.transaction.eventId }
 
-        val formatterConfig = MoneyFormatter.Config(
-            showCurrency = formattingSettings.showCurrency,
-            groupDigits = formattingSettings.groupDigits,
-            roundDecimals = formattingSettings.roundDecimals,
-            showPlusMinus = formattingSettings.showPlusMinus
-        )
+        val formatterConfig = formattingSettings.toFormatterConfig()
 
         val eventItems = events.map { event ->
             val txs = txGrouped[event.id] ?: emptyList()

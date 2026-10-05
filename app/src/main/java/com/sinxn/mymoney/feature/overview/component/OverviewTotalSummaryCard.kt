@@ -17,6 +17,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sinxn.mymoney.core.data.preferences.FormattingSettings
+import com.sinxn.mymoney.core.ui.LocalFormatterConfig
 import com.sinxn.mymoney.core.util.MoneyFormatter
 import com.sinxn.mymoney.feature.overview.CashFlowFilter
 import com.sinxn.mymoney.feature.overview.GroupType
@@ -42,17 +43,8 @@ fun OverviewTotalSummaryCard(
     selectedCategoryName: String?,
     modifier: Modifier = Modifier
 ) {
-    val configWithSign = remember(formattingSettings) {
-        MoneyFormatter.Config(
-            showCurrency = formattingSettings.showCurrency,
-            groupDigits = formattingSettings.groupDigits,
-            roundDecimals = formattingSettings.roundDecimals,
-            showPlusMinus = true
-        )
-    }
-    val configNoSign = remember(configWithSign) {
-        configWithSign.copy(showPlusMinus = false)
-    }
+    val configWithSign = LocalFormatterConfig.current.copy(showPlusMinus = true)
+    val configNoSign = LocalFormatterConfig.current.copy(showPlusMinus = false)
 
     val netAmount = overviewData.totalNetIncomes.getMoney(currencyCode)
     val incomeAmount = overviewData.totalIncomes.getMoney(currencyCode)

@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 import com.sinxn.mymoney.core.data.preferences.SettingsRepository
+import com.sinxn.mymoney.core.data.preferences.toFormatterConfig
 import com.sinxn.mymoney.core.util.MoneyFormatter
 
 sealed class PersonDetailsEvent {
@@ -83,12 +84,7 @@ class PersonDetailsViewModel @Inject constructor(
                 val displayCurrency = if (transactionCurrencies.size == 1) transactionCurrencies.first() else settings.globalCurrency
                 val displayDecimals = transactions.firstOrNull()?.decimals ?: 2
 
-                val formatterConfig = MoneyFormatter.Config(
-                    showCurrency = settings.showCurrency,
-                    groupDigits = settings.groupDigits,
-                    roundDecimals = settings.roundDecimals,
-                    showPlusMinus = settings.showPlusMinus
-                )
+                val formatterConfig = settings.toFormatterConfig()
 
                 _uiState.value = _uiState.value.copy(
                     person = currentPerson,
