@@ -108,7 +108,7 @@ interface MoneyDao {
     @Query("SELECT * FROM transfers WHERE (transactionFromId = :transactionId OR transactionToId = :transactionId OR transactionTaxId = :transactionId) AND isDeleted = 0 LIMIT 1")
     suspend fun getTransferByTransactionId(transactionId: String): com.sinxn.mymoney.core.data.local.entity.TransferEntity?
 
-    @Query("SELECT * FROM transactions WHERE type = 2 AND money = :money AND date = :date AND id != :transactionId AND isDeleted = 0 LIMIT 1")
+    @Query("SELECT * FROM transactions WHERE type = 1 AND money = :money AND date = :date AND id != :transactionId AND isDeleted = 0 LIMIT 1")
     suspend fun findSiblingTransferTransaction(money: Long, date: String, transactionId: String): TransactionEntity?
 
     @Query("SELECT * FROM transfers WHERE id = :id AND isDeleted = 0")
@@ -574,6 +574,7 @@ interface MoneyDao {
         INNER JOIN wallets w ON t.walletId = w.id
         LEFT JOIN currencies curr ON w.currency = curr.iso
         WHERE t.walletId = :walletId 
+          AND t.isDeleted = 0 AND w.isDeleted = 0
           AND t.date <= :maxDate
         ORDER BY t.date DESC
     """)
@@ -603,7 +604,7 @@ interface MoneyDao {
         LEFT JOIN categories c ON t.categoryId = c.id
         INNER JOIN wallets w ON t.walletId = w.id
         LEFT JOIN currencies curr ON w.currency = curr.iso
-        WHERE t.id = :transactionId
+        WHERE t.id = :transactionId AND t.isDeleted = 0
     """)
     fun getTransactionWithCategory(transactionId: String): Flow<com.sinxn.mymoney.core.data.local.model.TransactionWithCategory?>
 

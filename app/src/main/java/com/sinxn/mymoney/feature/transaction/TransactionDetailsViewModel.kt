@@ -138,8 +138,11 @@ class TransactionDetailsViewModel @Inject constructor(
 
     fun deleteTransaction(onComplete: () -> Unit) {
         viewModelScope.launch {
-            val current = uiState.value.transaction?.transaction ?: return@launch
-            val transfer = uiState.value.transferEntity ?: transactionRepository.getTransferByTransactionId(transactionId)
+            val current = uiState.value.transaction?.transaction
+                ?: transactionRepository.getTransactionById(transactionId)
+                ?: return@launch
+            val transfer = uiState.value.transferEntity
+                ?: transactionRepository.getTransferByTransactionId(transactionId)
             transactionRepository.deleteTransaction(current, transfer)
             onComplete()
         }

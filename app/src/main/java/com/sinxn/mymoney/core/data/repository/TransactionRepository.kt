@@ -89,11 +89,12 @@ class TransactionRepository @Inject constructor(
         }
     }
 
-    suspend fun deleteTransaction(transaction: TransactionEntity, transfer: TransferEntity?) {
+    suspend fun deleteTransaction(transaction: TransactionEntity, transfer: TransferEntity? = null) {
         val now = System.currentTimeMillis()
         moneyDao.updateTransaction(transaction.copy(isDeleted = true, lastEdit = now))
-        if (transfer != null) {
-            softDeleteTransferAndSiblings(transfer)
+        val actualTransfer = transfer ?: moneyDao.getTransferByTransactionId(transaction.id)
+        if (actualTransfer != null) {
+            softDeleteTransferAndSiblings(actualTransfer)
         }
     }
 
